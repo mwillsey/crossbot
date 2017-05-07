@@ -48,11 +48,8 @@ def add(message, minutes, seconds, date):
     if date is None:
         date = 'now'
 
-    seconds = int(minutes) * 60 + int(seconds)
+    total_seconds = int(minutes) * 60 + int(seconds)
     userid = message._get_user_id()
-
-    print('For user {}, add {}:{:02d} {}'.format(
-        userid, minutes, seconds, date))
 
     # try to add an entry, report back to the user if they already have one
     with sqlite3.connect(DB_NAME) as con:
@@ -60,7 +57,7 @@ def add(message, minutes, seconds, date):
             con.execute('''
             INSERT INTO crossword_time(userid, date, seconds)
             VALUES(?, date(?, 'start of day'), ?)
-            ''', (userid, date, seconds))
+            ''', (userid, date, total_seconds))
 
         except sqlite3.IntegrityError:
             seconds = con.execute('''
@@ -76,7 +73,14 @@ def add(message, minutes, seconds, date):
                           '({}:{:02d}) for this date.'.format(minutes, seconds))
             return
 
-    message.react('ok')
+    if total_seconds < 30:
+        emoji = 'fire'
+    elif total_seconds < 90:
+        emoji = 'ok'
+    else:
+        emoji = 'slowpoke'
+
+    message.react(emoji)
 
 @respond_to('times{}'.format(opt(date_rx)))
 def times(message, date):
