@@ -82,6 +82,24 @@ def add(message, minutes, seconds, date):
 
     message.react(emoji)
 
+
+@respond_to('delete{} *$'.format(opt(date_rx)))
+def delete(message, date):
+    '''Delete entry for today or given date (`delete 2017-05-05`).'''
+
+    if date is None:
+        date = 'now'
+
+    userid = message._get_user_id()
+
+    with sqlite3.connect(DB_NAME) as con:
+        con.execute('''
+        DELETE FROM crossword_time
+        WHERE userid=? AND date=date(?, 'start of day')
+        ''', (userid, date))
+
+    message.react('x')
+
 @respond_to('times{}'.format(opt(date_rx)))
 def times(message, date):
     '''Get all the times for today or given date (`times 2017-05-05`).'''
