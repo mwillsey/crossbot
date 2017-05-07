@@ -122,6 +122,11 @@ def times(message, date):
             name = users[userid]['name']
             response += '{} - {}:{:02d}\n'.format(name, minutes, seconds)
 
+    if len(response) == 0:
+        if date == 'now':
+            response = 'No times yet for today, be the first!'
+        else:
+            response = 'No times for this date.'
     message.send(response)
 
 @respond_to('plot{}{}'.format(opt(date_rx), opt(date_rx)))
