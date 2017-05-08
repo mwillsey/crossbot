@@ -129,6 +129,52 @@ def times(message, date):
             response = 'No times for this date.'
     message.send(response)
 
+@respond_to('announce{}'.format(opt(date_rx)))
+def send_daily_message(message, date):
+    if date is None:
+        date = 'now'
+
+    with sqlite3.connect(DB_NAME) as con:
+        cursor = con.execute('''
+        SELECT userid, seconds
+        FROM crossword_time
+        WHERE date = date(?, 'start of day', '-1 days')
+        ORDER BY seconds
+        LIMIT 1''', (date,));
+
+        try:
+            userid, seconds = next(cursor)
+        except StopIteration:
+            return message.send("No one played the minicrossword yesterday. Why not?")
+
+        username = message._client.users[userid]["name"]
+
+        cursor = con.execute('''
+        SELECT userid, date
+        FROM crossword_time
+        WHERE userid != ?
+        ORDER BY date DESCENDING
+        LIMIT 1''', (userid,))
+
+        try:
+            previous, when = next(cursor)
+        except StopIteration:
+            return message.send("Looks like only {} has been fastest at the minicrossword. The rest of y'all gotta step up your game!".format(username))
+
+        # Formatting the response
+        m_winner = "Yesterday, {} solved the minicrossword fastest. ".format(username)
+
+        streak = datetime.now().date() - datetime.strptime(when, "%Y-%m-%d").date()
+
+        if streak.days > 1:
+            m_streak = "They're on a {}-day streak!".format(username, streak.days)
+        else:
+            m_streak = "But {} won the day before. Can they retake the top spot?".format(message._client.users[previous]["name"])
+
+        m_url = "Play today's minicrossword at https://www.nytimes.com/crosswords/game/mini and tell me how you do :)"
+
+        message.send(m_winner + "\n" + m_streak + "\n" + m_url)
+
 @respond_to('plot{}{}'.format(opt(date_rx), opt(date_rx)))
 def plot(message, start_date, end_date):
     '''Plot everyone's times in a date range. `plot` plots the last week.
