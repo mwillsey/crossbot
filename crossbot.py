@@ -153,7 +153,7 @@ def send_daily_message(message, date):
         SELECT userid, date
         FROM crossword_time
         WHERE userid != ?
-        ORDER BY date DESCENDING
+        ORDER BY date DESC
         LIMIT 1''', (userid,))
 
         try:
