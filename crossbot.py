@@ -18,7 +18,7 @@ BOT_NAME = 'crossbot'
 DB_NAME = 'crossbot.db'
 
 time_rx = r'(\d*):(\d\d)'
-date_rx = r'(\d\d\d\d-\d\d-\d\d)|now'
+date_rx = r'(?:(\d\d\d\d-\d\d-\d\d)|now)'
 
 def opt(rx):
     '''Returns a regex that optionally accepts the input with leading
