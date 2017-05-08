@@ -134,48 +134,55 @@ def send_daily_message(message, date):
     if date is None:
         date = 'now'
 
+    m = ""
+
+
     with sqlite3.connect(DB_NAME) as con:
         cursor = con.execute('''
         SELECT userid, seconds
         FROM crossword_time
         WHERE date = date(?, 'start of day', '-1 days')
-        ORDER BY seconds ASCENDING
+        ORDER BY seconds ASC
         LIMIT 1''', (date,));
 
         try:
             userid, seconds = next(cursor)
         except StopIteration:
-            return message.send("No one played the minicrossword yesterday. Why not?")
+            m += "No one played the minicrossword yesterday. Why not?"
+            return message.send(m)
+        else:
+            username = message._client.users[userid]["name"]
+            m += "Yesterday, {} solved the minicrossword fastest.\n".format(username)
 
-        username = message._client.users[userid]["name"]
 
         cursor = con.execute('''
-        SELECT data.userid, julianday(?) - julianday(data.date) AS streak
-        FROM data
-        JOIN (SELECT seconds, date
-        FROM data
-        WHERE who = ?
-        AND date < date(?, 'start of day', '-0 days') AS winner
-        WHERE data.seconds < winner.seconds
-        AND data.date = winner.date
-        ORDER BY streak ASCENDING''', (userid, date, date))
+        SELECT T1.userid, julianday(date(?, 'start of day', '-1 days'))
+                        - julianday(T1.date) AS streak
+        FROM crossword_time T1
+        JOIN (
+            SELECT T2.seconds, T2.date
+            FROM crossword_time T2
+            WHERE T2.userid = ?
+            AND T2.date < date(?, 'start of day')
+        ) AS winner
+        WHERE T1.seconds < winner.seconds
+        AND T1.date = winner.date
+        ORDER BY streak ASC''', (date, userid, date))
 
         try:
             previous, streak = next(cursor)
         except StopIteration:
-            return message.send("The rest of y'all gotta step up your game!".format(username))
-
-        # Formatting the response
-        m_winner = "Yesterday, {} solved the minicrossword fastest. ".format(username)
-
-        if streak > 1:
-            m_streak = "They're on a {}-day streak!".format(username, streak)
+            m += "The rest of y'all gotta step up your game!\n".format(username)
+            return message.send(m)
         else:
-            m_streak = "{} won the day before.".format(message._client.users[previous]["name"])
+            if streak > 1:
+                m += "They're on a {}-day streak!\n\n".format(int(streak))
+            else:
+                m += "{} won the day before.\n\n".format(message._client.users[previous]["name"])
 
-        m_url = "Play today's: https://www.nytimes.com/crosswords/game/mini"
+        m += "Play today's: https://www.nytimes.com/crosswords/game/mini"
 
-        message.send(m_winner + "\n" + m_streak + "\n" + m_url)
+        message.send(m)
 
 @respond_to('plot{}{}'.format(opt(date_rx), opt(date_rx)))
 def plot(message, start_date, end_date):
