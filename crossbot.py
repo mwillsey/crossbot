@@ -139,7 +139,7 @@ def send_daily_message(message, date):
         SELECT userid, seconds
         FROM crossword_time
         WHERE date = date(?, 'start of day', '-1 days')
-        ORDER BY seconds
+        ORDER BY seconds ASCENDING
         LIMIT 1''', (date,));
 
         try:
@@ -150,28 +150,30 @@ def send_daily_message(message, date):
         username = message._client.users[userid]["name"]
 
         cursor = con.execute('''
-        SELECT userid, date
-        FROM crossword_time
-        WHERE userid != ?
-        ORDER BY date DESC
-        LIMIT 1''', (userid,))
+        SELECT data.userid, julianday(?) - julianday(data.date) AS streak
+        FROM data
+        JOIN (SELECT seconds, date
+        FROM data
+        WHERE who = ?
+        AND date < date(?, 'start of day', '-0 days') AS winner
+        WHERE data.seconds < winner.seconds
+        AND data.date = winner.date
+        ORDER BY streak ASCENDING''', (userid, date, date))
 
         try:
-            previous, when = next(cursor)
+            previous, streak = next(cursor)
         except StopIteration:
-            return message.send("Looks like only {} has been fastest at the minicrossword. The rest of y'all gotta step up your game!".format(username))
+            return message.send("The rest of y'all gotta step up your game!".format(username))
 
         # Formatting the response
         m_winner = "Yesterday, {} solved the minicrossword fastest. ".format(username)
 
-        streak = datetime.now().date() - datetime.strptime(when, "%Y-%m-%d").date()
-
-        if streak.days > 1:
-            m_streak = "They're on a {}-day streak!".format(username, streak.days)
+        if streak > 1:
+            m_streak = "They're on a {}-day streak!".format(username, streak)
         else:
-            m_streak = "But {} won the day before. Can they retake the top spot?".format(message._client.users[previous]["name"])
+            m_streak = "{} won the day before.".format(message._client.users[previous]["name"])
 
-        m_url = "Play today's minicrossword at https://www.nytimes.com/crosswords/game/mini and tell me how you do :)"
+        m_url = "Play today's: https://www.nytimes.com/crosswords/game/mini"
 
         message.send(m_winner + "\n" + m_streak + "\n" + m_url)
 
