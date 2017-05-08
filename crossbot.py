@@ -183,7 +183,7 @@ def plot(message, start_date, end_date):
     if end_date is None:
         end_date = 'now'
 
-    start_modifer = ''
+    start_modifer = '-0 days'
     if start_date is None:
         start_date = 'now'
         start_modifer = '-7 days'
