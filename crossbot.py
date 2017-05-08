@@ -130,7 +130,9 @@ def times(message, date):
     message.send(response)
 
 @respond_to('announce{}'.format(opt(date_rx)))
-def send_daily_message(message, date):
+def announce(message, date):
+    '''Report who won the previous day and if they're on a streak.
+    Optionally takes a date.'''
     if date is None:
         date = 'now'
 
