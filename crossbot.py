@@ -73,9 +73,20 @@ def add(message, minutes, seconds, date):
                           '({}:{:02d}) for this date.'.format(minutes, seconds))
             return
 
-    if total_seconds < 30:
+    with sqlite3.connect(DB_NAME) as con:
+        cur = con.execute("select strftime('%w', ?)", (date,))
+        day_of_week = int(cur.fetchone()[0])
+
+    if day_of_week == 6: # Saturday is longer
+        fast_time = 90
+        ok_time = 150
+    else:
+        fast_time = 30
+        ok_time = 90
+
+    if total_seconds < fast_time:
         emoji = 'fire'
-    elif total_seconds < 90:
+    elif total_seconds < ok_time:
         emoji = 'ok'
     else:
         emoji = 'slowpoke'
