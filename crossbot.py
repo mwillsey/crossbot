@@ -8,8 +8,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
+import datetime, pytz
 from collections import defaultdict
-from datetime import datetime
 from tempfile import NamedTemporaryFile
 
 from slackbot.bot import respond_to, default_reply
@@ -25,6 +25,29 @@ def opt(rx):
     whitespace.'''
     return '(?: +{})?'.format(rx)
 
+TZ_US_EAST = pytz.timezone('US/Eastern')
+
+def get_date(date):
+    '''If date is a date, this does nothing. If it's 'now' or None, then this
+    gets either today's date or tomorrow's if the crossword has already come
+    out (10pm on weekdays, 6pm on weekends)'''
+
+    if date is None or date == 'now':
+
+        e_dt = datetime.datetime.now(TZ_US_EAST)
+        dt = datetime.datetime.now()
+
+        release_hour = 22 if e_dt.weekday() < 5 else 18
+
+        # if it's already been released (with a small buffer), use tomorrow
+        if e_dt.time() > datetime.time(hour=release_hour, minute=5):
+            dt += datetime.timedelta(days=1)
+
+        date = dt.strftime("%Y-%m-%d")
+
+    return date
+
+
 @respond_to('help *$')
 def help(message):
     '''Get help.'''
@@ -34,6 +57,8 @@ def help(message):
         'I live here: https://github.com/mwillsey/crossbot',
         'Times look like this `1:30` or this `:32` (the `:` is necessary).',
         'Dates look like this `2017-05-05` or simply `now` for today.',
+        '`now` or omitted dates will automatically become tomorrow if the'
+        'crossword has already been released (10pm weekdays, 6pm weekends).'
         'Here are my commands:\n\n',
     ]
     message.send('\n'.join(s) + message.docs_reply())
@@ -45,8 +70,7 @@ def add(message, minutes, seconds, date):
 
     if minutes is None or minutes == '':
         minutes = 0
-    if date is None:
-        date = 'now'
+    date = get_date(date)
 
     total_seconds = int(minutes) * 60 + int(seconds)
     userid = message._get_user_id()
@@ -56,14 +80,14 @@ def add(message, minutes, seconds, date):
         try:
             con.execute('''
             INSERT INTO crossword_time(userid, date, seconds)
-            VALUES(?, date(?, 'start of day'), ?)
+            VALUES(?, date(?), ?)
             ''', (userid, date, total_seconds))
 
         except sqlite3.IntegrityError:
             seconds = con.execute('''
             SELECT seconds
             FROM crossword_time
-            WHERE userid = ? and date = date(?, 'start of day')
+            WHERE userid = ? and date = date(?)
             ''', (userid, date)).fetchone()
 
             minutes, seconds = divmod(seconds[0], 60)
@@ -98,15 +122,14 @@ def add(message, minutes, seconds, date):
 def delete(message, date):
     '''Delete entry for today or given date (`delete 2017-05-05`).'''
 
-    if date is None:
-        date = 'now'
+    date = get_date(date)
 
     userid = message._get_user_id()
 
     with sqlite3.connect(DB_NAME) as con:
         con.execute('''
         DELETE FROM crossword_time
-        WHERE userid=? AND date=date(?, 'start of day')
+        WHERE userid=? AND date=date(?)
         ''', (userid, date))
 
     message.react('x')
@@ -115,8 +138,7 @@ def delete(message, date):
 def times(message, date):
     '''Get all the times for today or given date (`times 2017-05-05`).'''
 
-    if date is None:
-        date = 'now'
+    date = get_date(date)
 
     response = ''
 
@@ -124,7 +146,7 @@ def times(message, date):
         cursor = con.execute('''
         SELECT userid, seconds
         FROM crossword_time
-        WHERE date = date(?, 'start of day')
+        WHERE date = date(?)
         ORDER BY seconds''', (date,))
 
         users = message._client.users
@@ -144,8 +166,7 @@ def times(message, date):
 def announce(message, date):
     '''Report who won the previous day and if they're on a streak.
     Optionally takes a date.'''
-    if date is None:
-        date = 'now'
+    date = get_date(date)
 
     m = ""
 
@@ -154,7 +175,7 @@ def announce(message, date):
         cursor = con.execute('''
         SELECT userid, seconds
         FROM crossword_time
-        WHERE date = date(?, 'start of day', '-1 days')
+        WHERE date = date(?, '-1 days')
         ORDER BY seconds ASC
         LIMIT 1''', (date,));
 
@@ -169,14 +190,14 @@ def announce(message, date):
 
 
         cursor = con.execute('''
-        SELECT T1.userid, julianday(date(?, 'start of day', '-1 days'))
+        SELECT T1.userid, julianday(date(?, '-1 days'))
                         - julianday(T1.date) AS streak
         FROM crossword_time T1
         JOIN (
             SELECT T2.seconds, T2.date
             FROM crossword_time T2
             WHERE T2.userid = ?
-            AND T2.date < date(?, 'start of day')
+            AND T2.date < date(?)
         ) AS winner
         WHERE T1.seconds < winner.seconds
         AND T1.date = winner.date
@@ -202,22 +223,18 @@ def plot(message, start_date, end_date):
     '''Plot everyone's times in a date range. `plot` plots the last week.
     `plot [start date]` and `plot [start date] [end date]` do the obvious thing.'''
 
-    if end_date is None:
-        end_date = 'now'
+    start_date = get_date(start_date)
+    end_date   = get_date(end_date)
 
-    start_modifer = '-0 days'
-    if start_date is None:
-        start_date = 'now'
-        start_modifer = '-7 days'
-
+    start_modifer = '-7 days' if start_date == end_date else '-0 days'
 
     with sqlite3.connect(DB_NAME) as con:
         cursor = con.execute('''
         SELECT userid, date, seconds
         FROM crossword_time
         WHERE date
-          BETWEEN date(?, 'start of day', ?)
-          AND     date(?, 'start of day')
+          BETWEEN date(?, ?)
+          AND     date(?)
         ORDER BY date''', (start_date, start_modifer, end_date))
 
         times = defaultdict(list)
@@ -237,7 +254,7 @@ def plot(message, start_date, end_date):
     for userid, entries in times.items():
 
         dates, seconds = zip(*entries)
-        dates = [datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
+        dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
         name = users[userid]['name']
         ax.plot_date(mdates.date2num(dates), seconds, '-o', label=name)
 
