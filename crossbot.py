@@ -171,49 +171,38 @@ def announce(message, date):
 
     m = ""
 
+    users = message._client.users
 
     with sqlite3.connect(DB_NAME) as con:
-        cursor = con.execute('''
-        SELECT userid, seconds
-        FROM crossword_time
-        WHERE date = date(?, '-1 days')
-        ORDER BY seconds ASC
-        LIMIT 1''', (date,));
 
-        try:
-            userid, seconds = next(cursor)
-        except StopIteration:
-            m += "No one played the minicrossword yesterday. Why not?"
-            return message.send(m)
+        def best(offset):
+            offset_s = '-{} days'.format(offset)
+            result = con.execute('''
+            SELECT userid
+            FROM crossword_time
+            WHERE date = date(?, ?)
+            ORDER BY seconds ASC
+            LIMIT 1''', (date, offset_s)).fetchone()
+
+            return None if result is None else result[0]
+
+        best1 = best(1)
+        best2 = best(2)
+
+        if best1 is None:
+            m += 'No one played the minicrossword yesterday. Why not?\n'
+        elif best1 != best2:
+            # no streak
+            m += 'Yesterday, {} solved the minicrossword fastest.\n'\
+                 .format(users[best1]['name'])
+            if best2 is not None:
+                m += '{} won the day before.\n'\
+                     .format(users[best2]['name'])
         else:
-            username = message._client.users[userid]["name"]
-            m += "Yesterday, {} solved the minicrossword fastest.\n".format(username)
-
-
-        cursor = con.execute('''
-        SELECT T1.userid, julianday(date(?, '-1 days'))
-                        - julianday(T1.date) AS streak
-        FROM crossword_time T1
-        JOIN (
-            SELECT T2.seconds, T2.date
-            FROM crossword_time T2
-            WHERE T2.userid = ?
-            AND T2.date < date(?)
-        ) AS winner
-        WHERE T1.seconds < winner.seconds
-        AND T1.date = winner.date
-        ORDER BY streak ASC''', (date, userid, date))
-
-        try:
-            previous, streak = next(cursor)
-        except StopIteration:
-            m += "The rest of y'all gotta step up your game!\n".format(username)
-            return message.send(m)
-        else:
-            if streak > 1:
-                m += "They're on a {}-day streak!\n\n".format(int(streak))
-            else:
-                m += "{} won the day before.\n\n".format(message._client.users[previous]["name"])
+            n = 2
+            while best(n+1) == best1: n += 1
+            m += '{} is on a {}-day streak! {}\n'\
+                 .format(users[best1]['name'], n, ':fire:' * n)
 
         m += "Play today's: https://www.nytimes.com/crosswords/game/mini"
 
