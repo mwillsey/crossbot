@@ -10,6 +10,7 @@ import matplotlib.dates as mdates
 
 import datetime, pytz
 from collections import defaultdict
+from itertools import takewhile
 from tempfile import NamedTemporaryFile
 
 from slackbot.bot import respond_to, default_reply
@@ -218,15 +219,20 @@ def announce(message, date):
 
         message.send(m)
 
-@respond_to('plot{}{}'.format(opt(date_rx), opt(date_rx)))
-def plot(message, start_date, end_date):
-    '''Plot everyone's times in a date range. `plot` plots the last week.
-    `plot [start date]` and `plot [start date] [end date]` do the obvious thing.'''
+@respond_to('plot{}{}{}'.format(opt(r'(log|linear)'), opt(date_rx), opt(date_rx)))
+def plot(message, scale, start_date, end_date):
+    '''Plot everyone's times in a date range.
+    `plot [scale] [start date] [end date]`, all arguments optional.
+    `plot` plots the last 4 days by default.
+    The scale can be `log` (default) or `linear`.'''
 
     start_date = get_date(start_date)
     end_date   = get_date(end_date)
 
-    start_modifer = '-7 days' if start_date == end_date else '-0 days'
+    start_modifer = '-4 days' if start_date == end_date else '-0 days'
+
+    if scale is None:
+        scale = 'log'
 
     with sqlite3.connect(DB_NAME) as con:
         cursor = con.execute('''
@@ -243,7 +249,7 @@ def plot(message, start_date, end_date):
 
     users = message._client.users
 
-    width, height, dpi = 400, 300, 100
+    width, height, dpi = 600, 400, 100
     fig = plt.figure(figsize=(width/dpi, height/dpi), dpi=dpi)
     ax = fig.add_subplot(1,1,1)
 
@@ -251,21 +257,31 @@ def plot(message, start_date, end_date):
         minutes, seconds = divmod(int(sec), 60)
         return '{}:{:02}'.format(minutes, seconds)
 
+    max_sec = 0
     for userid, entries in times.items():
 
         dates, seconds = zip(*entries)
+        max_sec = max(max_sec, max(seconds))
         dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
         name = users[userid]['name']
         ax.plot_date(mdates.date2num(dates), seconds, '-o', label=name)
 
+    ax.set_yscale(scale)
+    if scale == 'log':
+        ticks = takewhile(lambda x: x <= max_sec, (30 * (2**i) for i in range(10)))
+        ax.yaxis.set_ticks(list(ticks))
+    else:
+        ax.yaxis.set_ticks(range(0, max_sec+1, 30))
+
     fig.autofmt_xdate()
+    ax.xaxis.set_major_locator(mdates.DayLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %-d')) # May 3
     ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(fmt_min)) # 1:30
     ax.set_ylim(ymin=0)
-    ax.legend()
+    ax.legend(fontsize=8, loc='upper left')
 
     temp = NamedTemporaryFile(suffix='.png', delete=False)
-    fig.savefig(temp, format='png')
+    fig.savefig(temp, format='png', bbox_inches='tight')
     temp.close()
 
     message.channel.upload_file('plot', temp.name)
