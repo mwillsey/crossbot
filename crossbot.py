@@ -219,17 +219,30 @@ def announce(message, date):
 
         message.send(m)
 
-@respond_to('plot{}{}{}'.format(opt(r'(log|linear)'), opt(date_rx), opt(date_rx)))
-def plot(message, scale, start_date, end_date):
+@respond_to('plot{}{}{}{}'.format(opt(r'(\d+)'), opt(r'(log|linear)'),
+                                  opt(date_rx), opt(date_rx)))
+def plot(message, num_days, scale, start_date, end_date):
     '''Plot everyone's times in a date range.
-    `plot [scale] [start date] [end date]`, all arguments optional.
+    `plot [num_days] [scale] [start date] [end date]`, all arguments optional.
+    You can provide either `num_days` or `start_date` and `end_date`.
     `plot` plots the last 4 days by default.
     The scale can be `log` (default) or `linear`.'''
 
     start_date = get_date(start_date)
     end_date   = get_date(end_date)
 
-    start_modifer = '-4 days' if start_date == end_date else '-0 days'
+    start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
+    end_dt   = datetime.datetime.strptime(end_date,   "%Y-%m-%d").date()
+
+    num_days = 4 if num_days is None else int(num_days)
+
+    # we only use num_days if the other params weren't given
+    # otherwise set num_days based the given range
+    if start_date == end_date:
+        start_dt -= datetime.timedelta(days=num_days)
+        start_date = start_dt.strftime("%Y-%m-%d")
+    else:
+        num_days = (end_dt - start_dt).days
 
     if scale is None:
         scale = 'log'
@@ -239,9 +252,9 @@ def plot(message, scale, start_date, end_date):
         SELECT userid, date, seconds
         FROM crossword_time
         WHERE date
-          BETWEEN date(?, ?)
+          BETWEEN date(?)
           AND     date(?)
-        ORDER BY date''', (start_date, start_modifer, end_date))
+        ORDER BY date''', (start_date, end_date))
 
         times = defaultdict(list)
         for userid, date, seconds in cursor:
@@ -249,7 +262,9 @@ def plot(message, scale, start_date, end_date):
 
     users = message._client.users
 
-    width, height, dpi = 600, 400, 100
+    width, height, dpi = (120*num_days), 400, 100
+    width = max(400, min(width, 1000))
+
     fig = plt.figure(figsize=(width/dpi, height/dpi), dpi=dpi)
     ax = fig.add_subplot(1,1,1)
 
