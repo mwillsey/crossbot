@@ -243,7 +243,7 @@ def plot(message, num_days, scale, start_date, end_date):
         WHERE date
           BETWEEN date(?)
           AND     date(?)
-        ORDER BY date''', (start_date, end_date))
+        ORDER BY date, userid''', (start_date, end_date))
 
         times = defaultdict(list)
         for userid, date, seconds in cursor:
