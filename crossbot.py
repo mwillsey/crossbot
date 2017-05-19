@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import os
+import statistics
 
 # don't use matplotlib gui
 import matplotlib
@@ -135,7 +136,7 @@ def delete(message, date):
 
     message.react('x')
 
-@respond_to('times{}'.format(opt(date_rx)))
+@respond_to('times{} *$'.format(opt(date_rx)))
 def times(message, date):
     '''Get all the times for today or given date (`times 2017-05-05`).'''
 
@@ -208,9 +209,11 @@ def announce(message, date):
 
         message.send(m)
 
-@respond_to('plot{}{}{}{}'.format(opt(r'(\d+)'), opt(r'(log|linear)'),
-                                  opt(date_rx), opt(date_rx)))
-def plot(message, num_days, scale, start_date, end_date):
+@respond_to('plot{}{}{}{}{}'
+            .format(opt(r'(rank|times)'),
+                    opt(r'(\d+)'), opt(r'(log|linear)'),
+                    opt(date_rx), opt(date_rx)))
+def plot(message, plot_type, num_days, scale, start_date, end_date):
     '''Plot everyone's times in a date range.
     `plot [num_days] [scale] [start date] [end date]`, all arguments optional.
     You can provide either `num_days` or `start_date` and `end_date`.
@@ -233,8 +236,11 @@ def plot(message, num_days, scale, start_date, end_date):
     else:
         num_days = (end_dt - start_dt).days
 
+    if plot_type is None:
+        plot_type = 'times'
+
     if scale is None:
-        scale = 'log'
+        scale = 'linear' if plot_type == 'rank' else 'log'
 
     with sqlite3.connect(DB_NAME) as con:
         cursor = con.execute('''
@@ -245,43 +251,99 @@ def plot(message, num_days, scale, start_date, end_date):
           AND     date(?)
         ORDER BY date, userid''', (start_date, end_date))
 
+        userids_present = set()
+
         times = defaultdict(list)
+        times_by_date = defaultdict(dict)
         for userid, date, seconds in cursor:
+            userids_present.add(userid)
             times[userid].append((date, seconds))
+            times_by_date[date][userid] = seconds
 
     users = message._client.users
+
+    if plot_type == 'rank':
+        sorted_dates = sorted(times_by_date.keys())
+
+        # scores are the stdev away from mean of that day
+        scores = {}
+        for date, user_times in times_by_date.items():
+            times = user_times.values()
+            mean  = statistics.mean(times)
+            stdev = statistics.pstdev(times)
+            scores[date] = {
+                userid: (mean - t) / stdev if stdev != 0 else 0
+                for userid, t in user_times.items()
+            }
+
+        # initialize the running scores with the first entry in this time range
+        running = {}
+        for user in userids_present:
+            for date in sorted_dates:
+                score = scores[date].get(userid)
+                if score is not None:
+                    running[user] = score
+                    break
+                # raise RuntimeError('Could not find a time for {}'
+                #                    .format(users[userid]['name']))
+
+        MAX_PENALTY = -1.5
+        NUM_DAYS = 4
+        old_wt = (NUM_DAYS - 1) / NUM_DAYS
+        new_wt = 1 / NUM_DAYS
+        weighted_scores = defaultdict(list)
+        for date in sorted_dates:
+            for user, score in scores[date].items():
+                score = max(score, MAX_PENALTY)
+                new_score = running[user] * old_wt + score * new_wt
+                running[user] = new_score
+                weighted_scores[user].append((date, new_score))
+
 
     width, height, dpi = (120*num_days), 400, 100
     width = max(400, min(width, 1000))
 
     fig = plt.figure(figsize=(width/dpi, height/dpi), dpi=dpi)
     ax = fig.add_subplot(1,1,1)
+    ax.set_yscale(scale)
 
     def fmt_min(sec, pos):
         minutes, seconds = divmod(int(sec), 60)
         return '{}:{:02}'.format(minutes, seconds)
 
-    max_sec = 0
-    for userid, entries in times.items():
+    if plot_type == 'rank':
+        for userid, pairs in weighted_scores.items():
+            dates, scores = zip(*pairs)
+            dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
+            name = users[userid]['name']
+            ax.plot_date(mdates.date2num(dates), scores, '-o', label=name)
 
-        dates, seconds = zip(*entries)
-        max_sec = max(max_sec, max(seconds))
-        dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
-        name = users[userid]['name']
-        ax.plot_date(mdates.date2num(dates), seconds, '-o', label=name)
+    elif plot_type == 'times':
+        max_sec = 0
+        for userid, entries in times.items():
 
-    ax.set_yscale(scale)
-    if scale == 'log':
-        ticks = takewhile(lambda x: x <= max_sec, (30 * (2**i) for i in range(10)))
-        ax.yaxis.set_ticks(list(ticks))
+            dates, seconds = zip(*entries)
+            max_sec = max(max_sec, max(seconds))
+            dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
+            name = users[userid]['name']
+            ax.plot_date(mdates.date2num(dates), seconds, '-o', label=name)
+
+        if scale == 'log':
+            ticks = takewhile(lambda x: x <= max_sec, (30 * (2**i) for i in range(10)))
+            ax.yaxis.set_ticks(list(ticks))
+        else:
+            ax.yaxis.set_ticks(range(0, max_sec+1, 30))
+
+        ax.set_ylim(bottom=0)
+
     else:
-        ax.yaxis.set_ticks(range(0, max_sec+1, 30))
+        raise RuntimeError('invalid plot_type {}'.format(plot_type))
 
     fig.autofmt_xdate()
     ax.xaxis.set_major_locator(mdates.DayLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %-d')) # May 3
-    ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(fmt_min)) # 1:30
-    ax.set_ylim(ymin=0)
+    if plot_type == 'times':
+        ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(fmt_min)) # 1:30
     ax.legend(fontsize=8, loc='upper left')
 
     temp = NamedTemporaryFile(suffix='.png', delete=False)
