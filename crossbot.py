@@ -210,14 +210,15 @@ def announce(message, date):
         message.send(m)
 
 @respond_to('plot{}{}{}{}{}'
-            .format(opt(r'(rank|times)'),
+            .format(opt(r'(normalized|times)'),
                     opt(r'(\d+)'), opt(r'(log|linear)'),
                     opt(date_rx), opt(date_rx)))
 def plot(message, plot_type, num_days, scale, start_date, end_date):
     '''Plot everyone's times in a date range.
-    `plot [num_days] [scale] [start date] [end date]`, all arguments optional.
+    `plot [plot_type] [num_days] [scale] [start date] [end date]`, all arguments optional.
+    `plot_type` is either `normalized` (default) or `times` for a non-smoothed plot of actual times.
     You can provide either `num_days` or `start_date` and `end_date`.
-    `plot` plots the last 4 days by default.
+    `plot` plots the last 5 days by default.
     The scale can be `log` (default) or `linear`.'''
 
     start_date = get_date(start_date)
@@ -226,7 +227,7 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
     start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
     end_dt   = datetime.datetime.strptime(end_date,   "%Y-%m-%d").date()
 
-    num_days = 4 if num_days is None else int(num_days)
+    num_days = 5 if num_days is None else int(num_days)
 
     # we only use num_days if the other params weren't given
     # otherwise set num_days based the given range
@@ -237,10 +238,10 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
         num_days = (end_dt - start_dt).days
 
     if plot_type is None:
-        plot_type = 'times'
+        plot_type = 'normalized'
 
     if scale is None:
-        scale = 'linear' if plot_type == 'rank' else 'log'
+        scale = 'linear' if plot_type == 'normalized' else 'log'
 
     with sqlite3.connect(DB_NAME) as con:
         cursor = con.execute('''
@@ -262,7 +263,7 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
 
     users = message._client.users
 
-    if plot_type == 'rank':
+    if plot_type == 'normalized':
         sorted_dates = sorted(times_by_date.keys())
 
         def bracket(x):
@@ -311,7 +312,7 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
     cmap = plt.get_cmap('nipy_spectral')
     markers = cycle(['-o', '-X', '-s', '-^'])
 
-    if plot_type == 'rank':
+    if plot_type == 'normalized':
         n_users = len(weighted_scores)
         colors = [cmap(i / n_users) for i in range(n_users)]
         for (userid, pairs), color in zip(weighted_scores.items(), colors):
