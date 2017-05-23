@@ -11,7 +11,7 @@ import matplotlib.dates as mdates
 
 import datetime, pytz
 from collections import defaultdict
-from itertools import takewhile
+from itertools import takewhile, cycle
 from tempfile import NamedTemporaryFile
 
 from slackbot.bot import respond_to, default_reply
@@ -265,6 +265,9 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
     if plot_type == 'rank':
         sorted_dates = sorted(times_by_date.keys())
 
+        def bracket(x):
+            return max(-1.5, min(x, 1.5))
+
         # scores are the stdev away from mean of that day
         scores = {}
         for date, user_times in times_by_date.items():
@@ -272,32 +275,26 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
             mean  = statistics.mean(times)
             stdev = statistics.pstdev(times)
             scores[date] = {
-                userid: (mean - t) / stdev if stdev != 0 else 0
+                userid: bracket((mean - t) / stdev)
+                if stdev != 0 else 0
                 for userid, t in user_times.items()
             }
 
-        # initialize the running scores with the first entry in this time range
-        running = {}
-        for user in userids_present:
-            for date in sorted_dates:
-                score = scores[date].get(userid)
-                if score is not None:
-                    running[user] = score
-                    break
-                # raise RuntimeError('Could not find a time for {}'
-                #                    .format(users[userid]['name']))
+        running = defaultdict(list)
 
-        MAX_PENALTY = -1.5
         NUM_DAYS = 4
-        old_wt = (NUM_DAYS - 1) / NUM_DAYS
-        new_wt = 1 / NUM_DAYS
         weighted_scores = defaultdict(list)
         for date in sorted_dates:
             for user, score in scores[date].items():
-                score = max(score, MAX_PENALTY)
-                new_score = running[user] * old_wt + score * new_wt
-                running[user] = new_score
-                weighted_scores[user].append((date, new_score))
+
+                score_list = running[user]
+                score_list.append(score)
+
+                if len(score_list) == 0:
+                    continue
+
+                avg = statistics.mean(score_list[-NUM_DAYS:])
+                weighted_scores[user].append((date, avg))
 
 
     width, height, dpi = (120*num_days), 400, 100
@@ -311,22 +308,29 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
         minutes, seconds = divmod(int(sec), 60)
         return '{}:{:02}'.format(minutes, seconds)
 
+    cmap = plt.get_cmap('nipy_spectral')
+    markers = cycle(['-o', '-X', '-s', '-^'])
+
     if plot_type == 'rank':
-        for userid, pairs in weighted_scores.items():
+        n_users = len(weighted_scores)
+        colors = [cmap(i / n_users) for i in range(n_users)]
+        for (userid, pairs), color in zip(weighted_scores.items(), colors):
             dates, scores = zip(*pairs)
             dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
             name = users[userid]['name']
-            ax.plot_date(mdates.date2num(dates), scores, '-o', label=name)
+            ax.plot_date(mdates.date2num(dates), scores, next(markers), label=name, color=color)
 
     elif plot_type == 'times':
         max_sec = 0
-        for userid, entries in times.items():
+        n_users = len(times)
+        colors = [cmap(i / n_users) for i in range(n_users)]
+        for (userid, entries), color in zip(times.items(), colors):
 
             dates, seconds = zip(*entries)
             max_sec = max(max_sec, max(seconds))
             dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
             name = users[userid]['name']
-            ax.plot_date(mdates.date2num(dates), seconds, '-o', label=name)
+            ax.plot_date(mdates.date2num(dates), seconds, next(markers), label=name, color=color)
 
         if scale == 'log':
             ticks = takewhile(lambda x: x <= max_sec, (30 * (2**i) for i in range(10)))
