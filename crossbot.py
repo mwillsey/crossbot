@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 import datetime, pytz
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from itertools import takewhile, cycle
 from tempfile import NamedTemporaryFile
 
@@ -341,6 +341,7 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
     markers = cycle(['-o', '-X', '-s', '-^'])
 
     if plot_type == 'normalized':
+        weighted_scores = OrderedDict(sorted(weighted_scores.items()))
         n_users = len(weighted_scores)
         colors = [cmap(i / n_users) for i in range(n_users)]
         for (userid, pairs), color in zip(weighted_scores.items(), colors):
@@ -353,6 +354,7 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
         max_sec = 0
         n_users = len(times)
         colors = [cmap(i / n_users) for i in range(n_users)]
+        times = OrderedDict(sorted(times.items()))
         for (userid, entries), color in zip(times.items(), colors):
 
             dates, seconds = zip(*entries)
