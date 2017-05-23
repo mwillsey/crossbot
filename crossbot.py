@@ -50,7 +50,7 @@ def get_date(date):
     return date
 
 
-@respond_to('help *$')
+@respond_to('^help *$')
 def help(message):
     '''Get help.'''
     s = [
@@ -66,15 +66,21 @@ def help(message):
     message.send('\n'.join(s) + message.docs_reply())
 
 
-@respond_to('add {}{} *$'.format(time_rx, opt(date_rx)))
+@respond_to('^add {}{} *$'.format(time_rx, opt(date_rx)))
 def add(message, minutes, seconds, date):
-    '''Add entry for today (`add 1:07`) or given date (`add :32 2017-05-05`).'''
+    '''Add entry for today (`add 1:07`) or given date (`add :32 2017-05-05`).
+       A zero second time will be interpreted as a failed attempt.'''
 
     if minutes is None or minutes == '':
         minutes = 0
     date = get_date(date)
 
     total_seconds = int(minutes) * 60 + int(seconds)
+
+    if total_seconds == 0:
+        # interpreting as a failed attempt.
+        total_seconds = -1
+
     userid = message._get_user_id()
 
     # try to add an entry, report back to the user if they already have one
@@ -110,7 +116,9 @@ def add(message, minutes, seconds, date):
         fast_time = 30
         ok_time = 90
 
-    if total_seconds < fast_time:
+    if total_seconds < 0:
+        emoji = 'facepalm'
+    elif total_seconds < fast_time:
         emoji = 'fire'
     elif total_seconds < ok_time:
         emoji = 'ok'
@@ -120,7 +128,7 @@ def add(message, minutes, seconds, date):
     message.react(emoji)
 
 
-@respond_to('delete{} *$'.format(opt(date_rx)))
+@respond_to('^delete{} *$'.format(opt(date_rx)))
 def delete(message, date):
     '''Delete entry for today or given date (`delete 2017-05-05`).'''
 
@@ -136,13 +144,14 @@ def delete(message, date):
 
     message.react('x')
 
-@respond_to('times{} *$'.format(opt(date_rx)))
+@respond_to('^times{} *$'.format(opt(date_rx)))
 def times(message, date):
     '''Get all the times for today or given date (`times 2017-05-05`).'''
 
     date = get_date(date)
 
     response = ''
+    failures = ''
 
     with sqlite3.connect(DB_NAME) as con:
         cursor = con.execute('''
@@ -153,9 +162,15 @@ def times(message, date):
 
         users = message._client.users
         for userid, seconds in cursor:
-            minutes, seconds = divmod(seconds, 60)
             name = users[userid]['name']
-            response += '{} - {}:{:02d}\n'.format(name, minutes, seconds)
+            if seconds < 0:
+                failures += '{} - :facepalm:\n'.format(name)
+            else:
+                minutes, seconds = divmod(seconds, 60)
+                response += '{} - {}:{:02d}\n'.format(name, minutes, seconds)
+
+    # append now so failures at the end
+    response += failures
 
     if len(response) == 0:
         if date == 'now':
@@ -164,7 +179,7 @@ def times(message, date):
             response = 'No times for this date.'
     message.send(response)
 
-@respond_to('announce{}'.format(opt(date_rx)))
+@respond_to('^announce{}'.format(opt(date_rx)))
 def announce(message, date):
     '''Report who won the previous day and if they're on a streak.
     Optionally takes a date.'''
@@ -181,7 +196,7 @@ def announce(message, date):
             result = con.execute('''
             SELECT userid
             FROM crossword_time
-            WHERE date = date(?, ?)
+            WHERE date = date(?, ?) AND seconds >= 0
             ORDER BY seconds ASC
             LIMIT 1''', (date, offset_s)).fetchone()
 
@@ -209,7 +224,7 @@ def announce(message, date):
 
         message.send(m)
 
-@respond_to('plot{}{}{}{}{}'
+@respond_to('^plot{}{}{}{}{}'
             .format(opt(r'(normalized|times)'),
                     opt(r'(\d+)'), opt(r'(log|linear)'),
                     opt(date_rx), opt(date_rx)))
@@ -258,7 +273,9 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
         times_by_date = defaultdict(dict)
         for userid, date, seconds in cursor:
             userids_present.add(userid)
-            times[userid].append((date, seconds))
+            if seconds >= 0:
+                # don't add failures to the times plot
+                times[userid].append((date, seconds))
             times_by_date[date][userid] = seconds
 
     users = message._client.users
@@ -266,18 +283,29 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
     if plot_type == 'normalized':
         sorted_dates = sorted(times_by_date.keys())
 
-        def bracket(x):
-            return max(-1.5, min(x, 1.5))
+        def mk_score(mean, t, stdev):
+            if t < 0:
+                return FAILURE_PENALTY
+            if stdev == 0:
+                return 0
+
+            score = (mean - t) / stdev
+            return max(-1.5, min(score, 1.5))
+
+        # failures count as 10 minutes for means and stdev
+        # and come with a heaver ranking penalty
+        FAILURE_TIME_FOR_STATS = 10 * 60
+        FAILURE_PENALTY = -2.5
 
         # scores are the stdev away from mean of that day
         scores = {}
         for date, user_times in times_by_date.items():
-            times = user_times.values()
+            times = [t if t >= 0 else FAILURE_TIME_FOR_STATS
+                     for t in user_times.values()]
             mean  = statistics.mean(times)
             stdev = statistics.pstdev(times)
             scores[date] = {
-                userid: bracket((mean - t) / stdev)
-                if stdev != 0 else 0
+                userid: mk_score(mean, t, stdev)
                 for userid, t in user_times.items()
             }
 
