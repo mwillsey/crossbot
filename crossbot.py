@@ -37,15 +37,15 @@ def get_date(date):
     if date is None or date == 'now':
 
         e_dt = datetime.datetime.now(TZ_US_EAST)
-        dt = datetime.datetime.now()
 
         release_hour = 22 if e_dt.weekday() < 5 else 18
+        release_dt = e_dt.replace(hour=release_hour, minute=5, second=0, microsecond=0)
 
         # if it's already been released (with a small buffer), use tomorrow
-        if e_dt.time() > datetime.time(hour=release_hour, minute=5):
-            dt += datetime.timedelta(days=1)
+        if e_dt > release_dt:
+            e_dt += datetime.timedelta(days=1)
 
-        date = dt.strftime("%Y-%m-%d")
+        date = e_dt.strftime("%Y-%m-%d")
 
     return date
 
