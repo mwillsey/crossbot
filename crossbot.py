@@ -234,7 +234,7 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
     `plot_type` is either `normalized` (default) or `times` for a non-smoothed plot of actual times.
     You can provide either `num_days` or `start_date` and `end_date`.
     `plot` plots the last 5 days by default.
-    The scale can be `log` (default) or `linear`.'''
+    The scale can be `log` or `linear`.'''
 
     start_date = get_date(start_date)
     end_date   = get_date(end_date)
@@ -283,6 +283,10 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
     if plot_type == 'normalized':
         sorted_dates = sorted(times_by_date.keys())
 
+        # failures come with a heaver ranking penalty
+        MAX_PENALTY = -1.5
+        FAILURE_PENALTY = -2
+
         def mk_score(mean, t, stdev):
             if t < 0:
                 return FAILURE_PENALTY
@@ -290,43 +294,41 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
                 return 0
 
             score = (mean - t) / stdev
-            return max(-1.5, min(score, 1.5))
-
-        # failures count as 10 minutes for means and stdev
-        # and come with a heaver ranking penalty
-        FAILURE_TIME_FOR_STATS = 10 * 60
-        FAILURE_PENALTY = -2.5
+            return max(MAX_PENALTY, score)
 
         # scores are the stdev away from mean of that day
         scores = {}
         for date, user_times in times_by_date.items():
-            times = [t if t >= 0 else FAILURE_TIME_FOR_STATS
-                     for t in user_times.values()]
+            times = user_times.values()
+            # make failures 1 minute worse than the worst time
+            times = [t if t >= 0 else max(times) + 60 for t in times]
             mean  = statistics.mean(times)
-            stdev = statistics.pstdev(times)
+            stdev = statistics.pstdev(times, mean)
             scores[date] = {
                 userid: mk_score(mean, t, stdev)
                 for userid, t in user_times.items()
             }
 
+        NEW_SCORE_WEIGHT = .4
         running = defaultdict(list)
 
-        NUM_DAYS = 4
+        MAX_PLOT_SCORE =  1.0
+        MIN_PLOT_SCORE = -1.0
         weighted_scores = defaultdict(list)
         for date in sorted_dates:
             for user, score in scores[date].items():
 
-                score_list = running[user]
-                score_list.append(score)
+                old_score = running.get(user)
 
-                if len(score_list) == 0:
-                    continue
+                new_score = score * NEW_SCORE_WEIGHT + old_score * (1 - NEW_SCORE_WEIGHT) \
+                            if old_score is not None else score
 
-                avg = statistics.mean(score_list[-NUM_DAYS:])
-                weighted_scores[user].append((date, avg))
+                running[user] = new_score
+                plot_score = max(MIN_PLOT_SCORE, min(new_score, MAX_PLOT_SCORE))
+                weighted_scores[user].append((date, plot_score))
 
 
-    width, height, dpi = (120*num_days), 400, 100
+    width, height, dpi = (120*num_days), 500, 100
     width = max(400, min(width, 1000))
 
     fig = plt.figure(figsize=(width/dpi, height/dpi), dpi=dpi)
