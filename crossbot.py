@@ -39,7 +39,7 @@ def get_date(date):
         e_dt = datetime.datetime.now(TZ_US_EAST)
 
         release_hour = 22 if e_dt.weekday() < 5 else 18
-        release_dt = e_dt.replace(hour=release_hour, minute=5, second=0, microsecond=0)
+        release_dt = e_dt.replace(hour=release_hour, minute=0, second=30, microsecond=0)
 
         # if it's already been released (with a small buffer), use tomorrow
         if e_dt > release_dt:
