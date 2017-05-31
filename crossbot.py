@@ -66,7 +66,7 @@ def help(message):
     message.send('\n'.join(s) + message.docs_reply())
 
 
-@respond_to('^add {}{} *$'.format(time_rx, opt(date_rx)))
+@respond_to('^add +{}{} *$'.format(time_rx, opt(date_rx)))
 def add(message, minutes, seconds, date):
     '''Add entry for today (`add 1:07`) or given date (`add :32 2017-05-05`).
        A zero second time will be interpreted as a failed attempt.'''
