@@ -2,6 +2,7 @@ import sqlite3
 import json
 import os
 import statistics
+import math
 
 # don't use matplotlib gui
 import matplotlib
@@ -110,22 +111,52 @@ def add(message, minutes, seconds, date):
         day_of_week = int(cur.fetchone()[0])
 
     if day_of_week == 6: # Saturday is longer
-        fast_time = 90
-        ok_time = 150
-    else:
         fast_time = 30
-        ok_time = 90
-
-    if total_seconds < 0:
-        emoji = 'facepalm'
-    elif total_seconds < fast_time:
-        emoji = 'fire'
-    elif total_seconds < ok_time:
-        emoji = 'ok'
+        slow_time = 3*60 + 30
     else:
-        emoji = 'slowpoke'
+        fast_time = 15
+        slow_time = 2*60 + 30
 
-    message.react(emoji)
+    message.react(emoji(total_seconds, fast_time, slow_time))
+
+# possible reactions sorted by speed
+SPEED_EMOJI = [
+    'fire',
+    'hot_pepper',
+    'open_mouth',
+    'runner',
+    'fistv',
+    'thumbsup',
+    'ok',
+    'slowparrot',
+    'slow',
+    'slowpoke',
+    'turtle',
+    'snail',
+    'poop',
+]
+
+def emoji(time, fast_time, slow_time):
+
+    assert fast_time < slow_time
+
+    if time < 0:
+        return 'facepalm'
+    if time < fast_time:
+        return SPEED_EMOJI[0]
+
+    speed = time - fast_time
+    time_range = slow_time - fast_time
+    index = speed / time_range * len(SPEED_EMOJI)
+    index = int(math.ceil(index))
+
+    if index >= len(SPEED_EMOJI):
+        index = len(SPEED_EMOJI) - 1
+
+    assert index in range(len(SPEED_EMOJI))
+
+    return SPEED_EMOJI[index]
+
 
 
 @respond_to('^delete{} *$'.format(opt(date_rx)))
