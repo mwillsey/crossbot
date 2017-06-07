@@ -417,6 +417,7 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
     temp = NamedTemporaryFile(suffix='.png', delete=False)
     fig.savefig(temp, format='png', bbox_inches='tight')
     temp.close()
+    plt.close(fig)
 
     message.channel.upload_file('plot', temp.name)
 
