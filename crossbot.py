@@ -255,13 +255,14 @@ def announce(message, date):
 
         message.send(m)
 
-@respond_to('^plot{}{}{}{}{}'
+@respond_to('^plot{}{}{}{}{}{}'
             .format(opt(r'(normalized|times)'),
-                    opt(r'(\d+)'), opt(r'(log|linear)'),
+                    opt(r'(\d+)'), opt(r'(\d?\.\d+)'),
+                    opt(r'(log|linear)'),
                     opt(date_rx), opt(date_rx)))
-def plot(message, plot_type, num_days, scale, start_date, end_date):
+def plot(message, plot_type, num_days, smoothing, scale, start_date, end_date):
     '''Plot everyone's times in a date range.
-    `plot [plot_type] [num_days] [scale] [start date] [end date]`, all arguments optional.
+    `plot [plot_type] [num_days] [smoothing] [scale] [start date] [end date]`, all arguments optional.
     `plot_type` is either `normalized` (default) or `times` for a non-smoothed plot of actual times.
     You can provide either `num_days` or `start_date` and `end_date`.
     `plot` plots the last 5 days by default.
@@ -282,6 +283,12 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
         start_date = start_dt.strftime("%Y-%m-%d")
     else:
         num_days = (end_dt - start_dt).days
+
+    if smoothing is None:
+        smoothing = .6
+    else:
+        smoothing = float(smoothing)
+        smoothing = max(0, min(smoothing, .95))
 
     if plot_type is None:
         plot_type = 'normalized'
@@ -340,7 +347,7 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
                 for userid, t in user_times.items()
             }
 
-        NEW_SCORE_WEIGHT = .4
+        new_score_weight = 1 - smoothing
         running = defaultdict(list)
 
         MAX_PLOT_SCORE =  1.0
@@ -351,7 +358,7 @@ def plot(message, plot_type, num_days, scale, start_date, end_date):
 
                 old_score = running.get(user)
 
-                new_score = score * NEW_SCORE_WEIGHT + old_score * (1 - NEW_SCORE_WEIGHT) \
+                new_score = score * new_score_weight + old_score * (1 - new_score_weight) \
                             if old_score is not None else score
 
                 running[user] = new_score
