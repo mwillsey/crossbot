@@ -120,19 +120,24 @@ def add(message, minutes, seconds, date):
     message.react(emoji(total_seconds, fast_time, slow_time))
 
 # possible reactions sorted by speed
+# if these aren't in Slack, crossbot will crash
 SPEED_EMOJI = [
     'fire',
     'hot_pepper',
-    'open_mouth',
-    'runner',
+    'rockon',
+    'rocket',
+    'nicer',
+    'fastparrot',
     'fistv',
     'thumbsup',
     'ok',
     'slowparrot',
     'slow',
     'slowpoke',
+    'waiting',
     'turtle',
     'snail',
+    'zzz',
     'poop',
 ]
 
@@ -156,7 +161,6 @@ def emoji(time, fast_time, slow_time):
     assert index in range(len(SPEED_EMOJI))
 
     return SPEED_EMOJI[index]
-
 
 
 @respond_to('^delete{} *$'.format(opt(date_rx)))
