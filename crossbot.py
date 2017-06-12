@@ -10,6 +10,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
+import numpy as np
+
 import datetime, pytz
 from collections import defaultdict, OrderedDict
 from itertools import takewhile, cycle
@@ -268,6 +270,7 @@ def plot(message, plot_type, num_days, smoothing, scale, start_date, end_date):
     '''Plot everyone's times in a date range.
     `plot [plot_type] [num_days] [smoothing] [scale] [start date] [end date]`, all arguments optional.
     `plot_type` is either `normalized` (default) or `times` for a non-smoothed plot of actual times.
+    `smoothing` is between 0 (no smoothing) and 1 exclusive. .6 default
     You can provide either `num_days` or `start_date` and `end_date`.
     `plot` plots the last 5 days by default.
     The scale can be `log` or `linear`.'''
@@ -344,8 +347,12 @@ def plot(message, plot_type, num_days, smoothing, scale, start_date, end_date):
             times = user_times.values()
             # make failures 1 minute worse than the worst time
             times = [t if t >= 0 else max(times) + 60 for t in times]
+            q1, q3 = np.percentile(times, [25,75])
+            stdev  = statistics.pstdev(times)
+            o1, o3 = q1 - stdev, q3 + stdev
+            times  = [t for t in times if o1 <= t <= o3]
             mean  = statistics.mean(times)
-            stdev = statistics.pstdev(times, mean)
+            stdev  = statistics.pstdev(times, mean)
             scores[date] = {
                 userid: mk_score(mean, t, stdev)
                 for userid, t in user_times.items()
