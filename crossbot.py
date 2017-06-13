@@ -377,7 +377,7 @@ def plot(message, plot_type, num_days, smoothing, scale, start_date, end_date):
                 weighted_scores[user].append((date, plot_score))
 
 
-    width, height, dpi = (120*num_days), 500, 100
+    width, height, dpi = (120*num_days), 600, 100
     width = max(400, min(width, 1000))
 
     fig = plt.figure(figsize=(width/dpi, height/dpi), dpi=dpi)
@@ -430,7 +430,7 @@ def plot(message, plot_type, num_days, smoothing, scale, start_date, end_date):
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %-d')) # May 3
     if plot_type == 'times':
         ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(fmt_min)) # 1:30
-    ax.legend(fontsize=8, loc='upper left')
+    ax.legend(fontsize=6, loc='upper left')
 
     temp = NamedTemporaryFile(suffix='.png', delete=False)
     fig.savefig(temp, format='png', bbox_inches='tight')
