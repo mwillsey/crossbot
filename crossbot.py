@@ -201,10 +201,10 @@ def times(message, date):
         for userid, seconds in cursor:
             name = users[userid]['name']
             if seconds < 0:
-                failures += '{} - :facepalm:\n'.format(name)
+                failures += '0{} - :facepalm:\n'.format(name)
             else:
                 minutes, seconds = divmod(seconds, 60)
-                response += '{} - {}:{:02d}\n'.format(name, minutes, seconds)
+                response += '0{} - {}:{:02d}\n'.format(name, minutes, seconds)
 
     # append now so failures at the end
     response += failures
