@@ -1,13 +1,17 @@
 appdirs==1.4.3
+certifi==2017.4.17
+chardet==3.0.4
 cycler==0.10.0
+idna==2.5
 matplotlib==2.0.1
 numpy==1.12.1
 packaging==16.8
 pyparsing==2.2.0
 python-dateutil==2.6.0
 pytz==2017.2
-requests==2.13.0
+requests==2.18.1
 six==1.10.0
-slackbot==0.4.1
-slacker==0.9.42
+-e git://github.com/lins05/slackbot.git@0dbd656f0791cba6b3ff50e3f70294e51ef16a58#egg=slackbot
+slacker==0.9.50
+urllib3==1.21.1
 websocket-client==0.40.0
