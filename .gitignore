@@ -1,5 +1,5 @@
 
-# virtualenv
+# virtualenv and python stuff
 .Python
 bin
 include
@@ -10,6 +10,7 @@ scripts
 pyvenv.cfg
 .venv
 pip-selfcheck.json
+__pycache__
 
 # ignore the database
 *.db
