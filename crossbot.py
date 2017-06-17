@@ -92,7 +92,7 @@ def load_plugins(plugin_dir):
 def mk_parser():
 
     parser = ArgumentParser(
-        prog='crossbot',
+        prog='@crossbot',
         description = '''
         You can either @ me in a channel or just DM me to give me a command.
         Play here: https://www.nytimes.com/crosswords/game/mini
