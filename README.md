@@ -20,7 +20,7 @@ pip install -r requirements.txt
 python setup.py install
 ```
 
-Initialize the database with `sqlite3 crossbot.db < init_db.sql` if you don't
+Initialize the database with `sqlite3 crossbot.db < scripts/init_db.sql` if you don't
 have one already.
 
 
