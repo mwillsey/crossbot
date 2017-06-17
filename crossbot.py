@@ -1,442 +1,148 @@
-import sqlite3
-import json
+#!/usr/bin/env python
+
+import argparse
 import os
-import statistics
-import math
+import re
+import importlib
+import traceback
 
-# don't use matplotlib gui
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
+import pytz
 
-import numpy as np
+bot_name = 'crossbot'
+db_path  = 'crossbot.db'
 
-import datetime, pytz
-from collections import defaultdict, OrderedDict
-from itertools import takewhile, cycle
-from tempfile import NamedTemporaryFile
+nyt_timezone = pytz.timezone('US/Eastern')
 
-from slackbot.bot import respond_to, default_reply
+class ParsePrintException(Exception):
+    pass
 
-BOT_NAME = 'crossbot'
-DB_NAME = 'crossbot.db'
+# subclass ArgumentParser so it doesn't just exit the program on error
+# also we want the help messages to go to slack if we are using slack
+class ArgumentParser(argparse.ArgumentParser):
 
-time_rx = r'(\d*):(\d\d)'
-date_rx = r'(?:(\d\d\d\d-\d\d-\d\d)|now)'
+    def print_help(self):  raise ParsePrintException(self.format_help())
+    def print_usage(self): raise ParsePrintException(self.format_usage())
 
-def opt(rx):
-    '''Returns a regex that optionally accepts the input with leading
-    whitespace.'''
-    return '(?: +{})?'.format(rx)
+    def error(self, message):
+        raise ParsePrintException('Parse Error:\n' + message)
 
-TZ_US_EAST = pytz.timezone('US/Eastern')
-
-def get_date(date):
-    '''If date is a date, this does nothing. If it's 'now' or None, then this
-    gets either today's date or tomorrow's if the crossword has already come
-    out (10pm on weekdays, 6pm on weekends)'''
-
-    if date is None or date == 'now':
-
-        e_dt = datetime.datetime.now(TZ_US_EAST)
-
-        release_hour = 22 if e_dt.weekday() < 5 else 18
-        release_dt = e_dt.replace(hour=release_hour, minute=0, second=30, microsecond=0)
-
-        # if it's already been released (with a small buffer), use tomorrow
-        if e_dt > release_dt:
-            e_dt += datetime.timedelta(days=1)
-
-        date = e_dt.strftime("%Y-%m-%d")
-
-    return date
+    def exit(self, status=0, message=None):
+        if status != 0:
+            raise ParsePrintException('Parse Error:\n' + message)
 
 
-@respond_to('^help *$')
-def help(message):
-    '''Get help.'''
-    s = [
-        'You can either @ me in a channel or just DM me to give me a command.',
-        'Play here: https://www.nytimes.com/crosswords/game/mini',
-        'I live here: https://github.com/mwillsey/crossbot',
-        'Times look like this `1:30` or this `:32` (the `:` is necessary).',
-        'Dates look like this `2017-05-05` or simply `now` for today.',
-        '`now` or omitted dates will automatically become tomorrow if the'
-        'crossword has already been released (10pm weekdays, 6pm weekends).'
-        'Here are my commands:\n\n',
-    ]
-    message.send('\n'.join(s) + message.docs_reply())
+class Client():
+    pass
+
+class SlackClient(Client):
+    def __init__(self, message):
+        self.message = message
+        self.userid  = message._get_user_id()
+
+    def react(self, emoji): self.message.react(emoji)
+    def send (self, msg):   self.message.send(msg)
+    def reply(self, msg):   self.message.reply(msg)
+
+    def user(self, userid):
+        users = self.message._client.users
+
+        if userid in users:
+            return users[userid]['name']
+        else:
+            print('WARNING: userid "{}" not found'.format(userid))
+            return str(userid)
+
+    def upload(self, name, path):
+        self.message.channel.upload_file(name, path)
+
+class CommandLineClient(Client):
+    userid = 'command-line-user'
+
+    def react(self, emoji): print('react :{}:'.format(emoji))
+    def send (self, msg):   print(msg)
+    def reply(self, msg):   print('@user - ' + msg)
+
+    def user(self, userid):
+        return userid
+    def upload(self, name, path):
+        print('Uploaded {} as "{}"'.format(path, name))
 
 
-@respond_to('^add +{}{} *$'.format(time_rx, opt(date_rx)))
-def add(message, minutes, seconds, date):
-    '''Add entry for today (`add 1:07`) or given date (`add :32 2017-05-05`).
-       A zero second time will be interpreted as a failed attempt.'''
+def load_plugins(plugin_dir):
 
-    if minutes is None or minutes == '':
-        minutes = 0
-    date = get_date(date)
+    plugin_path = os.path.join(os.path.dirname(__file__), plugin_dir)
 
-    total_seconds = int(minutes) * 60 + int(seconds)
+    modules = (
+        plugin_dir + '.' + os.path.basename(path)
+        for path, ext in map(os.path.splitext, os.listdir(plugin_path))
+        if ext == '.py' and '__' not in path
+    )
 
-    if total_seconds == 0:
-        # interpreting as a failed attempt.
-        total_seconds = -1
-
-    userid = message._get_user_id()
-
-    # try to add an entry, report back to the user if they already have one
-    with sqlite3.connect(DB_NAME) as con:
+    imported = []
+    for mod_name in modules:
         try:
-            con.execute('''
-            INSERT INTO crossword_time(userid, date, seconds)
-            VALUES(?, date(?), ?)
-            ''', (userid, date, total_seconds))
+            mod = importlib.import_module(mod_name)
+            imported.append(mod)
+        except:
+            print('ERROR: Something went wrong when importing "{}"'.format(mod_name))
+            traceback.print_exc()
 
-        except sqlite3.IntegrityError:
-            seconds = con.execute('''
-            SELECT seconds
-            FROM crossword_time
-            WHERE userid = ? and date = date(?)
-            ''', (userid, date)).fetchone()
+    return imported
 
-            minutes, seconds = divmod(seconds[0], 60)
+def mk_parser():
 
-            message.reply('I could not add this to the database, '
-                          'because you already have an entry '
-                          '({}:{:02d}) for this date.'.format(minutes, seconds))
-            return
+    parser = ArgumentParser(
+        prog='crossbot',
+        description = '''
+        You can either @ me in a channel or just DM me to give me a command.
+        Play here: https://www.nytimes.com/crosswords/game/mini
+        I live here: https://github.com/mwillsey/crossbot
+        Times look like this `1:30` or this `:32` (the `:` is necessary).
+        Dates look like this `2017-05-05` or simply `now` for today.
+        `now` or omitted dates will automatically become tomorrow if the
+        crossword has already been released (10pm weekdays, 6pm weekends).
+        Here are my commands:\n\n
+        '''
+    )
+    subparsers = parser.add_subparsers(help = 'subparsers help')
 
-    with sqlite3.connect(DB_NAME) as con:
-        cur = con.execute("select strftime('%w', ?)", (date,))
-        day_of_week = int(cur.fetchone()[0])
-
-    if day_of_week == 6: # Saturday is longer
-        fast_time = 30
-        slow_time = 3*60 + 30
-    else:
-        fast_time = 15
-        slow_time = 2*60 + 30
-
-    message.react(emoji(total_seconds, fast_time, slow_time))
-
-# possible reactions sorted by speed
-# if these aren't in Slack, crossbot will crash
-SPEED_EMOJI = [
-    'fire',
-    'hot_pepper',
-    'rockon',
-    'rocket',
-    'nicer',
-    'fastparrot',
-    'fistv',
-    'thumbsup',
-    'ok',
-    'slowparrot',
-    'slow',
-    'slowpoke',
-    'waiting',
-    'turtle',
-    'snail',
-    'zzz',
-    'poop',
-]
-
-def emoji(time, fast_time, slow_time):
-
-    assert fast_time < slow_time
-
-    if time < 0:
-        return 'facepalm'
-    if time < fast_time:
-        return SPEED_EMOJI[0]
-
-    speed = time - fast_time
-    time_range = slow_time - fast_time
-    index = speed / time_range * len(SPEED_EMOJI)
-    index = int(math.ceil(index))
-
-    if index >= len(SPEED_EMOJI):
-        index = len(SPEED_EMOJI) - 1
-
-    assert index in range(len(SPEED_EMOJI))
-
-    return SPEED_EMOJI[index]
-
-
-@respond_to('^delete{} *$'.format(opt(date_rx)))
-def delete(message, date):
-    '''Delete entry for today or given date (`delete 2017-05-05`).'''
-
-    date = get_date(date)
-
-    userid = message._get_user_id()
-
-    with sqlite3.connect(DB_NAME) as con:
-        con.execute('''
-        DELETE FROM crossword_time
-        WHERE userid=? AND date=date(?)
-        ''', (userid, date))
-
-    message.react('x')
-
-@respond_to('^times{} *$'.format(opt(date_rx)))
-def times(message, date):
-    '''Get all the times for today or given date (`times 2017-05-05`).'''
-
-    date = get_date(date)
-
-    response = ''
-    failures = ''
-
-    with sqlite3.connect(DB_NAME) as con:
-        cursor = con.execute('''
-        SELECT userid, seconds
-        FROM crossword_time
-        WHERE date = date(?)
-        ORDER BY seconds''', (date,))
-
-        users = message._client.users
-        for userid, seconds in cursor:
-            name = users[userid]['name']
-            if seconds < 0:
-                failures += '0{} - :facepalm:\n'.format(name)
-            else:
-                minutes, seconds = divmod(seconds, 60)
-                response += '0{} - {}:{:02d}\n'.format(name, minutes, seconds)
-
-    # append now so failures at the end
-    response += failures
-
-    if len(response) == 0:
-        if date == 'now':
-            response = 'No times yet for today, be the first!'
+    def show_help(client, args):
+        if args.help_command:
+            for cmd in args.help_command:
+                try:
+                    parser.parse_args([cmd, '--help'])
+                except ParsePrintException as e:
+                    client.send(str(e))
         else:
-            response = 'No times for this date.'
-    message.send(response)
+            client.send(parser.format_help())
 
-@respond_to('^announce{}'.format(opt(date_rx)))
-def announce(message, date):
-    '''Report who won the previous day and if they're on a streak.
-    Optionally takes a date.'''
-    date = get_date(date)
+    help_parser = subparsers.add_parser('help')
+    help_parser.set_defaults(command = show_help)
+    help_parser.add_argument('help_command', nargs='*')
 
-    m = ""
+    return parser, subparsers
 
-    users = message._client.users
 
-    with sqlite3.connect(DB_NAME) as con:
+if __name__ == '__main__':
 
-        def best(offset):
-            offset_s = '-{} days'.format(offset)
-            result = con.execute('''
-            SELECT userid
-            FROM crossword_time
-            WHERE date = date(?, ?) AND seconds >= 0
-            ORDER BY seconds ASC
-            LIMIT 1''', (date, offset_s)).fetchone()
+    client = CommandLineClient()
 
-            return None if result is None else result[0]
+    parser, subparsers = mk_parser()
 
-        best1 = best(1)
-        best2 = best(2)
-
-        if best1 is None:
-            m += 'No one played the minicrossword yesterday. Why not?\n'
-        elif best1 != best2:
-            # no streak
-            m += 'Yesterday, {} solved the minicrossword fastest.\n'\
-                 .format(users[best1]['name'])
-            if best2 is not None:
-                m += '{} won the day before.\n'\
-                     .format(users[best2]['name'])
+    # hopefully the plugins will add themselves to subparsers
+    for mod in load_plugins('commands'):
+        if hasattr(mod, 'init'):
+            mod.init(subparsers)
         else:
-            n = 2
-            while best(n+1) == best1: n += 1
-            m += '{} is on a {}-day streak! {}\n'\
-                 .format(users[best1]['name'], n, ':fire:' * n)
+            print('WARNING: plugin "{}" has no init()'.format(mod.__name__))
 
-        m += "Play today's: https://www.nytimes.com/crosswords/game/mini"
+    try:
+        args = parser.parse_args()
 
-        message.send(m)
-
-@respond_to('^plot{}{}{}{}{}{}'
-            .format(opt(r'(normalized|times)'),
-                    opt(r'(\d+)'), opt(r'(\d?\.\d+)'),
-                    opt(r'(log|linear)'),
-                    opt(date_rx), opt(date_rx)))
-def plot(message, plot_type, num_days, smoothing, scale, start_date, end_date):
-    '''Plot everyone's times in a date range.
-    `plot [plot_type] [num_days] [smoothing] [scale] [start date] [end date]`, all arguments optional.
-    `plot_type` is either `normalized` (default) or `times` for a non-smoothed plot of actual times.
-    `smoothing` is between 0 (no smoothing) and 1 exclusive. .6 default
-    You can provide either `num_days` or `start_date` and `end_date`.
-    `plot` plots the last 5 days by default.
-    The scale can be `log` or `linear`.'''
-
-    start_date = get_date(start_date)
-    end_date   = get_date(end_date)
-
-    start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
-    end_dt   = datetime.datetime.strptime(end_date,   "%Y-%m-%d").date()
-
-    num_days = 5 if num_days is None else int(num_days)
-
-    # we only use num_days if the other params weren't given
-    # otherwise set num_days based the given range
-    if start_date == end_date:
-        start_dt -= datetime.timedelta(days=num_days)
-        start_date = start_dt.strftime("%Y-%m-%d")
-    else:
-        num_days = (end_dt - start_dt).days
-
-    if smoothing is None:
-        smoothing = .6
-    else:
-        smoothing = float(smoothing)
-        smoothing = max(0, min(smoothing, .95))
-
-    if plot_type is None:
-        plot_type = 'normalized'
-
-    if scale is None:
-        scale = 'linear' if plot_type == 'normalized' else 'log'
-
-    with sqlite3.connect(DB_NAME) as con:
-        cursor = con.execute('''
-        SELECT userid, date, seconds
-        FROM crossword_time
-        WHERE date
-          BETWEEN date(?)
-          AND     date(?)
-        ORDER BY date, userid''', (start_date, end_date))
-
-        userids_present = set()
-
-        times = defaultdict(list)
-        times_by_date = defaultdict(dict)
-        for userid, date, seconds in cursor:
-            userids_present.add(userid)
-            if seconds >= 0:
-                # don't add failures to the times plot
-                times[userid].append((date, seconds))
-            times_by_date[date][userid] = seconds
-
-    users = message._client.users
-
-    if plot_type == 'normalized':
-        sorted_dates = sorted(times_by_date.keys())
-
-        # failures come with a heaver ranking penalty
-        MAX_PENALTY = -1.5
-        FAILURE_PENALTY = -2
-
-        def mk_score(mean, t, stdev):
-            if t < 0:
-                return FAILURE_PENALTY
-            if stdev == 0:
-                return 0
-
-            score = (mean - t) / stdev
-            return max(MAX_PENALTY, score)
-
-        # scores are the stdev away from mean of that day
-        scores = {}
-        for date, user_times in times_by_date.items():
-            times = user_times.values()
-            # make failures 1 minute worse than the worst time
-            times = [t if t >= 0 else max(times) + 60 for t in times]
-            q1, q3 = np.percentile(times, [25,75])
-            stdev  = statistics.pstdev(times)
-            o1, o3 = q1 - stdev, q3 + stdev
-            times  = [t for t in times if o1 <= t <= o3]
-            mean  = statistics.mean(times)
-            stdev  = statistics.pstdev(times, mean)
-            scores[date] = {
-                userid: mk_score(mean, t, stdev)
-                for userid, t in user_times.items()
-            }
-
-        new_score_weight = 1 - smoothing
-        running = defaultdict(list)
-
-        MAX_PLOT_SCORE =  1.0
-        MIN_PLOT_SCORE = -1.0
-        weighted_scores = defaultdict(list)
-        for date in sorted_dates:
-            for user, score in scores[date].items():
-
-                old_score = running.get(user)
-
-                new_score = score * new_score_weight + old_score * (1 - new_score_weight) \
-                            if old_score is not None else score
-
-                running[user] = new_score
-                plot_score = max(MIN_PLOT_SCORE, min(new_score, MAX_PLOT_SCORE))
-                weighted_scores[user].append((date, plot_score))
-
-
-    width, height, dpi = (120*num_days), 600, 100
-    width = max(400, min(width, 1000))
-
-    fig = plt.figure(figsize=(width/dpi, height/dpi), dpi=dpi)
-    ax = fig.add_subplot(1,1,1)
-    ax.set_yscale(scale)
-
-    def fmt_min(sec, pos):
-        minutes, seconds = divmod(int(sec), 60)
-        return '{}:{:02}'.format(minutes, seconds)
-
-    cmap = plt.get_cmap('nipy_spectral')
-    markers = cycle(['-o', '-X', '-s', '-^'])
-
-    if plot_type == 'normalized':
-        weighted_scores = OrderedDict(sorted(weighted_scores.items()))
-        n_users = len(weighted_scores)
-        colors = [cmap(i / n_users) for i in range(n_users)]
-        for (userid, pairs), color in zip(weighted_scores.items(), colors):
-            dates, scores = zip(*pairs)
-            dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
-            name = users[userid]['name']
-            ax.plot_date(mdates.date2num(dates), scores, next(markers), label=name, color=color)
-
-    elif plot_type == 'times':
-        max_sec = 0
-        n_users = len(times)
-        colors = [cmap(i / n_users) for i in range(n_users)]
-        times = OrderedDict(sorted(times.items()))
-        for (userid, entries), color in zip(times.items(), colors):
-
-            dates, seconds = zip(*entries)
-            max_sec = max(max_sec, max(seconds))
-            dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
-            name = users[userid]['name']
-            ax.plot_date(mdates.date2num(dates), seconds, next(markers), label=name, color=color)
-
-        if scale == 'log':
-            ticks = takewhile(lambda x: x <= max_sec, (30 * (2**i) for i in range(10)))
-            ax.yaxis.set_ticks(list(ticks))
+        if not hasattr(args, 'command'):
+            show_help(args)
         else:
-            ax.yaxis.set_ticks(range(0, max_sec+1, 30))
+            args.command(client, args)
 
-        ax.set_ylim(bottom=0)
-
-    else:
-        raise RuntimeError('invalid plot_type {}'.format(plot_type))
-
-    fig.autofmt_xdate()
-    ax.xaxis.set_major_locator(mdates.DayLocator())
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %-d')) # May 3
-    if plot_type == 'times':
-        ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(fmt_min)) # 1:30
-    ax.legend(fontsize=6, loc='upper left')
-
-    temp = NamedTemporaryFile(suffix='.png', delete=False)
-    fig.savefig(temp, format='png', bbox_inches='tight')
-    temp.close()
-    plt.close(fig)
-
-    message.channel.upload_file('plot', temp.name)
-
-    os.remove(temp.name)
+    except ParsePrintException as e:
+        print(str(e))

@@ -17,16 +17,27 @@ Initialize the database with `sqlite3 crossbot.db < init_db.sql` if you don't
 have one already.
 
 
+## Running the bot
+
 To actually run the bot, you need to provide an API token.
 ```sh
 export SLACKBOT_API_TOKEN=<<your slack api token>>
 python run.py
 ```
 
-In `slackbot_settings.py` you can change various things including what Slack
-user the bot will report errors to.
+There are some settings in `crossbot.py` that you can play with to change, say,
+who the errors get reported to.
 
+## Messing around on the command line
 
-It's a little difficult to actually test the bot outside of Slack. Your best bet
-is to just load `crossbot.py` in a `python` interpreter and call the functions
-from there. You'll have to mock up `Message` objects.
+You can now run `crossbot` on the command line! Just run `./crossbot.py help`
+like you normally would on Slack. Pretty much all the functionality works. On
+the command line, you're a pretend user with id `command-line-user`.
+
+## Extending crossbot
+
+There's pretty terrible (but somewhat functional) plugin architecture. Files in
+`commands/` are automatically loaded. Check out `commands/times.py` to see how a
+simple command is implemented. You'll probably want to check out the `Client`
+class in `crossbot.py` as well; that's what allows the commands to work the same
+over the shell or Slackk.
