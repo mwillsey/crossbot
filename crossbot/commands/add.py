@@ -2,30 +2,31 @@ import sqlite3
 import math
 
 import crossbot
-import util
 
-def init(subparsers):
+def init(client):
 
-    parser = subparsers.add_parser('add', help='Add a time.')
+    parser = client.parser.subparsers.add_parser('add', help='Add a time.')
     parser.set_defaults(command=add)
 
     parser.add_argument(
         'time',
-        type    = util.get_time,
+        type    = crossbot.time,
         help    = 'Score to add. eg. ":32", "2:45", "fail"')
 
     parser.add_argument(
         'date',
         nargs   = '?',
         default = 'now',
-        type    = util.get_date,
+        type    = crossbot.date,
         help    = 'Date to add a score for.')
 
     # TODO add a command-line only --user parameter
 
-def add(client, args):
+def add(client, request):
     '''Add entry for today (`add 1:07`) or given date (`add :32 2017-05-05`).
        A zero second time will be interpreted as a failed attempt.'''
+
+    args = request.args
 
     # try to add an entry, report back to the user if they already have one
     with sqlite3.connect(crossbot.db_path) as con:
@@ -33,20 +34,21 @@ def add(client, args):
             con.execute('''
             INSERT INTO crossword_time(userid, date, seconds)
             VALUES(?, date(?), ?)
-            ''', (client.userid, args.date, args.time))
+            ''', (request.userid, args.date, args.time))
 
         except sqlite3.IntegrityError:
             seconds = con.execute('''
             SELECT seconds
             FROM crossword_time
             WHERE userid = ? and date = date(?)
-            ''', (client.userid, args.date)).fetchone()
+            ''', (request.userid, args.date)).fetchone()
 
             minutes, seconds = divmod(args.time, 60)
 
-            client.reply('I could not add this to the database, '
+            request.reply('I could not add this to the database, '
                           'because you already have an entry '
-                          '({}:{:02d}) for this date.'.format(minutes, seconds))
+                          '({}:{:02d}) for this date.'.format(minutes, seconds),
+                          direct=True)
             return
 
     with sqlite3.connect(crossbot.db_path) as con:
@@ -60,7 +62,7 @@ def add(client, args):
         fast_time = 15
         slow_time = 2*60 + 30
 
-    client.react(emoji(args.time, fast_time, slow_time))
+    request.react(emoji(args.time, fast_time, slow_time))
 
 # possible reactions sorted by speed
 # if these aren't in Slack, crossbot will crash

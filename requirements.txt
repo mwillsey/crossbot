@@ -11,7 +11,7 @@ python-dateutil==2.6.0
 pytz==2017.2
 requests==2.18.1
 six==1.10.0
--e git://github.com/lins05/slackbot.git@0dbd656f0791cba6b3ff50e3f70294e51ef16a58#egg=slackbot
+git+git://github.com/lins05/slackbot.git@0dbd656f0791cba6b3ff50e3f70294e51ef16a58#egg=slackbot
 slacker==0.9.50
 urllib3==1.21.1
 websocket-client==0.40.0

@@ -2,11 +2,11 @@
 # virtualenv and python stuff
 .Python
 bin
+build
 include
 lib
 lib64
 local
-scripts
 pyvenv.cfg
 .venv
 pip-selfcheck.json
@@ -14,4 +14,7 @@ __pycache__
 
 # ignore the database
 *.db
+
+# ignore your api token
+*TOKEN
 

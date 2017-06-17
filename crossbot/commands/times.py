@@ -1,22 +1,21 @@
 import sqlite3
 
 import crossbot
-import util
 
-def init(subparsers):
+def init(client):
 
-    parser = subparsers.add_parser('times', help='show times')
+    parser = client.parser.subparsers.add_parser('times', help='show times')
     parser.set_defaults(command= times)
 
     parser.add_argument(
         'date',
         nargs   = '?',
         default = 'now',
-        type    = util.get_date,
+        type    = crossbot.date,
         help    = 'Date to get times for.')
 
 
-def times(client, args):
+def times(client, request):
     '''Get all the times for today or given date (`times 2017-05-05`).'''
 
     response = ''
@@ -27,7 +26,7 @@ def times(client, args):
         SELECT userid, seconds
         FROM crossword_time
         WHERE date = date(?)
-        ORDER BY seconds''', (args.date,))
+        ORDER BY seconds''', (request.args.date,))
 
         for userid, seconds in cursor:
             name = client.user(userid)
@@ -41,9 +40,9 @@ def times(client, args):
     response += failures
 
     if len(response) == 0:
-        if args.date == 'now':
+        if request.args.date == 'now':
             response = 'No times yet for today, be the first!'
         else:
             response = 'No times for this date.'
 
-    client.send(response)
+    request.reply(response)

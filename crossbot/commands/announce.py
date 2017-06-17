@@ -1,21 +1,21 @@
 import sqlite3
 
 import crossbot
-import util
 
-def init(subparsers):
+def init(client):
 
-    parser = subparsers.add_parser('announce', help='Announce any streaks.')
+    parser = client.parser.subparsers.add_parser(
+        'announce', help='Announce any streaks.')
     parser.set_defaults(command=announce)
 
     parser.add_argument(
         'date',
         nargs   = '?',
         default = 'now',
-        type    = util.get_date,
+        type    = crossbot.date,
         help    = 'Date to announce for.')
 
-def announce(client, args):
+def announce(client, request):
     '''Report who won the previous day and if they're on a streak.
     Optionally takes a date.'''
 
@@ -30,7 +30,7 @@ def announce(client, args):
             FROM crossword_time
             WHERE date = date(?, ?) AND seconds >= 0
             ORDER BY seconds ASC
-            LIMIT 1''', (args.date, offset_s)).fetchone()
+            LIMIT 1''', (request.args.date, offset_s)).fetchone()
 
             return None if result is None else result[0]
 
@@ -54,4 +54,4 @@ def announce(client, args):
 
         m += "Play today's: https://www.nytimes.com/crosswords/game/mini"
 
-        client.send(m)
+        request.reply(m)

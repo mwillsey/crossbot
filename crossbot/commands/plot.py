@@ -16,11 +16,10 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 import crossbot
-import util
 
-def init(subparsers):
+def init(client):
 
-    parser = subparsers.add_parser('plot', help='plot something')
+    parser = client.parser.subparsers.add_parser('plot', help='plot something')
     parser.set_defaults(
         command   = plot,
         plot_type = 'normalized',
@@ -73,12 +72,12 @@ def init(subparsers):
 
     dates.add_argument(
         '--start-date',
-        type    = util.get_date,
+        type    = crossbot.date,
         metavar = 'START',
         help    = 'Date to start plotting from.')
     dates.add_argument(
         '--end-date',
-        type    = util.get_date,
+        type    = crossbot.date,
         metavar = 'END',
         help    = 'Date to end plotting at. Defaults to today.')
     dates.add_argument(
@@ -90,7 +89,7 @@ def init(subparsers):
         ' Default %(default)s.')
 
 
-def plot(client, args):
+def plot(client, request):
     '''Plot everyone's times in a date range.
     `plot [plot_type] [num_days] [smoothing] [scale] [start date] [end date]`, all arguments optional.
     `plot_type` is either `normalized` (default) or `times` for a non-smoothed plot of actual times.
@@ -99,8 +98,10 @@ def plot(client, args):
     `plot` plots the last 5 days by default.
     The scale can be `log` or `linear`.'''
 
-    start_date = util.get_date(args.start_date)
-    end_date   = util.get_date(args.end_date)
+    args = request.args
+
+    start_date = crossbot.date(args.start_date)
+    end_date   = crossbot.date(args.end_date)
 
     start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
     end_dt   = datetime.datetime.strptime(end_date,   "%Y-%m-%d").date()
@@ -114,7 +115,7 @@ def plot(client, args):
         args.num_days = (end_dt - start_dt).days
 
     if not 0 <= args.smooth <= 0.95:
-        client.reply('smooth should be between 0 and 0.95')
+        request.reply('smooth should be between 0 and 0.95', direct=True)
 
     if args.scale is None:
         args.scale = 'linear' if args.plot_type == 'normalized' else 'log'
@@ -251,6 +252,9 @@ def plot(client, args):
     temp.close()
     plt.close(fig)
 
-    client.upload('plot', temp.name)
+    request.upload('plot', temp.name)
 
-    os.remove(temp.name)
+    # don't renome temp files if using command line client,
+    # let the user see them
+    if not isinstance(request, crossbot.client.CommandLineRequest):
+        os.remove(temp.name)
