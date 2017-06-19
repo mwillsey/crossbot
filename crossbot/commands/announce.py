@@ -49,8 +49,8 @@ def announce(client, request):
         else:
             n = 2
             while best(n+1) == best1: n += 1
-            m += '{} is on a {}-day streak! {}\n'\
-                 .format(users[best1]['name'], n, ':fire:' * n)
+            m += '{} is on a {}-day streak! {}\nCan they keep it up?\n'\
+                 .format(client.user(best1), n, ':fire:' * n)
 
         m += "Play today's: https://www.nytimes.com/crosswords/game/mini"
 
