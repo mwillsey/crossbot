@@ -94,8 +94,8 @@ def init(client):
     focus.add_argument(
         '-f', '--focus',
         type    = str,
-        metavar = 'F',
-        help    = 'Player to focus the plot on.')
+        metavar = 'USER',
+        help    = 'Player to focus the plot on. Use Slack username.')
 
 
 def plot(client, request):
@@ -223,7 +223,7 @@ def plot(client, request):
             dates, scores = zip(*pairs)
             dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
             name = client.user(userid)
-            if not args.focus is None:
+            if args.focus is not None:
                 color = 'red' if args.focus == name else '#0F0F0F0F'
             ax.plot_date(mdates.date2num(dates), scores, next(markers), label=name, color=color)
 
@@ -237,7 +237,7 @@ def plot(client, request):
             max_sec = max(max_sec, max(seconds))
             dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
             name = client.user(userid)
-            if not args.focus is None:
+            if args.focus is not None:
                 color = 'red' if args.focus == name else '#0F0F0F0F'
             ax.plot_date(mdates.date2num(dates), seconds, next(markers), label=name, color=color)
 
