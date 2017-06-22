@@ -25,6 +25,7 @@ def init(client):
         plot_type = 'normalized',
         smooth    = 0.6,
         num_days  = 7,
+        focus     = None,
     )
 
     ptype = parser.add_argument_group('Plot type')\
@@ -87,6 +88,14 @@ def init(client):
         help    = 'Number of days since today to plot.'
         ' Ignored if both start-date and end-date given.'
         ' Default %(default)s.')
+
+    focus = parser.add_argument_group('Focus player')
+
+    focus.add_argument(
+        '-f', '--focus',
+        type    = str,
+        metavar = 'USER',
+        help    = 'Player to focus the plot on. Use Slack username.')
 
 
 def plot(client, request):
@@ -214,6 +223,8 @@ def plot(client, request):
             dates, scores = zip(*pairs)
             dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
             name = client.user(userid)
+            if args.focus is not None:
+                color = 'red' if args.focus == name else '#0F0F0F0F'
             ax.plot_date(mdates.date2num(dates), scores, next(markers), label=name, color=color)
 
     elif args.plot_type == 'times':
@@ -222,11 +233,12 @@ def plot(client, request):
         colors = [cmap(i / n_users) for i in range(n_users)]
         times = OrderedDict(sorted(times.items()))
         for (userid, entries), color in zip(times.items(), colors):
-
             dates, seconds = zip(*entries)
             max_sec = max(max_sec, max(seconds))
             dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
             name = client.user(userid)
+            if args.focus is not None:
+                color = 'red' if args.focus == name else '#0F0F0F0F'
             ax.plot_date(mdates.date2num(dates), seconds, next(markers), label=name, color=color)
 
         if args.scale == 'log':
