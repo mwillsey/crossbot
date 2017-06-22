@@ -220,11 +220,11 @@ def plot(client, request):
         n_users = len(weighted_scores)
         colors = [cmap(i / n_users) for i in range(n_users)]
         for (userid, pairs), color in zip(weighted_scores.items(), colors):
-            if not args.focus is None:
-                color = 'red' if args.focus == userid else '#0F0F0F0F'
             dates, scores = zip(*pairs)
             dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
             name = client.user(userid)
+            if not args.focus is None:
+                color = 'red' if args.focus == name else '#0F0F0F0F'
             ax.plot_date(mdates.date2num(dates), scores, next(markers), label=name, color=color)
 
     elif args.plot_type == 'times':
@@ -233,12 +233,12 @@ def plot(client, request):
         colors = [cmap(i / n_users) for i in range(n_users)]
         times = OrderedDict(sorted(times.items()))
         for (userid, entries), color in zip(times.items(), colors):
-            if not args.focus is None:
-                color = 'red' if args.focus == userid else '#0F0F0F0F'
             dates, seconds = zip(*entries)
             max_sec = max(max_sec, max(seconds))
             dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
             name = client.user(userid)
+            if not args.focus is None:
+                color = 'red' if args.focus == name else '#0F0F0F0F'
             ax.plot_date(mdates.date2num(dates), seconds, next(markers), label=name, color=color)
 
         if args.scale == 'log':
