@@ -48,3 +48,9 @@ There's pretty terrible (but somewhat functional) plugin architecture. Files in
 simple command is implemented. You'll probably want to check out the `Client`
 class in `client.py` as well; that's what allows the commands to work the same
 over the shell or Slack.
+
+When you're developing, make sure to run `./setup.py install` to get
+`crossbot.py` to reflect your changes. If you add or rename files, you might
+want to do `./setup.py clean --all` followed by `./setup.py install` to have it
+start fresh.
+
