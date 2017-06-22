@@ -91,7 +91,8 @@ def time(time_str):
     '''Parses a time that looks like ":32", "3:42", or "fail".'''
 
     if time_str == 'fail':
-        return 0
+        # store fails a negative
+        return -1
 
     match = time_rx.match(time_str)
     if not match:
@@ -102,7 +103,13 @@ def time(time_str):
     minutes, seconds = ( int(x) if x else 0
                          for x in match.groups() )
 
-    return minutes * 60 + seconds
+    total = minutes * 60 + seconds
+
+    if total == 0:
+        # "add :00" is equivalent to "add fail"
+        return - 1
+
+    return total
 
 
 date_fmt = '%Y-%m-%d'
