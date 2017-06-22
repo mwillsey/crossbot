@@ -25,6 +25,7 @@ def init(client):
         plot_type = 'normalized',
         smooth    = 0.6,
         num_days  = 7,
+        focus     = None,
     )
 
     ptype = parser.add_argument_group('Plot type')\
@@ -87,6 +88,14 @@ def init(client):
         help    = 'Number of days since today to plot.'
         ' Ignored if both start-date and end-date given.'
         ' Default %(default)s.')
+
+    focus = parser.add_argument_group('Focus player')
+
+    focus.add_argument(
+        '-f', '--focus',
+        type    = str,
+        metavar = 'F',
+        help    = 'Player to focus the plot on.')
 
 
 def plot(client, request):
@@ -211,6 +220,8 @@ def plot(client, request):
         n_users = len(weighted_scores)
         colors = [cmap(i / n_users) for i in range(n_users)]
         for (userid, pairs), color in zip(weighted_scores.items(), colors):
+            if not args.focus is None:
+                color = 'red' if args.focus == userid else '#0F0F0F0F'
             dates, scores = zip(*pairs)
             dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
             name = client.user(userid)
@@ -222,7 +233,8 @@ def plot(client, request):
         colors = [cmap(i / n_users) for i in range(n_users)]
         times = OrderedDict(sorted(times.items()))
         for (userid, entries), color in zip(times.items(), colors):
-
+            if not args.focus is None:
+                color = 'red' if args.focus == userid else '#0F0F0F0F'
             dates, seconds = zip(*entries)
             max_sec = max(max_sec, max(seconds))
             dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
