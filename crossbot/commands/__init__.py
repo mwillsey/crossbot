@@ -1,3 +1,4 @@
+# from https://stackoverflow.com/a/3365846
 import pkgutil
 
 __all__ = []
