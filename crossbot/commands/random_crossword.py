@@ -8,20 +8,22 @@ import random
 
 def init(client):
 
-    parser = client.parser.subparsers.add_parser('random', help='random mini crossword url')
+    parser = client.parser.subparsers.add_parser(
+            'random',
+            help='Get a random mini crossworl link.')
     parser.set_defaults(command=random_date_url)
 
     parser.add_argument(
         '--start-date',
         default = first_dt,
         type    = crossbot.date,
-        help    = 'Date to get times for.')
+        help    = 'Beginning of random range. Default {}'.format(first_date))
 
     parser.add_argument(
         '--end-date',
         default = 'now',
         type    = crossbot.date,
-        help    = 'Date to get times for.')
+        help    = 'End of random range. Default today.')
 
 mini_url = "https://www.nytimes.com/crosswords/game/mini/{:04}/{:02}/{:02}"
 
