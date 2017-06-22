@@ -29,6 +29,7 @@ def init(client):
         smooth    = 0.6,
         num_days  = 7,
         focus     = None,
+        scale     = 'symlog',
     )
 
     ptype = parser.add_argument_group('Plot type')\
@@ -56,8 +57,8 @@ def init(client):
         '--log',
         action = 'store_const',
         dest   = 'scale',
-        const  = 'log')
-    scales.add_argument (
+        const  = 'symlog')
+    scales.add_argument(
         '--linear',
         action = 'store_const',
         dest   = 'scale',
@@ -111,7 +112,7 @@ def plot(client, request):
     `smoothing` is between 0 (no smoothing) and 1 exclusive. .6 default
     You can provide either `num_days` or `start_date` and `end_date`.
     `plot` plots the last 5 days by default.
-    The scale can be `log` or `linear`.'''
+    The scale can be `log` (the default) or `linear`.'''
 
     args = request.args
 
@@ -134,9 +135,6 @@ def plot(client, request):
 
     if not 0 <= args.smooth <= 0.95:
         request.reply('smooth should be between 0 and 0.95', direct=True)
-
-    if args.scale is None:
-        args.scale = 'linear' if args.plot_type == 'normalized' else 'log'
 
     with sqlite3.connect(crossbot.db_path) as con:
         query = '''
@@ -216,7 +214,7 @@ def plot(client, request):
 
     if args.plot_type == 'times':
 
-        if args.scale == 'log':
+        if args.scale == 'symlog':
             ticks = takewhile(lambda x: x <= max_score, (30 * (2**i) for i in range(10)))
             ax.yaxis.set_ticks(list(ticks))
         else:
@@ -314,7 +312,10 @@ def get_normalized_scores(entries, args):
                         if old_score is not None else score
 
             running[user] = new_score
-            plot_score = max(MIN_PLOT_SCORE, min(new_score, MAX_PLOT_SCORE))
+            if args.scale == 'symlog':
+                plot_score = new_score
+            else:
+                plot_score = max(MIN_PLOT_SCORE, min(new_score, MAX_PLOT_SCORE))
             weighted_scores[user][date] = plot_score
 
     return weighted_scores
