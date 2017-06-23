@@ -26,6 +26,7 @@ def init(client):
         smooth    = 0.6,
         num_days  = 7,
         focus     = None,
+        scale     = 'log',
     )
 
     ptype = parser.add_argument_group('Plot type')\
@@ -54,17 +55,12 @@ def init(client):
         '--log',
         action = 'store_const',
         dest   = 'scale',
-        const  = 'log')
+        const  = 'symlog')
     scales.add_argument(
         '--linear',
         action = 'store_const',
         dest   = 'scale',
         const  = 'linear')
-    scales.add_argument(
-        '--symlog',
-        action = 'store_const',
-        dest   = 'scale',
-        const  = 'symlog')
 
     appearance.add_argument(
         '-s', '--smooth',
@@ -110,7 +106,7 @@ def plot(client, request):
     `smoothing` is between 0 (no smoothing) and 1 exclusive. .6 default
     You can provide either `num_days` or `start_date` and `end_date`.
     `plot` plots the last 5 days by default.
-    The scale can be `log`, `symlog`, or `linear`.'''
+    The scale can be `log` (the default) or `linear`.'''
 
     args = request.args
 
@@ -130,9 +126,6 @@ def plot(client, request):
 
     if not 0 <= args.smooth <= 0.95:
         request.reply('smooth should be between 0 and 0.95', direct=True)
-
-    if args.scale is None:
-        args.scale = 'symlog'
 
     with sqlite3.connect(crossbot.db_path) as con:
         cursor = con.execute('''
@@ -249,7 +242,7 @@ def plot(client, request):
                 color = 'red' if args.focus == name else '#0F0F0F0F'
             ax.plot_date(mdates.date2num(dates), seconds, next(markers), label=name, color=color)
 
-        if args.scale == 'log' or args.scale == 'symlog':
+        if args.scale == 'symlog':
             ticks = takewhile(lambda x: x <= max_sec, (30 * (2**i) for i in range(10)))
             ax.yaxis.set_ticks(list(ticks))
         else:
