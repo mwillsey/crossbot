@@ -15,42 +15,59 @@ def init(client):
         type    = crossbot.date,
         help    = 'Date to announce for.')
 
+def best(con, date, offset=0):
+    offset_s = '-{} days'.format(offset)
+    result = con.execute('''
+    WITH date_times 
+    AS (SELECT * 
+        FROM crossword_time 
+        WHERE date = date(?, ?) AND seconds >=0)
+    SELECT userid 
+    FROM date_times 
+    WHERE seconds = (SELECT min(seconds) FROM date_times)
+    ''', (date, offset_s)).fetchall()
+
+    # get the actual userid's out of the tuple
+    return set(tup[0] for tup in result)
+
+
+
 def announce(client, request):
     '''Report who won the previous day and if they're on a streak.
     Optionally takes a date.'''
 
     m = ""
 
+    date = request.args.date
+
     with sqlite3.connect(crossbot.db_path) as con:
 
-        def best(offset):
-            offset_s = '-{} days'.format(offset)
-            result = con.execute('''
-            SELECT userid
-            FROM crossword_time
-            WHERE date = date(?, ?) AND seconds >= 0
-            ORDER BY seconds ASC
-            LIMIT 1''', (request.args.date, offset_s)).fetchone()
+        best1 = best(con, date, 1)
+        best2 = best(con, date, 2)
+        streaks = best1 & best2
 
-            return None if result is None else result[0]
+        def fmt(best_set):
+            return ' and '.join(client.user(uid) for uid in best_set)
 
-        best1 = best(1)
-        best2 = best(2)
-
-        if best1 is None:
+        if not best1:
             m += 'No one played the minicrossword yesterday. Why not?\n'
-        elif best1 != best2:
-            # no streak
+        elif not streaks:
+            # empty intersection means no streak
+            assert best1
             m += 'Yesterday, {} solved the minicrossword fastest.\n'\
-                 .format(client.user(best1))
-            if best2 is not None:
+                 .format(fmt(best1))
+            if best2:
                 m += '{} won the day before.\n'\
-                     .format(client.user(best2))
+                     .format(fmt(best2))
         else:
+            assert streaks
+            # sorry, but tracking multiple winning streaks is too hard and
+            # is very unlikely
+            best_uid = list(streaks)[0]
             n = 2
-            while best(n+1) == best1: n += 1
+            while best_uid in best(con, date, n+1): n += 1
             m += '{} is on a {}-day streak! {}\nCan they keep it up?\n'\
-                 .format(client.user(best1), n, ':fire:' * n)
+                 .format(client.user(best_uid), n, ':fire:' * n)
 
         m += "Play today's: https://www.nytimes.com/crosswords/game/mini"
 
