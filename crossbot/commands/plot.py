@@ -26,7 +26,7 @@ def init(client):
         smooth    = 0.6,
         num_days  = 7,
         focus     = None,
-        scale     = 'log',
+        scale     = 'symlog',
     )
 
     ptype = parser.add_argument_group('Plot type')\
