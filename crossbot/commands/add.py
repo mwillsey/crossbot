@@ -57,7 +57,7 @@ def add(client, request):
 
     if day_of_week == 6: # Saturday is longer
         fast_time = 30
-        slow_time = 3*60 + 30
+        slow_time = 4*60 + 30
     else:
         fast_time = 15
         slow_time = 2*60 + 30
