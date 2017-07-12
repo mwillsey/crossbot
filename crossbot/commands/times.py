@@ -22,11 +22,13 @@ def times(client, request):
     failures = ''
 
     with sqlite3.connect(crossbot.db_path) as con:
-        cursor = con.execute('''
+        query = '''
         SELECT userid, seconds
-        FROM crossword_time
+        FROM {}
         WHERE date = date(?)
-        ORDER BY seconds''', (request.args.date,))
+        ORDER BY seconds'''.format(request.args.table)
+
+        cursor = con.execute(query, (request.args.date,))
 
         for userid, seconds in cursor:
             name = client.user(userid)

@@ -4,3 +4,5 @@ date = parser.date
 time = parser.time
 
 db_path = settings.db_path
+
+tables = settings.tables

@@ -43,6 +43,27 @@ class Parser:
             '''
         )
 
+        self.parser.set_defaults(
+            table = crossbot.tables['mini']
+        )
+
+        table_choice = self.parser.add_argument_group('Mini or Regular')\
+                                  .add_mutually_exclusive_group()
+
+        table_choice.add_argument(
+            '--mini',
+            action = 'store_const',
+            dest   = 'table',
+            const  = crossbot.tables['mini'],
+            help   = 'Use the scores from the mini crossword.')
+
+        table_choice.add_argument(
+            '-r', '--regular',
+            action = 'store_const',
+            dest   = 'table',
+            const  = crossbot.tables['regular'],
+            help   = 'Use the scores from the regular crossword.')
+
         self.subparsers = self.parser.add_subparsers(help = 'subparsers help')
 
         help_parser = self.subparsers.add_parser('help')

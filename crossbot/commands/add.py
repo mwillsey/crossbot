@@ -31,17 +31,20 @@ def add(client, request):
     # try to add an entry, report back to the user if they already have one
     with sqlite3.connect(crossbot.db_path) as con:
         try:
-            con.execute('''
-            INSERT INTO crossword_time(userid, date, seconds)
+            query = '''
+            INSERT INTO {}(userid, date, seconds)
             VALUES(?, date(?), ?)
-            ''', (request.userid, args.date, args.time))
+            '''.format(args.table)
+
+            con.execute(query, (request.userid, args.date, args.time))
 
         except sqlite3.IntegrityError:
-            seconds = con.execute('''
+            query = '''
             SELECT seconds
-            FROM crossword_time
+            FROM {}
             WHERE userid = ? and date = date(?)
-            ''', (request.userid, args.date)).fetchone()
+            '''.format(args.table)
+            seconds = con.execute(query, (request.userid, args.date)).fetchone()
 
             minutes, seconds = divmod(args.time, 60)
 

@@ -20,11 +20,13 @@ def delete(client, request):
     '''Delete entry for today or given date (`delete 2017-05-05`).'''
 
     with sqlite3.connect(crossbot.db_path) as con:
-        cur = con.cursor()
-        cur.execute('''
-        DELETE FROM crossword_time
+        query = '''
+        DELETE FROM {}
         WHERE userid=? AND date=date(?)
-        ''', (request.userid, request.args.date))
+        '''.format(request.args.table)
+
+        cur = con.cursor()
+        cur.execute(query, (request.userid, request.args.date))
 
         if cur.rowcount == 0:
             request.reply("You didn't have an entry for this date.",

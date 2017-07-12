@@ -130,13 +130,15 @@ def plot(client, request):
         args.scale = 'linear' if args.plot_type == 'normalized' else 'log'
 
     with sqlite3.connect(crossbot.db_path) as con:
-        cursor = con.execute('''
+        query = '''
         SELECT userid, date, seconds
-        FROM crossword_time
+        FROM {}
         WHERE date
           BETWEEN date(?)
           AND     date(?)
-        ORDER BY date, userid''', (start_date, end_date))
+        ORDER BY date, userid'''.format(args.table)
+
+        cursor = con.execute(query, (start_date, end_date))
 
         userids_present = set()
 
@@ -255,8 +257,13 @@ def plot(client, request):
     fig.autofmt_xdate()
     ax.xaxis.set_major_locator(mdates.DayLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %-d')) # May 3
+
     if args.plot_type == 'times':
         ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(fmt_min)) # 1:30
+
+    # hack to prevent crashes on the regular crosswords
+    ax.xaxis.get_major_locator().MAXTICKS = 10000
+
     ax.legend(fontsize=6, loc='upper left')
 
     temp = NamedTemporaryFile(suffix='.png', delete=False)
