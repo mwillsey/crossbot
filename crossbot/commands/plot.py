@@ -17,6 +17,8 @@ import matplotlib.dates as mdates
 
 import crossbot
 
+from crossbot.parser import date_fmt
+
 
 def init(client):
 
@@ -116,16 +118,19 @@ def plot(client, request):
     start_date = crossbot.date(args.start_date)
     end_date   = crossbot.date(args.end_date)
 
-    start_dt = datetime.datetime.strptime(start_date, "%Y-%m-%d").date()
-    end_dt   = datetime.datetime.strptime(end_date,   "%Y-%m-%d").date()
+    start_dt = datetime.datetime.strptime(start_date, date_fmt).date()
+    end_dt   = datetime.datetime.strptime(end_date,   date_fmt).date()
 
     # we only use num_days if the other params weren't given
     # otherwise set num_days based the given range
     if start_date == end_date:
         start_dt -= datetime.timedelta(days=args.num_days)
-        start_date = start_dt.strftime("%Y-%m-%d")
+        start_date = start_dt.strftime(date_fmt)
     else:
         args.num_days = (end_dt - start_dt).days
+
+    dt_range = [start_dt + datetime.timedelta(days=i) for i in range(args.num_days + 1)]
+    date_range = [dt.strftime(date_fmt) for dt in dt_range]
 
     if not 0 <= args.smooth <= 0.95:
         request.reply('smooth should be between 0 and 0.95', direct=True)
@@ -152,7 +157,27 @@ def plot(client, request):
     else:
         raise RuntimeError('invalid plot_type {}'.format(args.plot_type))
 
-    user_scores = sorted(scores_by_user.items())
+    # find contiguous sequences of dates
+    user_seqs = defaultdict(list)
+    for userid, date_scores in scores_by_user.items():
+        date_seq = []
+
+        for date in date_range:
+            score = date_scores.get(date)
+
+            if score is not None:
+                date_seq.append((date, score))
+                continue
+
+            # no score for this date, lets break the sequence, adding this
+            # contiguous sequence to user_seqs
+            if date_seq:
+                user_seqs[userid].append(date_seq)
+                date_seq = []
+
+        # get the final sequence if one exists
+        if date_seq:
+            user_seqs[userid].append(date_seq)
 
     width, height, dpi = (120*args.num_days), 600, 100
     width = max(400, min(width, 1000))
@@ -168,19 +193,26 @@ def plot(client, request):
     cmap = plt.get_cmap('nipy_spectral')
     markers = cycle(['-o', '-X', '-s', '-^'])
 
-    n_users = len(user_scores)
+    n_users = len(user_seqs)
     colors = [cmap(i / n_users) for i in range(n_users)]
 
     max_score = -100000
 
-    for (userid, date_scores), color in zip(user_scores, colors):
-        dates, scores = zip(*date_scores.items())
-        max_score = max(max_score, max(scores))
-        dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
+    for (userid, date_seqs), color, marker in zip(user_seqs.items(), colors, markers):
         name = client.user(userid)
-        if args.focus is not None:
-            color = 'red' if args.focus == name else '#0F0F0F0F'
-        ax.plot_date(mdates.date2num(dates), scores, next(markers), label=name, color=color)
+        label = name
+        for date_seq in date_seqs:
+            dates, scores = zip(*date_seq)
+            max_score = max(max_score, max(scores))
+            dates = [datetime.datetime.strptime(d, date_fmt).date() for d in dates]
+
+            if args.focus is not None:
+                color = 'red' if args.focus == name else '#0F0F0F0F'
+
+            ax.plot_date(mdates.date2num(dates), scores, marker, label=label, color=color)
+
+            # make sure that we don't but anyone in the legend twice
+            label = '_nolegend_'
 
     if args.plot_type == 'times':
 
