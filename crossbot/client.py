@@ -23,7 +23,7 @@ class CommandLineRequest(Request):
         print(prefix + msg)
 
     def upload(self, name, path):
-        print('Pretending to upload {} as "{}"'.format(path, name))
+        print(path)
 
 class SlackRequest(Request):
 
