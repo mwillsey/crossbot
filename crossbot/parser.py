@@ -136,12 +136,15 @@ def time(time_str):
 date_fmt = '%Y-%m-%d'
 nyt_timezone = pytz.timezone('US/Eastern')
 
-def date(date_str):
-    '''If date_str is a date, this does nothing. If it's 'now' or None, then
+def date(date_str, default='now'):
+    '''If date_str is a date, this does nothing. If it's 'now', then
     this gets either today's date or tomorrow's if the crossword has already
     come out (10pm on weekdays, 6pm on weekends)'''
 
-    if date_str is None or date_str == 'now':
+    if date_str is None:
+        date_str = default
+
+    if date_str == 'now':
 
         dt = datetime.datetime.now(nyt_timezone)
 

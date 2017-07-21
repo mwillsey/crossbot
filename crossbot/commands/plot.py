@@ -73,14 +73,16 @@ def init(client):
 
     dates = parser.add_argument_group('Date range')
 
+    def date_none(date_str): return crossbot.date(date_str, default=None)
+
     dates.add_argument(
         '--start-date',
-        type    = crossbot.date,
+        type    = date_none,
         metavar = 'START',
         help    = 'Date to start plotting from.')
     dates.add_argument(
         '--end-date',
-        type    = crossbot.date,
+        type    = date_none,
         metavar = 'END',
         help    = 'Date to end plotting at. Defaults to today.')
     dates.add_argument(
@@ -108,6 +110,11 @@ def fmt_min(sec, pos):
     return '{}:{:02}'.format(minutes, seconds)
 
 
+# "date" means a date string, "dt" means a datetime object
+def date_dt(date):
+    return datetime.datetime.strptime(date, date_fmt).date()
+
+
 def plot(client, request):
     '''Plot everyone's times in a date range.
     `smoothing` is between 0 (no smoothing) and 1 exclusive. .6 default
@@ -117,25 +124,40 @@ def plot(client, request):
 
     args = request.args
 
-    start_date = crossbot.date(args.start_date)
-    end_date   = crossbot.date(args.end_date)
+    start_date = args.start_date
+    end_date = args.end_date
 
-    start_dt = datetime.datetime.strptime(start_date, date_fmt).date()
-    end_dt   = datetime.datetime.strptime(end_date,   date_fmt).date()
+    delta = datetime.timedelta(days=args.num_days)
 
-    # we only use num_days if the other params weren't given
-    # otherwise set num_days based the given range
-    if start_date == end_date:
-        start_dt -= datetime.timedelta(days=args.num_days)
-        start_date = start_dt.strftime(date_fmt)
+    # if we have both dates, use them and correct num days
+    # if we have one, use that and num_days
+    # otherwise, end_date is today and use num_days
+    if start_date:
+        start_dt = date_dt(start_date)
+        if end_date:
+            end_dt = date_dt(end_date)
+            args.num_days = (end_dt - start_dt).days
+        else:
+            end_dt = start_dt + delta
     else:
-        args.num_days = (end_dt - start_dt).days
+        end_dt = date_dt(end_date if end_date else crossbot.date('now'))
+        start_dt = end_dt - delta
 
-    dt_range = [start_dt + datetime.timedelta(days=i) for i in range(args.num_days + 1)]
-    date_range = [dt.strftime(date_fmt) for dt in dt_range]
+    # reformat the dates based on the above dt calculations
+    start_date = start_dt.strftime(date_fmt)
+    end_date = end_dt.strftime(date_fmt)
 
     if not 0 <= args.smooth <= 0.95:
         request.reply('smooth should be between 0 and 0.95', direct=True)
+        return
+
+    if start_dt > end_dt:
+        request.reply('start date should be before end_date', direct=True)
+        return
+
+    dt_range = [ start_dt + datetime.timedelta(days=i)
+                 for i in range(args.num_days + 1) ]
+    date_range = [dt.strftime(date_fmt) for dt in dt_range]
 
     # For normalized, once date_range is already made, bump the start date
     # back. Normalized uses smoothing, so we don't want the initial point
