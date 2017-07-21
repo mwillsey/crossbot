@@ -28,7 +28,6 @@ def init(client):
         plot_type = 'normalized',
         smooth    = 0.6,
         num_days  = 7,
-        focus     = None,
         scale     = 'linear',
     )
 
@@ -92,13 +91,12 @@ def init(client):
         ' Ignored if both start-date and end-date given.'
         ' Default %(default)s.')
 
-    focus = parser.add_argument_group('Focus player')
-
-    focus.add_argument(
+    parser.add_argument(
         '-f', '--focus',
+        action  = 'append',
         type    = str,
         metavar = 'USER',
-        help    = 'Player to focus the plot on. Use Slack username.')
+        help    = 'Slack name of player to focus the plot on. Can be used multiple times.')
 
 
 # a nice way to convert db entries into objects
@@ -204,13 +202,14 @@ def plot(client, request):
     for (userid, date_seqs), color, marker in zip(user_seqs.items(), colors, markers):
         name = client.user(userid)
         label = name
+
+        if args.focus:
+            color = color if name in args.focus else '#0F0F0F0F'
+
         for date_seq in date_seqs:
             dates, scores = zip(*date_seq)
             max_score = max(max_score, max(scores))
             dates = [datetime.datetime.strptime(d, date_fmt).date() for d in dates]
-
-            if args.focus is not None:
-                color = 'red' if args.focus == name else '#0F0F0F0F'
 
             ax.plot_date(mdates.date2num(dates), scores, marker, label=label, color=color)
 
