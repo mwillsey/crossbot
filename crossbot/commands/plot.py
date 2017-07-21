@@ -6,7 +6,7 @@ import statistics
 import numpy as np
 
 from collections import defaultdict, namedtuple
-from itertools import takewhile, cycle
+from itertools import cycle
 from tempfile import NamedTemporaryFile
 
 # don't use matplotlib gui
@@ -29,7 +29,7 @@ def init(client):
         smooth    = 0.6,
         num_days  = 7,
         focus     = None,
-        scale     = 'symlog',
+        scale     = 'linear',
     )
 
     ptype = parser.add_argument_group('Plot type')\
@@ -105,6 +105,11 @@ def init(client):
 Entry = namedtuple('Entry', ['userid', 'date', 'seconds'])
 
 
+def fmt_min(sec, pos):
+    minutes, seconds = divmod(int(sec), 60)
+    return '{}:{:02}'.format(minutes, seconds)
+
+
 def plot(client, request):
     '''Plot everyone's times in a date range.
     `plot [plot_type] [num_days] [smoothing] [scale] [start date] [end date]`, all arguments optional.
@@ -112,7 +117,7 @@ def plot(client, request):
     `smoothing` is between 0 (no smoothing) and 1 exclusive. .6 default
     You can provide either `num_days` or `start_date` and `end_date`.
     `plot` plots the last 5 days by default.
-    The scale can be `log` (the default) or `linear`.'''
+    The scale can be `log` or `linear` (default).'''
 
     args = request.args
 
@@ -150,8 +155,13 @@ def plot(client, request):
 
     if args.plot_type == 'normalized':
         scores_by_user = get_normalized_scores(entries, args)
+        ticker = matplotlib.ticker.MultipleLocator(base=0.25)
+        formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
     elif args.plot_type == 'times':
         scores_by_user = get_times(entries, args)
+        sec = 30 if args.table == crossbot.tables['mini'] else 60 * 5
+        ticker = matplotlib.ticker.MultipleLocator(base=sec)
+        formatter = matplotlib.ticker.FuncFormatter(fmt_min) # 1:30
     else:
         raise RuntimeError('invalid plot_type {}'.format(args.plot_type))
 
@@ -182,11 +192,6 @@ def plot(client, request):
 
     fig = plt.figure(figsize=(width/dpi, height/dpi), dpi=dpi)
     ax = fig.add_subplot(1,1,1)
-    ax.set_yscale(args.scale)
-
-    def fmt_min(sec, pos):
-        minutes, seconds = divmod(int(sec), 60)
-        return '{}:{:02}'.format(minutes, seconds)
 
     cmap = plt.get_cmap('nipy_spectral')
     markers = cycle(['-o', '-X', '-s', '-^'])
@@ -212,22 +217,13 @@ def plot(client, request):
             # make sure that we don't but anyone in the legend twice
             label = '_nolegend_'
 
-    if args.plot_type == 'times':
-
-        if args.scale == 'symlog':
-            ticks = takewhile(lambda x: x <= max_score, (30 * (2**i) for i in range(10)))
-            ax.yaxis.set_ticks(list(ticks))
-        else:
-            ax.yaxis.set_ticks(range(0, max_score + 1, 30))
-
-        ax.set_ylim(bottom=0)
+    ax.set_yscale(args.scale)
+    ax.yaxis.set_major_locator(ticker)
+    ax.yaxis.set_major_formatter(formatter)
 
     fig.autofmt_xdate()
     ax.xaxis.set_major_locator(mdates.DayLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %-d')) # May 3
-
-    if args.plot_type == 'times':
-        ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(fmt_min)) # 1:30
 
     # hack to prevent crashes on the regular crosswords
     ax.xaxis.get_major_locator().MAXTICKS = 10000
@@ -267,7 +263,7 @@ def get_normalized_scores(entries, args):
     sorted_dates = sorted(times_by_date.keys())
 
     # failures come with a heaver ranking penalty
-    MAX_PENALTY = -1.5
+    MAX_SCORE = 1.5
     FAILURE_PENALTY = -2
 
     def mk_score(mean, t, stdev):
@@ -277,7 +273,7 @@ def get_normalized_scores(entries, args):
             return 0
 
         score = (mean - t) / stdev
-        return max(MAX_PENALTY, score)
+        return np.clip(score, -MAX_SCORE, MAX_SCORE)
 
     # scores are the stdev away from mean of that day
     scores = {}
@@ -300,8 +296,6 @@ def get_normalized_scores(entries, args):
     new_score_weight = 1 - args.smooth
     running = defaultdict(list)
 
-    MAX_PLOT_SCORE =  1.0
-    MIN_PLOT_SCORE = -1.0
     weighted_scores = defaultdict(dict)
     for date in sorted_dates:
         for user, score in scores[date].items():
@@ -311,12 +305,7 @@ def get_normalized_scores(entries, args):
             new_score = score * new_score_weight + old_score * (1 - new_score_weight) \
                         if old_score is not None else score
 
-            running[user] = new_score
-            if args.scale == 'symlog':
-                plot_score = new_score
-            else:
-                plot_score = max(MIN_PLOT_SCORE, min(new_score, MAX_PLOT_SCORE))
-            weighted_scores[user][date] = plot_score
+            weighted_scores[user][date] = running[user] = new_score
 
     return weighted_scores
 
