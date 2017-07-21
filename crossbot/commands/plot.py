@@ -5,7 +5,7 @@ import sqlite3
 import statistics
 import numpy as np
 
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, namedtuple
 from itertools import takewhile, cycle
 from tempfile import NamedTemporaryFile
 
@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
 import crossbot
+
 
 def init(client):
 
@@ -45,7 +46,6 @@ def init(client):
         const   = 'normalized',
         help    = 'Plot smoothed, normalized scores.'
         ' Higher is better. (Default)')
-
 
     appearance = parser.add_argument_group('Plot appearance')
     scales = appearance.add_mutually_exclusive_group()
@@ -98,6 +98,10 @@ def init(client):
         help    = 'Player to focus the plot on. Use Slack username.')
 
 
+# a nice way to convert db entries into objects
+Entry = namedtuple('Entry', ['userid', 'date', 'seconds'])
+
+
 def plot(client, request):
     '''Plot everyone's times in a date range.
     `plot [plot_type] [num_days] [smoothing] [scale] [start date] [end date]`, all arguments optional.
@@ -138,70 +142,17 @@ def plot(client, request):
           AND     date(?)
         ORDER BY date, userid'''.format(args.table)
 
-        cursor = con.execute(query, (start_date, end_date))
-
-        userids_present = set()
-
-        times = defaultdict(list)
-        times_by_date = defaultdict(dict)
-        for userid, date, seconds in cursor:
-            userids_present.add(userid)
-            if seconds >= 0:
-                # don't add failures to the times plot
-                times[userid].append((date, seconds))
-            times_by_date[date][userid] = seconds
+        cur = con.execute(query, (start_date, end_date))
+        entries = [Entry._make(tup) for tup in cur]
 
     if args.plot_type == 'normalized':
-        sorted_dates = sorted(times_by_date.keys())
+        scores_by_user = get_normalized_scores(entries, args)
+    elif args.plot_type == 'times':
+        scores_by_user = get_times(entries, args)
+    else:
+        raise RuntimeError('invalid plot_type {}'.format(args.plot_type))
 
-        # failures come with a heaver ranking penalty
-        MAX_PENALTY = -1.5
-        FAILURE_PENALTY = -2
-
-        def mk_score(mean, t, stdev):
-            if t < 0:
-                return FAILURE_PENALTY
-            if stdev == 0:
-                return 0
-
-            score = (mean - t) / stdev
-            return max(MAX_PENALTY, score)
-
-        # scores are the stdev away from mean of that day
-        scores = {}
-        for date, user_times in times_by_date.items():
-            times = user_times.values()
-            # make failures 1 minute worse than the worst time
-            times = [t if t >= 0 else max(times) + 60 for t in times]
-            q1, q3 = np.percentile(times, [25,75])
-            stdev  = statistics.pstdev(times)
-            o1, o3 = q1 - stdev, q3 + stdev
-            times  = [t for t in times if o1 <= t <= o3]
-            mean  = statistics.mean(times)
-            stdev  = statistics.pstdev(times, mean)
-            scores[date] = {
-                userid: mk_score(mean, t, stdev)
-                for userid, t in user_times.items()
-            }
-
-        new_score_weight = 1 - args.smooth
-        running = defaultdict(list)
-
-        MAX_PLOT_SCORE =  1.0
-        MIN_PLOT_SCORE = -1.0
-        weighted_scores = defaultdict(list)
-        for date in sorted_dates:
-            for user, score in scores[date].items():
-
-                old_score = running.get(user)
-
-                new_score = score * new_score_weight + old_score * (1 - new_score_weight) \
-                            if old_score is not None else score
-
-                running[user] = new_score
-                plot_score = max(MIN_PLOT_SCORE, min(new_score, MAX_PLOT_SCORE))
-                weighted_scores[user].append((date, plot_score))
-
+    user_scores = sorted(scores_by_user.items())
 
     width, height, dpi = (120*args.num_days), 600, 100
     width = max(400, min(width, 1000))
@@ -217,42 +168,29 @@ def plot(client, request):
     cmap = plt.get_cmap('nipy_spectral')
     markers = cycle(['-o', '-X', '-s', '-^'])
 
-    if args.plot_type == 'normalized':
-        weighted_scores = OrderedDict(sorted(weighted_scores.items()))
-        n_users = len(weighted_scores)
-        colors = [cmap(i / n_users) for i in range(n_users)]
-        for (userid, pairs), color in zip(weighted_scores.items(), colors):
-            dates, scores = zip(*pairs)
-            dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
-            name = client.user(userid)
-            if args.focus is not None:
-                color = 'red' if args.focus == name else '#0F0F0F0F'
-            ax.plot_date(mdates.date2num(dates), scores, next(markers), label=name, color=color)
+    n_users = len(user_scores)
+    colors = [cmap(i / n_users) for i in range(n_users)]
 
-    elif args.plot_type == 'times':
-        max_sec = 0
-        n_users = len(times)
-        colors = [cmap(i / n_users) for i in range(n_users)]
-        times = OrderedDict(sorted(times.items()))
-        for (userid, entries), color in zip(times.items(), colors):
-            dates, seconds = zip(*entries)
-            max_sec = max(max_sec, max(seconds))
-            dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
-            name = client.user(userid)
-            if args.focus is not None:
-                color = 'red' if args.focus == name else '#0F0F0F0F'
-            ax.plot_date(mdates.date2num(dates), seconds, next(markers), label=name, color=color)
+    max_score = -100000
+
+    for (userid, date_scores), color in zip(user_scores, colors):
+        dates, scores = zip(*date_scores)
+        max_score = max(max_score, max(scores))
+        dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
+        name = client.user(userid)
+        if args.focus is not None:
+            color = 'red' if args.focus == name else '#0F0F0F0F'
+        ax.plot_date(mdates.date2num(dates), scores, next(markers), label=name, color=color)
+
+    if args.plot_type == 'times':
 
         if args.scale == 'log':
-            ticks = takewhile(lambda x: x <= max_sec, (30 * (2**i) for i in range(10)))
+            ticks = takewhile(lambda x: x <= max_score, (30 * (2**i) for i in range(10)))
             ax.yaxis.set_ticks(list(ticks))
         else:
-            ax.yaxis.set_ticks(range(0, max_sec+1, 30))
+            ax.yaxis.set_ticks(range(0, max_score + 1, 30))
 
         ax.set_ylim(bottom=0)
-
-    else:
-        raise RuntimeError('invalid plot_type {}'.format(args.plot_type))
 
     fig.autofmt_xdate()
     ax.xaxis.set_major_locator(mdates.DayLocator())
@@ -277,3 +215,86 @@ def plot(client, request):
     # let the user see them
     if not isinstance(request, crossbot.client.CommandLineRequest):
         os.remove(temp.name)
+
+
+#########################
+### Scoring Functions ###
+#########################
+
+
+# these should all take a list of Entry objects and the args object, and a
+# return a dict that looks like this:
+# scores[userid] = [(date, score), ...]
+
+
+def get_normalized_scores(entries, args):
+    """Generate smoothed scores based on mean, stdev of that days times. """
+
+    times_by_date = defaultdict(dict)
+    for e in entries:
+        times_by_date[e.date][e.userid] = e.seconds
+
+    sorted_dates = sorted(times_by_date.keys())
+
+    # failures come with a heaver ranking penalty
+    MAX_PENALTY = -1.5
+    FAILURE_PENALTY = -2
+
+    def mk_score(mean, t, stdev):
+        if t < 0:
+            return FAILURE_PENALTY
+        if stdev == 0:
+            return 0
+
+        score = (mean - t) / stdev
+        return max(MAX_PENALTY, score)
+
+    # scores are the stdev away from mean of that day
+    scores = {}
+    for date, user_times in times_by_date.items():
+        times = [t for t in user_times.values() if t is not None]
+        # make failures 1 minute worse than the worst time
+        times = [t if t >= 0 else max(times) + 60 for t in times]
+        q1, q3 = np.percentile(times, [25,75])
+        stdev  = statistics.pstdev(times)
+        o1, o3 = q1 - stdev, q3 + stdev
+        times  = [t for t in times if o1 <= t <= o3]
+        mean  = statistics.mean(times)
+        stdev  = statistics.pstdev(times, mean)
+        scores[date] = {
+            userid: mk_score(mean, t, stdev)
+            for userid, t in user_times.items()
+            if t is not None
+        }
+
+    new_score_weight = 1 - args.smooth
+    running = defaultdict(list)
+
+    MAX_PLOT_SCORE =  1.0
+    MIN_PLOT_SCORE = -1.0
+    weighted_scores = defaultdict(list)
+    for date in sorted_dates:
+        for user, score in scores[date].items():
+
+            old_score = running.get(user)
+
+            new_score = score * new_score_weight + old_score * (1 - new_score_weight) \
+                        if old_score is not None else score
+
+            running[user] = new_score
+            plot_score = max(MIN_PLOT_SCORE, min(new_score, MAX_PLOT_SCORE))
+            weighted_scores[user].append((date, plot_score))
+
+    return weighted_scores
+
+
+def get_times(entries, args):
+    """Just get the times, removing any failures."""
+
+    times = defaultdict(list)
+    for e in entries:
+        if e.seconds >= 0:
+            # don't add failures to the times plot
+            times[e.userid].append((e.date, e.seconds))
+
+    return times
