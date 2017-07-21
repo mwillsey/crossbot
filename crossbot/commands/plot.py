@@ -6,7 +6,7 @@ import statistics
 import numpy as np
 
 from collections import defaultdict, namedtuple
-from itertools import cycle
+from itertools import cycle, groupby
 from tempfile import NamedTemporaryFile
 
 # don't use matplotlib gui
@@ -25,10 +25,10 @@ def init(client):
     parser = client.parser.subparsers.add_parser('plot', help='plot something')
     parser.set_defaults(
         command   = plot,
-        plot_type = 'normalized',
         smooth    = 0.6,
         num_days  = 7,
         scale     = 'linear',
+        score_function = get_normalized_scores,
     )
 
     ptype = parser.add_argument_group('Plot type')\
@@ -37,15 +37,15 @@ def init(client):
     ptype.add_argument(
         '--times',
         action = 'store_const',
-        dest   = 'plot_type',
-        const  = 'times',
+        dest   = 'score_function',
+        const  = get_times,
         help   = 'Plot the raw times.')
 
     ptype.add_argument(
         '--normalized',
         action  = 'store_const',
-        dest    = 'plot_type',
-        const   = 'normalized',
+        dest    = 'score_function',
+        const   = get_normalized_scores,
         help    = 'Plot smoothed, normalized scores.'
         ' Higher is better. (Default)')
 
@@ -110,8 +110,6 @@ def fmt_min(sec, pos):
 
 def plot(client, request):
     '''Plot everyone's times in a date range.
-    `plot [plot_type] [num_days] [smoothing] [scale] [start date] [end date]`, all arguments optional.
-    `plot_type` is either `normalized` (default) or `times` for a non-smoothed plot of actual times.
     `smoothing` is between 0 (no smoothing) and 1 exclusive. .6 default
     You can provide either `num_days` or `start_date` and `end_date`.
     `plot` plots the last 5 days by default.
@@ -151,39 +149,20 @@ def plot(client, request):
         cur = con.execute(query, (start_date, end_date))
         entries = [Entry._make(tup) for tup in cur]
 
-    if args.plot_type == 'normalized':
-        scores_by_user = get_normalized_scores(entries, args)
-        ticker = matplotlib.ticker.MultipleLocator(base=0.25)
-        formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
-    elif args.plot_type == 'times':
-        scores_by_user = get_times(entries, args)
-        sec = 30 if args.table == crossbot.tables['mini'] else 60 * 5
-        ticker = matplotlib.ticker.MultipleLocator(base=sec)
-        formatter = matplotlib.ticker.FuncFormatter(fmt_min) # 1:30
-    else:
-        raise RuntimeError('invalid plot_type {}'.format(args.plot_type))
+    scores_by_user, ticker, formatter = args.score_function(entries, args)
 
     # find contiguous sequences of dates
-    user_seqs = defaultdict(list)
-    for userid, date_scores in scores_by_user.items():
-        date_seq = []
-
-        for date in date_range:
-            score = date_scores.get(date)
-
-            if score is not None:
-                date_seq.append((date, score))
-                continue
-
-            # no score for this date, lets break the sequence, adding this
-            # contiguous sequence to user_seqs
-            if date_seq:
-                user_seqs[userid].append(date_seq)
-                date_seq = []
-
-        # get the final sequence if one exists
-        if date_seq:
-            user_seqs[userid].append(date_seq)
+    user_seqs = [
+        (userid, [
+            list(g)
+            for k, g in groupby((
+                (date, date_scores.get(date))
+                for date in date_range
+            ), lambda ds: ds[1] is not None)
+            if k
+        ])
+        for userid, date_scores in scores_by_user.items()
+    ]
 
     width, height, dpi = (120*args.num_days), 600, 100
     width = max(400, min(width, 1000))
@@ -199,7 +178,7 @@ def plot(client, request):
 
     max_score = -100000
 
-    for (userid, date_seqs), color, marker in zip(user_seqs.items(), colors, markers):
+    for (userid, date_seqs), color, marker in zip(user_seqs, colors, markers):
         name = client.user(userid)
         label = name
 
@@ -249,7 +228,8 @@ def plot(client, request):
 
 # these should all take a list of Entry objects and the args object, and a
 # return a dict that looks like this:
-# scores[userid][date] = score
+#   scores[userid][date] = score
+# and also a ticker and a formatter
 
 
 def get_normalized_scores(entries, args):
@@ -306,7 +286,10 @@ def get_normalized_scores(entries, args):
 
             weighted_scores[user][date] = running[user] = new_score
 
-    return weighted_scores
+    ticker = matplotlib.ticker.MultipleLocator(base=0.25)
+    formatter = matplotlib.ticker.ScalarFormatter(useOffset=False)
+
+    return weighted_scores, ticker, formatter
 
 
 def get_times(entries, args):
@@ -318,4 +301,8 @@ def get_times(entries, args):
             # don't add failures to the times plot
             times[e.userid][e.date] = e.seconds
 
-    return times
+    sec = 30 if args.table == crossbot.tables['mini'] else 60 * 5
+    ticker = matplotlib.ticker.MultipleLocator(base=sec)
+    formatter = matplotlib.ticker.FuncFormatter(fmt_min) # 1:30
+
+    return times, ticker, formatter
