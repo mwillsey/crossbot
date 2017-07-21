@@ -174,7 +174,7 @@ def plot(client, request):
     max_score = -100000
 
     for (userid, date_scores), color in zip(user_scores, colors):
-        dates, scores = zip(*date_scores)
+        dates, scores = zip(*date_scores.items())
         max_score = max(max_score, max(scores))
         dates = [datetime.datetime.strptime(d, "%Y-%m-%d").date() for d in dates]
         name = client.user(userid)
@@ -224,7 +224,7 @@ def plot(client, request):
 
 # these should all take a list of Entry objects and the args object, and a
 # return a dict that looks like this:
-# scores[userid] = [(date, score), ...]
+# scores[userid][date] = score
 
 
 def get_normalized_scores(entries, args):
@@ -272,7 +272,7 @@ def get_normalized_scores(entries, args):
 
     MAX_PLOT_SCORE =  1.0
     MIN_PLOT_SCORE = -1.0
-    weighted_scores = defaultdict(list)
+    weighted_scores = defaultdict(dict)
     for date in sorted_dates:
         for user, score in scores[date].items():
 
@@ -283,7 +283,7 @@ def get_normalized_scores(entries, args):
 
             running[user] = new_score
             plot_score = max(MIN_PLOT_SCORE, min(new_score, MAX_PLOT_SCORE))
-            weighted_scores[user].append((date, plot_score))
+            weighted_scores[user][date] = plot_score
 
     return weighted_scores
 
@@ -291,10 +291,10 @@ def get_normalized_scores(entries, args):
 def get_times(entries, args):
     """Just get the times, removing any failures."""
 
-    times = defaultdict(list)
+    times = defaultdict(dict)
     for e in entries:
         if e.seconds >= 0:
             # don't add failures to the times plot
-            times[e.userid].append((e.date, e.seconds))
+            times[e.userid][e.date] = e.seconds
 
     return times
