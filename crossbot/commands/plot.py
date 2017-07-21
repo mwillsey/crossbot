@@ -137,6 +137,13 @@ def plot(client, request):
     if not 0 <= args.smooth <= 0.95:
         request.reply('smooth should be between 0 and 0.95', direct=True)
 
+    # For normalized, once date_range is already made, bump the start date
+    # back. Normalized uses smoothing, so we don't want the initial point
+    # plotted to be "overweighted" because there's no history
+    if args.score_function is get_normalized_scores:
+        start_dt -= datetime.timedelta(days=int(1 / (1 - args.smooth)))
+        start_date = start_dt.strftime(date_fmt)
+
     with sqlite3.connect(crossbot.db_path) as con:
         query = '''
         SELECT userid, date, seconds
