@@ -107,7 +107,8 @@ class Parser:
 # helper functions that can be used in the `type` field of
 # parser.add_argument()
 
-time_rx = re.compile(r'(\d*):(\d\d)')
+m_time_rx = re.compile(r'(\d*):(\d\d)')
+h_time_rx = re.compile(r'(\d*):(\d\d):(\d\d)')
 def time(time_str):
     '''Parses a time that looks like ":32", "3:42", or "fail".'''
 
@@ -115,20 +116,25 @@ def time(time_str):
         # store fails a negative
         return -1
 
-    match = time_rx.match(time_str)
-    if not match:
+    h_match = h_time_rx.match(time_str)
+    m_match = m_time_rx.match(time_str)
+    if h_match:
+        hours, minutes, seconds = ( int(x) if x else 0
+                                    for x in h_match.groups() )
+    elif m_match:
+        minutes, seconds = ( int(x) if x else 0
+                             for x in m_match.groups() )
+        hours = 0
+    else:
         raise argparse.ArgumentTypeError(
-            'Cannot parse time "{}", should look like ":32" or "fail"'
+            'Cannot parse time "{}", should look like ":12", "1:44:32", or "fail"'
             .format(time_str))
 
-    minutes, seconds = ( int(x) if x else 0
-                         for x in match.groups() )
-
-    total = minutes * 60 + seconds
+    total = hours * 60 * 60 + minutes * 60 + seconds
 
     if total == 0:
         # "add :00" is equivalent to "add fail"
-        return - 1
+        return -1
 
     return total
 
