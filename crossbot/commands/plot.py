@@ -266,7 +266,10 @@ def get_normalized_scores(entries, args):
 
     times_by_date = defaultdict(dict)
     for e in entries:
-        times_by_date[e.date][e.userid] = e.seconds
+        x = e.seconds
+        # if x > 0:
+        #     x = np.log(x)
+        times_by_date[e.date][e.userid] = x
 
     sorted_dates = sorted(times_by_date.keys())
 
