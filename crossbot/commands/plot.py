@@ -193,6 +193,9 @@ def plot(client, request):
         for userid, date_scores in scores_by_user.items()
     ]
 
+    # sort by actual username
+    user_seqs.sort(key=lambda tup: client.user(tup[0]))
+
     width, height, dpi = (120*args.num_days), 600, 100
     width = max(400, min(width, 1000))
 
