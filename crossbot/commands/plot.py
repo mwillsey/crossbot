@@ -26,6 +26,7 @@ def init(client):
     parser.set_defaults(
         command   = plot,
         smooth    = 0.6,
+        alpha     = 0.7,
         num_days  = 7,
         scale     = 'linear',
         score_function = get_normalized_scores,
@@ -70,6 +71,12 @@ def init(client):
         help = 'Smoothing factor between 0 and 0.95.'
         ' Default %(default)s.'
         ' Only applies to plot type `normalized`.')
+
+    appearance.add_argument(
+        '--alpha',
+        type = float,
+        help = 'Transparency for plotted points.'
+        ' Default %(default)s.')
 
     dates = parser.add_argument_group('Date range')
 
@@ -151,6 +158,10 @@ def plot(client, request):
         request.reply('smooth should be between 0 and 0.95', direct=True)
         return
 
+    if not 0 <= args.alpha <= 1:
+        request.reply('alpha should be between 0 and 1', direct=True)
+        return
+
     if start_dt > end_dt:
         request.reply('start date should be before end_date', direct=True)
         return
@@ -213,16 +224,21 @@ def plot(client, request):
     for (userid, date_seqs), color, marker in zip(user_seqs, colors, markers):
         name = client.user(userid)
         label = name
+        alpha = args.alpha
 
         if args.focus:
-            color = color if name in args.focus else '#0F0F0F0F'
+            if name in args.focus:
+                alpha = 1.0
+            else:
+                color = 'gray'
+                alpha = 0.3
 
         for date_seq in date_seqs:
             dates, scores = zip(*date_seq)
             max_score = max(max_score, max(scores))
             dates = [datetime.datetime.strptime(d, date_fmt).date() for d in dates]
 
-            ax.plot_date(mdates.date2num(dates), scores, marker, label=label, color=color)
+            ax.plot_date(mdates.date2num(dates), scores, marker, label=label, color=color, alpha=alpha)
 
             # make sure that we don't but anyone in the legend twice
             label = '_nolegend_'
