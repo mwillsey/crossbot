@@ -11,18 +11,34 @@ Clone the repo and install everything inside a `virtualenv`.
 git clone git@github.com:mwillsey/crossbot.git
 cd crossbot
 
-# create and activate a virtualenv for isolation
-virtualenv . --python python3
-source bin/activate
+# this would be a good time to make a virtual environment for isolation
+# see below
+
+# make an empty database if you haven't already
+# this will *not* overwrite an existing database
+sqlite3 crossbot.db < scripts/init_db.sql
 
 # install and setup the package
 pip install -r requirements.txt
 python setup.py install
 ```
 
-Initialize the database with `sqlite3 crossbot.db < scripts/init_db.sql` if you don't
-have one already.
+### Isolation
 
+To create a virtual environment, try 
+[virtualenvwrapper](http://virtualenvwrapper.readthedocs.io/en/latest/index.html).
+The following command will create the virtual environment and immediately use
+it.
+```sh
+mkvirtualenv crossbot --python python3
+```
+
+If you don't want to install virtualenvwrapper, you can use plain old
+virtualenv. Just make sure to activate it before `pip install`.
+```sh
+virtualenv . --python python3
+source bin/activate
+```
 
 ## Running the bot
 
