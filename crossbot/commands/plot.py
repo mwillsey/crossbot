@@ -25,7 +25,7 @@ def init(client):
     parser = client.parser.subparsers.add_parser('plot', help='plot something')
     parser.set_defaults(
         command   = plot,
-        smooth    = 0.6,
+        smooth    = 0.7,
         alpha     = 0.7,
         num_days  = 7,
         scale     = 'linear',
