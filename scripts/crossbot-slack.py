@@ -18,10 +18,12 @@ api_token = os.environ.get("SLACK_API_TOKEN")
 api_bot_token = os.environ.get("SLACK_API_BOT_TOKEN")
 
 slack_client = SlackClient(api_token)
+slack_bot_client = SlackClient(api_bot_token)
 
 
-def api(endpoint, response_key=None, **kwargs):
-    response = slack_client.api_call(endpoint, **kwargs)
+def api(endpoint, response_key=None, as_bot=False, **kwargs):
+    sc = slack_bot_client if as_bot else slack_client
+    response = sc.api_call(endpoint, **kwargs)
     if response.get('ok'):
         if response_key:
             return response[response_key]
@@ -71,6 +73,7 @@ class SlackRequest(crossbot.Request):
     def react(self, emoji):
         api(
             "reactions.add",
+            as_bot = True,
             name = emoji,
             channel = self.message['channel'],
             timestamp = self.message['ts']
