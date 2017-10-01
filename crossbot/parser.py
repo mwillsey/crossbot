@@ -6,17 +6,22 @@ import pytz
 
 import crossbot.settings
 
+
 # use this to prevent ArgumentParser from printing to the commandline
 # we can instead catch this and send to Slack
 class ParserException(Exception):
     pass
 
+
 # subclass ArgumentParser so it doesn't just exit the program on error
 # also we want the help messages to go to slack if we are using slack
 class ArgumentParser(argparse.ArgumentParser):
 
-    def print_help(self):  raise ParserException(self.format_help())
-    def print_usage(self): raise ParserException(self.format_usage())
+    def print_help(self):
+        raise ParserException(self.format_help())
+
+    def print_usage(self):
+        raise ParserException(self.format_usage())
 
     def error(self, message):
         raise ParserException('Parse Error:\n' + message)
@@ -24,6 +29,7 @@ class ArgumentParser(argparse.ArgumentParser):
     def exit(self, status=0, message=None):
         if status != 0:
             raise ParserException('Parse Error:\n' + message)
+
 
 class Parser:
 
@@ -77,7 +83,7 @@ class Parser:
     def print_help(self, args):
         # always raises ParserException so the client can print how it wants
 
-        if args.help_subcommands:
+        if getattr(args, 'help_subcommands', False):
             msg = ''
             for cmd in args.help_subcommands:
                 try:
@@ -103,12 +109,12 @@ class Parser:
         return command, args
 
 
-
 # helper functions that can be used in the `type` field of
 # parser.add_argument()
-
 m_time_rx = re.compile(r'(\d*):(\d\d)')
 h_time_rx = re.compile(r'(\d*):(\d\d):(\d\d)')
+
+
 def time(time_str):
     '''Parses a time that looks like ":32", "3:42", or "fail".'''
 
@@ -141,6 +147,7 @@ def time(time_str):
 
 date_fmt = '%Y-%m-%d'
 nyt_timezone = pytz.timezone('US/Eastern')
+
 
 def date(date_str, default='now'):
     '''If date_str is a date, this does nothing. If it's 'now', then

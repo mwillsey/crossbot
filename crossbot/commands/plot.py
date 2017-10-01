@@ -1,6 +1,5 @@
 
 import datetime
-import os
 import sqlite3
 import statistics
 import numpy as np
@@ -262,11 +261,6 @@ def plot(client, request):
     plt.close(fig)
 
     request.upload('plot', temp.name)
-
-    # don't renome temp files if using command line client,
-    # let the user see them
-    if not isinstance(request, crossbot.client.CommandLineRequest):
-        os.remove(temp.name)
 
 
 #########################
