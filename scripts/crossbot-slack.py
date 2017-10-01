@@ -125,8 +125,7 @@ def handle_message(event_data):
         except crossbot.ParserException as exn:
             slack_request.reply(str(exn), direct=True)
     else:
-        print(message.get("text"))
-        log.error("oops")
+        log.info("Not a crossbot message.")
 
 
 @app.server.before_first_request
@@ -140,4 +139,4 @@ def before_first_request():
 
 
 if __name__ == '__main__':
-    app.start(debug=True, port=6789)
+    app.server.run(debug=True, host='0.0.0.0', port=51234)
