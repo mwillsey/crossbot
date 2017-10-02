@@ -21,7 +21,7 @@ slack_client = SlackClient(api_token)
 slack_bot_client = SlackClient(api_bot_token)
 
 
-def api(endpoint, response_key=None, as_bot=False, **kwargs):
+def api(endpoint, response_key=None, as_bot=True, **kwargs):
     sc = slack_bot_client if as_bot else slack_client
     response = sc.api_call(endpoint, **kwargs)
     if response.get('ok'):
@@ -46,7 +46,8 @@ class SlackCrossbot(crossbot.Crossbot):
         super().__init__(self, **kwargs)
 
     def update_users(self):
-        users_list = api('users.list', 'members')
+        # need real api access for this, not bot
+        users_list = api('users.list', 'members', as_bot=False)
         self.users.update((u['id'], u) for u in users_list)
 
     def user(self, userid):
@@ -73,7 +74,6 @@ class SlackRequest(crossbot.Request):
     def react(self, emoji):
         api(
             "reactions.add",
-            as_bot = True,
             name = emoji,
             channel = self.message['channel'],
             timestamp = self.message['ts']
@@ -142,4 +142,14 @@ def before_first_request():
 
 
 if __name__ == '__main__':
+    # log everything to stdout and to a file
+    logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s %(message)s',
+            handlers = [
+                logging.FileHandler("crossbot.log"),
+                logging.StreamHandler()
+                ],
+            )
+
     app.server.run(debug=True, host='0.0.0.0', port=51234)

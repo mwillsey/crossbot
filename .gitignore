@@ -12,8 +12,9 @@ pyvenv.cfg
 pip-selfcheck.json
 __pycache__
 
-# ignore the database
+# ignore the database and log files
 *.db
+*.log
 
 # ignore your api tokens and secrets
 secrets
