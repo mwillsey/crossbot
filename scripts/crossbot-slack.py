@@ -2,6 +2,7 @@
 
 import os
 import re
+from threading import Thread
 from slackclient import SlackClient
 from slackeventsapi import SlackEventAdapter
 
@@ -112,13 +113,17 @@ def thanks():
 
 # Using the Slack Events Adapter, when we receive a message event
 @app.on("message")
-def handle_message(event_data):
+def handle_message_event(event_data):
     # Grab the message from the event payload
     message = event_data["event"]
+    thread = Thread(target=handle_message, args=(message,))
+    thread.start()
 
+def handle_message(message):
     # if the user says hello
     match = re_prog.match(message.get("text"))
     if match:
+        log.info("Crossbot message: " + message.get("text"))
         # get rid of the mention of the app
         message["text"] = match[2]
         # have our bot respond to the message
@@ -128,7 +133,7 @@ def handle_message(event_data):
         except crossbot.ParserException as exn:
             slack_request.reply(str(exn), direct=True)
     else:
-        log.info("Not a crossbot message.")
+        log.info("Not a crossbot message: " + message.get("text"))
 
 
 @app.server.before_first_request
