@@ -33,10 +33,10 @@ def times(client, request):
         for userid, seconds in cursor:
             name = client.user(userid)
             if seconds < 0:
-                failures += '0{} - :facepalm:\n'.format(name)
+                failures += '{} - :facepalm:\n'.format(name)
             else:
                 minutes, seconds = divmod(seconds, 60)
-                response += '0{} - {}:{:02d}\n'.format(name, minutes, seconds)
+                response += '{} - {}:{:02d}\n'.format(name, minutes, seconds)
 
     # append now so failures at the end
     response += failures
