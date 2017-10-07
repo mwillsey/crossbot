@@ -1,7 +1,11 @@
 import sqlite3
 import math
 
+from random import choice
+from datetime import datetime, timedelta
+
 import crossbot
+from crossbot.parser import date_fmt
 
 
 def init(client):
@@ -61,6 +65,48 @@ def add(client, request):
         day_of_week = int(cur.fetchone()[0])
 
     request.react(emoji(args.time, args.table, day_of_week))
+
+    # get all the entries for this person
+    with sqlite3.connect(crossbot.db_path) as con:
+        query = '''
+        SELECT date
+        FROM {}
+        WHERE userid = ?
+        '''.format(args.table)
+
+        result = cur.execute(query, (request.userid,))
+
+        dates_completed = set(tup[0] for tup in result)
+
+    # actually calculate the streak
+    check_date = datetime.strptime(args.date, date_fmt)
+    streak_count = 0
+    print(check_date, streak_count)
+    while check_date.strftime(date_fmt) in dates_completed:
+        print(check_date, streak_count)
+        streak_count += 1
+        check_date -= timedelta(days=1)
+
+    streak_messages = STREAKS.get(streak_count)
+    if streak_messages:
+        name = client.user(request.userid)
+        msg = choice(streak_messages).format(name=name)
+        request.react("achievement")
+        request.reply(msg)
+
+# STREAKS[streak_num] = list of messages with {name} format option
+STREAKS = {
+    1:   ["First one in a while, {name}.",
+          "Try it every day, {name}." ],
+    3:   ["3 entries in a row! Keep it up {name}!",
+          "Nice work, 3 in a row!"],
+    10:  ["{name}'s on a streak of 10 entries, way to go!"],
+    25:  [":open_mouth:, 25 days in a row!"],
+    50:  ["50 in a row, here's a medal :sports_medal:!"],
+    100: ["{name}'s done 100 crosswords in a row! They deserve a present :present:!"],
+    150: ["{name}'s on a streak of 150 days... impressive!"],
+    200: ["200 days in a row!?! Wow! Great work {name}!"],
+}
 
 
 # (fast_time, slow_time) for each day
