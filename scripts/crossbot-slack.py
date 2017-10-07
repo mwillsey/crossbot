@@ -62,7 +62,9 @@ class SlackCrossbot(crossbot.Crossbot):
 
 # FIXME get bot user id from somewhere
 bot = SlackCrossbot("U7CC1KX70")
-re_prog = re.compile(r'(crossbot|<@{}>)(?:$| +)(.*)'.format(bot.userid))
+
+# recognize commands prefixed by cb, crossbot, or @-mention
+re_prog = re.compile(r'(cb|crossbot|<@{}>)(?:$| +)(.*)'.format(bot.userid))
 
 
 class SlackRequest(crossbot.Request):
