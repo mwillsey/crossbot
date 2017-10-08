@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[requires]
+python_version = "3.6"
+
+[packages]
+flask = "*"
+matplotlib = "==2.1.0rc1"
+pytz = "*"
+slackclient = "*"
+slackeventsapi = "*"
+
+[dev-packages]
+# install this project in editable mode so we can import it
+"-e ." = {path = ".", editable = true}
+

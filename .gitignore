@@ -11,6 +11,7 @@ pyvenv.cfg
 .venv
 pip-selfcheck.json
 __pycache__
+*.egg-info
 
 # ignore the database and log files
 *.db

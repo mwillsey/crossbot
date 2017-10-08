@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-from distutils.core import setup
+from setuptools import setup, find_packages
+
 
 setup(
     name         = 'crossbot',
@@ -9,7 +10,7 @@ setup(
     author       = 'Max Willsey',
     author_email = 'me@mwillsey.com',
     url          = 'https://github.com/mwillsey/crossbot',
-    packages     = [ 'crossbot', 'crossbot.commands' ],
+    packages     = find_packages(),
     scripts      = [ 'scripts/crossbot-cmd-line.py',
                      'scripts/crossbot-slack.py' ],
 )
