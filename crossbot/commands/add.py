@@ -81,9 +81,7 @@ def add(client, request):
     # actually calculate the streak
     check_date = datetime.strptime(args.date, date_fmt)
     streak_count = 0
-    print(check_date, streak_count)
     while check_date.strftime(date_fmt) in dates_completed:
-        print(check_date, streak_count)
         streak_count += 1
         check_date -= timedelta(days=1)
 
