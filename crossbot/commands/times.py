@@ -1,6 +1,7 @@
 import sqlite3
 
 import crossbot
+from crossbot.commands.add import emoji
 
 def init(client):
 
@@ -21,28 +22,36 @@ def times(client, request):
     response = ''
     failures = ''
 
+    args = request.args
+
+    with sqlite3.connect(crossbot.db_path) as con:
+        cursor = con.execute("select strftime('%w', ?)", (args.date,))
+        day_of_week = int(cursor.fetchone()[0])
+
     with sqlite3.connect(crossbot.db_path) as con:
         query = '''
         SELECT userid, seconds
         FROM {}
         WHERE date = date(?)
-        ORDER BY seconds'''.format(request.args.table)
+        ORDER BY seconds'''.format(args.table)
 
-        cursor = con.execute(query, (request.args.date,))
+        cursor = con.execute(query, (args.date,))
 
         for userid, seconds in cursor:
             name = client.user(userid)
             if seconds < 0:
-                failures += '{} - :facepalm:\n'.format(name)
+                failures += ':facepalm: - {}\n'.format(name)
             else:
+                emj = emoji(seconds, args.table, day_of_week)
                 minutes, seconds = divmod(seconds, 60)
-                response += '{} - {}:{:02d}\n'.format(name, minutes, seconds)
+                response += ':{}: - {}:{:02d} - {}\n'.format(
+                    emj, minutes, seconds, name)
 
     # append now so failures at the end
     response += failures
 
     if len(response) == 0:
-        if request.args.date == 'now':
+        if args.date == 'now':
             response = 'No times yet for today, be the first!'
         else:
             response = 'No times for this date.'
