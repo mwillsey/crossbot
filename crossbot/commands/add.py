@@ -109,13 +109,13 @@ STREAKS = {
 
 # (fast_time, slow_time) for each day
 MINI_TIMES = [
-    (15, 2 * 60 + 30), # Sunday
-    (15, 2 * 60 + 30), # Monday
-    (15, 2 * 60 + 30), # Tuesday
-    (15, 2 * 60 + 30), # Wednesday
-    (15, 2 * 60 + 30), # Thursday
-    (15, 2 * 60 + 30), # Friday
-    (30, 4 * 60 + 30), # Saturday
+    (15, 3 * 60 + 30), # Sunday
+    (15, 3 * 60 + 30), # Monday
+    (15, 3 * 60 + 30), # Tuesday
+    (15, 3 * 60 + 30), # Wednesday
+    (15, 3 * 60 + 30), # Thursday
+    (15, 3 * 60 + 30), # Friday
+    (30, 5 * 60 + 30), # Saturday
 ]
 
 
@@ -149,6 +149,7 @@ SPEED_EMOJI = [
     'turtle',
     'snail',
     'zzz',
+    'rip',
     'poop',
 ]
 
@@ -169,14 +170,17 @@ def emoji(time, table, day_of_week):
         return 'facepalm'
     if time < fast_time:
         return SPEED_EMOJI[0]
+    if time > slow_time:
+        return SPEED_EMOJI[-1]
+
+    last_emoji = len(SPEED_EMOJI) - 2
 
     speed = time - fast_time
     time_range = slow_time - fast_time
-    index = speed / time_range * len(SPEED_EMOJI)
-    index = int(math.ceil(index))
+    ratio = (speed / time_range) ** 0.8
+    index = int(math.ceil(ratio * last_emoji))
 
-    if index >= len(SPEED_EMOJI):
-        index = len(SPEED_EMOJI) - 1
+    index = min(index, last_emoji)
 
     assert index in range(len(SPEED_EMOJI))
 
