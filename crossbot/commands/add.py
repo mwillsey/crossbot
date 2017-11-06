@@ -78,19 +78,36 @@ def add(client, request):
 
         dates_completed = set(tup[0] for tup in result)
 
-    # actually calculate the streak
+    # calculate the backwards streak
     check_date = datetime.strptime(args.date, date_fmt)
-    streak_count = 0
+    back_streak_count = 0
     while check_date.strftime(date_fmt) in dates_completed:
-        streak_count += 1
+        back_streak_count += 1
         check_date -= timedelta(days=1)
 
-    streak_messages = STREAKS.get(streak_count)
-    if streak_messages:
-        name = client.user(request.userid)
-        msg = choice(streak_messages).format(name=name)
-        request.react("achievement")
-        request.reply(msg)
+    # calculate the forwards streak
+    check_date = datetime.strptime(args.date, date_fmt)
+    forward_streak_count = 0
+    while check_date.strftime(date_fmt) in dates_completed:
+        forward_streak_count += 1
+        check_date += timedelta(days=1)
+
+    # the previous streak count this user had was the max of the forward and back
+    # the new one is the sum - 1 (this date is double counted)
+    # so give them every streak award between the two
+    old_sc = max(back_streak_count, forward_streak_count)
+    new_sc = back_streak_count + forward_streak_count
+    for streak_count in range(old_sc, new_sc):
+        streak_messages = STREAKS.get(streak_count)
+        if streak_messages:
+            name = client.user(request.userid)
+            msg = choice(streak_messages).format(name=name)
+            try:
+                # try here because we might fail if the reaction already exists.
+                request.react("achievement")
+            except:
+                print("Achievement reaction failed!")
+            request.reply(msg)
 
 # STREAKS[streak_num] = list of messages with {name} format option
 STREAKS = {
