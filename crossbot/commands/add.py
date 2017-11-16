@@ -147,6 +147,17 @@ REGULAR_TIMES = [
 ]
 
 
+SUDOKU_TIMES = [
+    (60, 10 * 60), # Sunday
+    (60, 10 * 60), # Monday
+    (60, 10 * 60), # Tuesday
+    (60, 10 * 60), # Wednesday
+    (60, 10 * 60), # Thursday
+    (60, 10 * 60), # Friday
+    (60, 10 * 60), # Saturday
+]
+
+
 # possible reactions sorted by speed
 # if these aren't in Slack, crossbot will crash
 SPEED_EMOJI = [
@@ -177,6 +188,8 @@ def emoji(time, table, day_of_week):
         times_list = MINI_TIMES
     elif table == crossbot.tables['regular']:
         times_list = REGULAR_TIMES
+    elif table == crossbot.tables['sudoku']:
+        times_list = SUDOKU_TIMES
     else:
         raise RuntimeError('Unknown table {}'.format(table))
 

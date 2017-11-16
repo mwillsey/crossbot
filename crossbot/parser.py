@@ -53,7 +53,7 @@ class Parser:
             table = crossbot.tables['mini']
         )
 
-        table_choice = self.parser.add_argument_group('Mini or Regular')\
+        table_choice = self.parser.add_argument_group('Puzzle Type')\
                                   .add_mutually_exclusive_group()
 
         table_choice.add_argument(
@@ -69,6 +69,13 @@ class Parser:
             dest   = 'table',
             const  = crossbot.tables['regular'],
             help   = 'Use the scores from the regular crossword.')
+
+        table_choice.add_argument(
+            '-s', '--sudoku',
+            action = 'store_const',
+            dest   = 'table',
+            const  = crossbot.tables['sudoku'],
+            help   = 'Use the scores from the easy sudoku.')
 
         self.subparsers = self.parser.add_subparsers(help = 'subparsers help')
 
