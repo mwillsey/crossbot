@@ -71,6 +71,12 @@ def announce(client, request):
             m += '{} is on a {}-day streak! {}\nCan they keep it up?\n'\
                  .format(client.user(best_uid), n, ':fire:' * n)
 
-        m += "Play today's: https://www.nytimes.com/crosswords/game/mini"
+        games = { "mini crossword" : "https://www.nytimes.com/crosswords/game/mini"
+                , "easy sudoku"    : "https://www.nytimes.com/crosswords/game/sudoku/easy"
+                }
+
+        m += "Play today's:"
+        for g in games:
+            m += "\n{} : {}".format(g, games[g])
 
         request.reply(m)
