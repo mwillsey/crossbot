@@ -4,6 +4,7 @@
 from gevent import monkey
 monkey.patch_all()
 from gevent.wsgi import WSGIServer
+from gevent import Greenlet
 
 import os
 import re
@@ -119,8 +120,12 @@ def thanks():
 
 # Using the Slack Events Adapter, when we receive a message event
 @app.on("message")
-def handle_message(event_data):
+def handle_message_event(event_data):
     message = event_data["event"]
+    Greenlet.spawn(handle_message, message)
+
+
+def handle_message(message):
     match = re_prog.match(message.get("text"))
     if match:
         log.info("Crossbot message: " + message.get("text"))
