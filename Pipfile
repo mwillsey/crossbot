@@ -8,6 +8,7 @@ python_version = "3.6"
 
 [packages]
 flask = "*"
+gevent = ">=1.2a1"
 matplotlib = "==2.1.0rc1"
 pytz = "*"
 slackclient = "*"

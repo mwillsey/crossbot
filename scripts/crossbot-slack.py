@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
+# monkey patching should come first
+from gevent import monkey
+monkey.patch_all()
+from gevent.wsgi import WSGIServer
+
 import os
 import re
-from threading import Thread
 from slackclient import SlackClient
 from slackeventsapi import SlackEventAdapter
 
@@ -115,14 +119,8 @@ def thanks():
 
 # Using the Slack Events Adapter, when we receive a message event
 @app.on("message")
-def handle_message_event(event_data):
-    # Grab the message from the event payload
+def handle_message(event_data):
     message = event_data["event"]
-    thread = Thread(target=handle_message, args=(message,))
-    thread.start()
-
-def handle_message(message):
-    # if the user says hello
     match = re_prog.match(message.get("text"))
     if match:
         log.info("Crossbot message: " + message.get("text"))
@@ -159,4 +157,5 @@ if __name__ == '__main__':
                 ],
             )
 
-    app.server.run(debug=True, host='0.0.0.0', port=51234)
+    server = WSGIServer(('', 51234,), app.server)
+    server.serve_forever()
