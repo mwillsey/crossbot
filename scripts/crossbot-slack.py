@@ -4,8 +4,9 @@
 from gevent import monkey
 monkey.patch_all()
 from gevent.wsgi import WSGIServer
-from gevent import Greenlet
+from gevent import Greenlet, sleep
 
+import datetime
 import os
 import re
 from slackclient import SlackClient
@@ -151,6 +152,28 @@ def before_first_request():
         log.error("Can't find Verification Token, did you set this env variable?")
 
 
+def recurring(action, start_dt, delay):
+    while True:
+        now = datetime.datetime.now()
+        while start_dt < now:
+            start_dt += delay
+
+        delay_sec = (start_dt - now).total_seconds()
+        sleep(delay_sec)
+
+        action()
+
+
+def announce():
+    message = {
+        'user': None,
+        'text': 'announce',
+        'channel': 'C58PXJTNU', # TODO get the channel from somewhere else
+    }
+    req = SlackRequest(message)
+    bot.handle_request(req)
+
+
 if __name__ == '__main__':
     # log everything to stdout and to a file
     logging.basicConfig(
@@ -161,6 +184,13 @@ if __name__ == '__main__':
                 logging.StreamHandler()
                 ],
             )
+
+    start_dt = datetime.datetime.now().replace(
+        hour=8, minute=30, second=0
+    )
+    delay = datetime.timedelta(days=1)
+
+    Greenlet.spawn(recurring, announce, start_dt, delay)
 
     server = WSGIServer(('', 51234,), app.server)
     server.serve_forever()
