@@ -74,7 +74,7 @@ def add(client, request):
         WHERE userid = ?
         '''.format(args.table)
 
-        result = cur.execute(query, (request.userid,))
+        result = con.execute(query, (request.userid,))
 
         dates_completed = set(tup[0] for tup in result)
 
