@@ -10,7 +10,7 @@ def init(client):
 
     parser = client.parser.subparsers.add_parser(
             'random',
-            help='Get a random mini crossworl link.')
+            help='Get a random mini crossword link.')
     parser.set_defaults(command=random_date_url)
 
     parser.add_argument(
