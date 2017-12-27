@@ -109,6 +109,9 @@ def add(client, request):
                 print("Achievement reaction failed!")
             request.reply(msg)
 
+    name = client.user(request.userid)
+    print("{} has a streak of {} in {}".format(name, new_sc - 1, args.table))
+
 # STREAKS[streak_num] = list of messages with {name} format option
 STREAKS = {
     1:   ["First one in a while, {name}.",

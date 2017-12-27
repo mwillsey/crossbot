@@ -159,6 +159,9 @@ def recurring(action, start_dt, delay):
             start_dt += delay
 
         delay_sec = (start_dt - now).total_seconds()
+        log.info('Sleeping action {} for {} seconds until {}'
+                 .format(action, delay_sec, start_dt))
+        assert delay_sec > 0
         sleep(delay_sec)
 
         action()
