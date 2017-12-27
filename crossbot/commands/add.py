@@ -114,16 +114,18 @@ def add(client, request):
 
 # STREAKS[streak_num] = list of messages with {name} format option
 STREAKS = {
-    1:   ["First one in a while, {name}.",
-          "Try it every day, {name}." ],
+#    1:   ["First one in a while, {name}.",
+#          "Try it every day, {name}." ],
     3:   ["3 entries in a row! Keep it up {name}!",
           "Nice work, 3 in a row!"],
     10:  ["{name}'s on a streak of 10 entries, way to go!"],
     25:  [":open_mouth:, 25 days in a row!"],
     50:  ["50 in a row, here's a medal :sports_medal:!"],
-    100: ["{name}'s done 100 crosswords in a row! They deserve a present :present:!"],
+    100: [":100::100::100: {name}'s done 100 crosswords in a row! :100::100::100:"],
     150: ["{name}'s on a streak of 150 days... impressive!"],
-    200: ["200 days in a row!?! Wow! Great work {name}!"],
+    200: [":two::zero::zero: days in a row!?! Wow! Great work {name}!"],
+    300: ["Congrats {name} for doing 300 crosswords in a row!"],
+    365: ["Whoa, {name} just finished a full *year of crosswords*! Congratulations! :calendar::partypopper:"],
 }
 
 
