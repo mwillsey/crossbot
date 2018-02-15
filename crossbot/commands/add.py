@@ -52,7 +52,7 @@ def add(client, request):
             '''.format(args.table)
             seconds = con.execute(query, (request.userid, args.date)).fetchone()
 
-            minutes, seconds = divmod(args.time, 60)
+            minutes, seconds = divmod(seconds, 60)
 
             request.reply('I could not add this to the database, '
                           'because you already have an entry '
