@@ -2,7 +2,7 @@
 
 # monkey patching should come first
 from gevent import monkey
-monkey.patch_all()
+monkey.patch_all(thread=False, socket=False)
 from gevent.wsgi import WSGIServer
 from gevent import Greenlet, sleep
 
