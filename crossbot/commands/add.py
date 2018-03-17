@@ -50,7 +50,7 @@ def add(client, request):
             FROM {}
             WHERE userid = ? and date = date(?)
             '''.format(args.table)
-            seconds = con.execute(query, (request.userid, args.date)).fetchone()
+            (seconds,) = con.execute(query, (request.userid, args.date)).fetchone()
 
             minutes, seconds = divmod(seconds, 60)
 
