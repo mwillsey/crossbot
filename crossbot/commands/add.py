@@ -38,11 +38,11 @@ def add(client, request):
     with sqlite3.connect(crossbot.db_path) as con:
         try:
             query = '''
-            INSERT INTO {}(userid, date, seconds)
-            VALUES(?, date(?), ?)
+            INSERT INTO {}(userid, date, seconds, timestamp)
+            VALUES(?, date(?), ?, ?)
             '''.format(args.table)
 
-            con.execute(query, (request.userid, args.date, args.time))
+            con.execute(query, (request.userid, args.date, args.time, datetime.now()))
 
         except sqlite3.IntegrityError:
             query = '''

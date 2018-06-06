@@ -4,6 +4,7 @@ crossword_time(
   userid   TEXT NOT NULL,
   date     INTEGER NOT NULL,
   seconds  INTEGER NOT NULL,
+  timestamp DATETIME;
   UNIQUE(userid, date)
 );
 
@@ -12,6 +13,7 @@ mini_crossword_time(
   userid   TEXT NOT NULL,
   date     INTEGER NOT NULL,
   seconds  INTEGER NOT NULL,
+  timestamp DATETIME;
   UNIQUE(userid, date)
 );
 
@@ -20,5 +22,6 @@ easy_sudoku_time(
   userid   TEXT NOT NULL,
   date     INTEGER NOT NULL,
   seconds  INTEGER NOT NULL,
+  timestamp DATETIME;
   UNIQUE(userid, date)
 );
