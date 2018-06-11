@@ -42,11 +42,11 @@ def fmt_tup(tup):
         tup.append(msg)
     return ', '.join(fmt_elem(elem) for elem in tup)
 
-def do_sql(cmd):
+def do_sql(cmd, *args):
     with sqlite3.connect(crossbot.db_path) as con:
         con.set_authorizer(allow_only_select)
         try:
-            rows = con.execute(cmd).fetchall()
+            rows = con.execute(cmd, args).fetchall()
             if len(rows) > 20:
                 msg = 'result was {} rows, truncating...'.format(len(rows))
                 rows = rows[:20]
@@ -56,21 +56,27 @@ def do_sql(cmd):
             result = str(e) + ', this incident has been reported'
     return result
 
+def format_sql_cmd(cmd):
+    def replace_with_id(match):
+        return match.group(1)
+    cmd = html.unescape(cmd)
+    cmd = re.sub(r'<@(\w+)>', replace_with_id, cmd)
+    cmd = cmd.replace(u"\u2018", "'").replace(u"\u2019", "'").replace(u"\u201c","'").replace(u"\u201d", "'")
+    return cmd
+
+def format_sql_result(result, client):
+    def replace_with_name(match):
+        match = match.group()
+        return client.user(match)
+    result = re.sub(r'\w{9}', replace_with_name, result)
+    return result
 
 def sql(client, request):
     '''Run a sql command.'''
 
-    def replace_with_id(match):
-        return match.group(1)
-    def replace_with_name(match):
-        match = match.group()
-        return client.user(match)
-
     cmd = ' '.join(request.args.sql_command)
     print("raw command: {}".format(cmd))
-    cmd = html.unescape(cmd)
-    cmd = re.sub(r'<@(\w+)>', replace_with_id, cmd)
-    cmd = cmd.replace(u"\u2018", "'").replace(u"\u2019", "'").replace(u"\u201c","'").replace(u"\u201d", "'")
+    cmd = format_sql_cmd(cmd)
     print("formatted command: {}".format(cmd))
 
     try:
@@ -79,6 +85,6 @@ def sql(client, request):
     except TimeoutError:
         result = "dont try to dos me, this incident has been reported"
 
-    result = re.sub(r'\w{9}', replace_with_name, result)
+    result = format_sql_result(result, client)
 
     request.reply(result)
