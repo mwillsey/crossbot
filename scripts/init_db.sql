@@ -25,3 +25,12 @@ easy_sudoku_time(
   timestamp DATETIME;
   UNIQUE(userid, date)
 );
+
+CREATE TABLE IF NOT EXISTS
+query_shorthands(
+  name      TEXT NOT NULL,
+  command   TEXT NOT NULL,
+  userid    TEXT NOT NULL,
+  timestamp TEXT NOT NULL;
+  UNIQUE(name)
+);
