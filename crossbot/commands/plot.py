@@ -5,7 +5,7 @@ import statistics
 import numpy as np
 
 from collections import defaultdict, namedtuple
-from itertools import cycle, groupby
+from itertools import cycle, groupby, count
 from tempfile import NamedTemporaryFile
 
 # don't use matplotlib gui
@@ -48,6 +48,20 @@ def init(client):
         const   = get_normalized_scores,
         help    = 'Plot smoothed, normalized scores.'
         ' Higher is better. (Default)')
+
+    ptype.add_argument(
+        '--streaks',
+        action  = 'store_const',
+        dest    = 'score_function',
+        const   = get_streaks,
+        help    = 'Plot completion streaks')
+
+    ptype.add_argument(
+        '--win-streaks',
+        action  = 'store_const',
+        dest    = 'score_function',
+        const   = get_win_streaks,
+        help    = 'Plot win streaks')
 
     appearance = parser.add_argument_group('Plot appearance')
     scales = appearance.add_mutually_exclusive_group()
@@ -218,33 +232,59 @@ def plot(client, request):
     n_users = len(user_seqs)
     colors = [cmap(i / n_users) for i in range(n_users)]
 
-    max_score = -100000
+    if args.score_function in [get_streaks, get_win_streaks]:
+        thickness = 1
+        # sort by first date appeared
+        user_seqs.sort(key=lambda x: min(x[1][0]))
 
-    for (userid, date_seqs), color, marker in zip(user_seqs, colors, markers):
-        name = client.user(userid)
-        label = name
-        alpha = args.alpha
+        for (userid, date_seqs), i, color in zip(user_seqs, count(), colors):
+            name = client.user(userid)
+            label = name
+            starts_and_lens = [
+                ((date_dt(min(seq)[0]) - start_dt).days, len(seq))
+                for seq in date_seqs
+            ]
+            starts, lens = zip(*starts_and_lens)
+            ax.barh(i, lens, thickness, starts, tick_label=name)
 
-        if args.focus:
-            if name in args.focus:
-                alpha = 1.0
-            else:
-                color = 'gray'
-                alpha = 0.3
+        plt.yticks(
+            np.arange(len(user_seqs)) * thickness,
+            [
+                client.user(userid)
+                for userid, seq in user_seqs
+            ],
+            size = 6,
+        )
 
-        for date_seq in date_seqs:
-            dates, scores = zip(*date_seq)
-            max_score = max(max_score, max(scores))
-            dates = [datetime.datetime.strptime(d, date_fmt).date() for d in dates]
+    else:
+        max_score = -100000
 
-            ax.plot_date(mdates.date2num(dates), scores, marker, label=label, color=color, alpha=alpha)
+        for (userid, date_seqs), color, marker in zip(user_seqs, colors, markers):
+            name = client.user(userid)
+            label = name
+            alpha = args.alpha
 
-            # make sure that we don't but anyone in the legend twice
-            label = '_nolegend_'
+            if args.focus:
+                if name in args.focus:
+                    alpha = 1.0
+                else:
+                    color = 'gray'
+                    alpha = 0.3
 
-    ax.set_yscale(args.scale)
-    ax.yaxis.set_major_locator(ticker)
-    ax.yaxis.set_major_formatter(formatter)
+            for date_seq in date_seqs:
+                dates, scores = zip(*date_seq)
+                max_score = max(max_score, max(scores))
+                dates = [datetime.datetime.strptime(d, date_fmt).date() for d in dates]
+
+                ax.plot_date(mdates.date2num(dates), scores, marker, label=label, color=color, alpha=alpha)
+
+                # make sure that we don't but anyone in the legend twice
+                label = '_nolegend_'
+
+
+        ax.set_yscale(args.scale)
+        ax.yaxis.set_major_locator(ticker)
+        ax.yaxis.set_major_formatter(formatter)
 
     fig.autofmt_xdate()
     ax.xaxis.set_major_locator(mdates.DayLocator())
@@ -255,8 +295,8 @@ def plot(client, request):
 
     ax.legend(fontsize=6, loc='upper left')
 
-    temp = NamedTemporaryFile(suffix='.png', delete=False)
-    fig.savefig(temp, format='png', bbox_inches='tight')
+    temp = NamedTemporaryFile(suffix='.pdf', delete=False)
+    fig.savefig(temp, format='pdf', bbox_inches='tight')
     temp.close()
     plt.close(fig)
 
@@ -350,5 +390,35 @@ def get_times(entries, args):
     sec = 30 if args.table == crossbot.tables['mini'] else 60 * 5
     ticker = matplotlib.ticker.MultipleLocator(base=sec)
     formatter = matplotlib.ticker.FuncFormatter(fmt_min) # 1:30
+
+    return times, ticker, formatter
+
+def get_win_streaks(entries, args):
+    """Just get the times, keeping failures because we're just going for completion"""
+
+    best_time = defaultdict(lambda: 99999999999999)
+    for e in entries:
+        if e.seconds >= 0:
+            best_time[e.date] = min(best_time[e.date], e.seconds)
+
+    times = defaultdict(dict)
+    for e in entries:
+        if e.seconds == best_time[e.date]:
+            times[e.userid][e.date] = e.seconds
+
+    ticker = None
+    formatter = None
+
+    return times, ticker, formatter
+
+def get_streaks(entries, args):
+    """Just get the times, keeping failures because we're just going for completion"""
+
+    times = defaultdict(dict)
+    for e in entries:
+        times[e.userid][e.date] = e.seconds
+
+    ticker = None
+    formatter = None
 
     return times, ticker, formatter
