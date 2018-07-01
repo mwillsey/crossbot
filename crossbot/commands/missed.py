@@ -67,6 +67,10 @@ def get_missed(client, request):
         prev = datetime.strptime(dates_completed[i - 1], date_fmt)
         next_done = datetime.strptime(dates_completed[i], date_fmt)
         next_cal = prev + timedelta(days=1)
+        if next_cal < start:
+            continue
+        if next_cal > end:
+            break
         if next_done != next_cal:
             gap_date = next_cal
             break
