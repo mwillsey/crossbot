@@ -18,15 +18,13 @@ mini_url = "https://www.nytimes.com/crosswords/game/mini/{:04}/{:02}/{:02}"
 
 def get_missed(client, request):
 
-    args = request.args
-
     # get all the entries for this person
     with sqlite3.connect(crossbot.db_path) as con:
         query = '''
         SELECT date
         FROM {}
         WHERE userid = ?
-        '''.format(args.table)
+        '''.format(request.args.table)
 
         result = con.execute(query, (request.userid,))
 
