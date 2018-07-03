@@ -29,15 +29,14 @@ def get_missed(client, request):
         result = con.execute(query, (request.userid,))
 
     # sort dates completed from most recent to oldest
-    completed = sorted((parse_date(tup[0]) for tup in result), reverse=True)
+    completed = set(parse_date(tup[0]) for tup in result)
 
     # find missed day
     missed = parse_date(crossbot.parser.date('now'))
-    for d in completed:
-        if d == missed:
-            missed -= timedelta(days=1)
-        else:
+    while True:
+        if missed not in completed:
             break
+        missed -= timedelta(days=1)
 
     url = mini_url.format(missed.year, missed.month, missed.day)
     request.reply(url)
