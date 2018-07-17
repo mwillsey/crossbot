@@ -14,7 +14,7 @@ def unindex(l, i):
 
 def data():
     with sqlite3.connect("crossbot.db") as cursor:
-         uids, dates, dows, secs = zip(*cursor.execute("select userid, date, strftime('%w', date), seconds from mini_crossword_time where seconds >= 0"))
+         uids, dates, dows, secs = zip(*cursor.execute("select userid, date, strftime('%w', date), seconds from mini_crossword_time"))
          return { 'uids': uids, 'dates': dates, 'dows': dows, 'secs': secs }
 
 def ago(uids, dates):
