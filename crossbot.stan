@@ -13,9 +13,9 @@ data {
 
 transformed data {
     vector[Ss] is_sat;
-    for (j in 1:Ss) is_sat[j] = (dows[j] == 7 ? 1.0 : 0.0);
-
     real<lower=0> corrected_secs[Ss];
+
+    for (j in 1:Ss) is_sat[j] = (dows[j] == 7 ? 1.0 : 0.0);
     for (j in 1:Ss) corrected_secs[j] = (secs[j] < 0 ? 300 : secs[j]);
 }
 

@@ -69,6 +69,9 @@ def summarize(fm, userdict=USERS):
     dates = [datetime.strptime(d, "%Y-%m-%d") for d, t in out]
     dates_ = matplotlib.dates.date2num(dates)
     ax.errorbar(dates_, pi(0, pi(1, out)), yerr=(pi(1, pi(1, out)), pi(2, pi(1, out))), fmt='o')
+    from scipy.signal import savgol_filter
+    yhat = savgol_filter(pi(0, pi(1, out)), 51, 3)
+    ax.plot(dates_, yhat, 'red')
     import matplotlib.backends.backend_agg as agg
     agg.FigureCanvasAgg(fig).print_figure("dates.pdf")
 
