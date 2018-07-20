@@ -8,15 +8,17 @@ data {
     int<lower=1,upper=Us> uids[Ss];
     int<lower=1,upper=7> dows[Ss];
     int<lower=1,upper=Ds> dates[Ss];
-    real ago[Ss];
+    int<lower=1,upper=Ds> nth[Ss];
 }
 
 transformed data {
-    vector[Ss] is_sat;
+    int<lower=0,upper=1> is_sat[Ss];
     real<lower=0> corrected_secs[Ss];
+    int<lower=1,upper=Ds> beginner_nth[Ss];
 
-    for (j in 1:Ss) is_sat[j] = (dows[j] == 7 ? 1.0 : 0.0);
+    for (j in 1:Ss) is_sat[j] = (dows[j] == 7 ? 1 : 0);
     for (j in 1:Ss) corrected_secs[j] = (secs[j] < 0 ? 300 : secs[j]);
+    for (j in 1:Ss) beginner_nth[j] = (nth[j] < 60 ? nth[j] : 60);
 }
 
 parameters {
@@ -30,25 +32,30 @@ parameters {
     real<lower=0> date_dev;
 
     real sat_effect;
+}
 
-    vector[Us] improvement_rate;
-    real improvement_mu;
-    real<lower=0> improvement_dev;
+transformed parameters {
+    real beginner_gain = 0.2;
+    real beginner_decay = 14;
+
+    vector[Ds] nth_effect;
+    for (j in 1:Ds)
+    nth_effect[j] = beginner_gain * exp(-j / beginner_decay);
 }
 
 model {
     // Priors
     skill_effect ~ normal(0, skill_dev);
     date_effect ~ normal(0, date_dev);
-    improvement_rate ~ normal(improvement_mu, improvement_dev);
 
     // Model
     corrected_secs ~
       lognormal( mu
                + skill_effect[uids]
-               + improvement_rate[uids] .* to_vector(ago)
+               //+ improvement_rate[uids] *. to_vector(nth)
+               + nth_effect[nth]
                + date_effect[dates]
-               + sat_effect * is_sat,
+               + sat_effect * to_vector(is_sat),
         sigma);
 }
 
