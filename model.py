@@ -238,16 +238,30 @@ def judge_time(data, model, day, todays, person, time):
         - model['bgain'] * exp(-ynth / model['bdecay'])
     return ysecs / model["sigma"]
         
+def print_judgement(data, model, todays):
+    judgements = { u: (t, judge_time(data, model, datetime.today().strftime("%Y-%m-%d"), TEST, u, t)) for u, t in todays.items() }
+    print("TEST = {")
+    for u, (t, d) in sorted(judgements.items(), key=lambda x: x[1][0]):
+        print("    \"{}\": {:>3}, # {:+.2f}".format(u, t, d))
+    print("}")
 
 TEST = {
-    "U0GRSVAJU": 32,  # -0.96
-    "U0G3G2L9L": 35,  # -0.40
-    "U0G3HALFR": 36,  # -2.14
-    "U0G3FKDSS": 47,  # -1.13
-    "U57492YFJ": 100, # +1.50
-    "U0G3RR3EF": 101, # +1.45
-    "U8D4CK7NC": 113, # +0.37
-    "U0G6V794M": 136, # +1.31
+    "U0WAPTL1Z":  22, # -0.29
+    "U0GG6DCCA":  22, # -0.80 James
+    "U6MKDAX2P":  29, # -0.14
+    "U0GRSVAJU":  32, # -0.79
+    "U2A6M3L10":  34, # -0.32
+    "U0G3G2L9L":  35, # -0.25
+    "U0G3HALFR":  36, # -1.97 Zach
+    "U1UKHF7FC":  45, # -0.23
+    "U0G3FKDSS":  47, # -0.98 Pavel
+    "U0N95LQQ6":  47, # -0.10
+    "U0GP7RWM8":  54, # -0.60
+    "U0GUBRDNE":  62, # +0.80
+    "U57492YFJ": 100, # +1.78
+    "U0G3RR3EF": 101, # +1.63
+    "U8D4CK7NC": 113, # +0.67
+    "U0G6V794M": 136, # +1.60
 }
 
 DATA = data()
