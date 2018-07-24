@@ -13,12 +13,10 @@ data {
 
 transformed data {
     int<lower=0,upper=1> is_sat[Ss];
-    real<lower=0> corrected_secs[Ss];
-    int<lower=1,upper=Ds> beginner_nth[Ss];
+    real<lower=0> log_secs[Ss];
 
     for (j in 1:Ss) is_sat[j] = (dows[j] == 7 ? 1 : 0);
-    for (j in 1:Ss) corrected_secs[j] = (secs[j] < 0 ? 300 : secs[j]);
-    for (j in 1:Ss) beginner_nth[j] = (nth[j] < 60 ? nth[j] : 60);
+    for (j in 1:Ss) log_secs[j] = log(secs[j] < 0 || secs[j] > 300 ? 300 : secs[j]);
 }
 
 parameters {
@@ -35,12 +33,21 @@ parameters {
 }
 
 transformed parameters {
+    // These should be learned, but they don't learn well
     real beginner_gain = 0.2;
     real beginner_decay = 14;
 
     vector[Ds] nth_effect;
+    vector[Ss] predictions;
+
     for (j in 1:Ds)
     nth_effect[j] = beginner_gain * exp(-j / beginner_decay);
+
+    predictions = mu
+                + skill_effect[uids]
+                + nth_effect[nth]
+                + date_effect[dates]
+                + sat_effect * to_vector(is_sat);
 }
 
 model {
@@ -49,24 +56,10 @@ model {
     date_effect ~ normal(0, date_dev);
 
     // Model
-    corrected_secs ~
-      lognormal( mu
-               + skill_effect[uids]
-               //+ improvement_rate[uids] *. to_vector(nth)
-               + nth_effect[nth]
-               + date_effect[dates]
-               + sat_effect * to_vector(is_sat),
-        sigma);
+    log_secs ~ normal(predictions, sigma);
 }
 
 generated quantities {
-    real avg_time;
-    real avg_skill[Us];
-    real avg_date[Ds];
-    real avg_sat;
-
-    avg_time = exp(mu);
-    for (j in 1:Us) avg_skill[j] = exp(skill_effect[j]);
-    for (j in 1:Ds) avg_date[j] = exp(date_effect[j]);
-    avg_sat = exp(sat_effect);
+    vector[Ss] residuals;
+    for (j in 1:Ss) residuals[j] = (log_secs[j] - predictions[j]) / sigma;
 }

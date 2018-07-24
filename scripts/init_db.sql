@@ -34,3 +34,11 @@ query_shorthands(
   timestamp TEXT NOT NULL,
   UNIQUE(name)
 );
+
+CREATE TABLE IF NOT EXISTS model (
+  userid TEXT NOT NULL,
+  date INTEGER NOT NULL,
+  prediction INTEGER NOT NULL,
+  residual REAL NOT NULL
+  UNIQUE(userid, date)
+);

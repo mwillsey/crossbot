@@ -40,11 +40,12 @@ def munge_data(uids, dates, dows, secs, ts):
     }
 
 def fit(data):
-    sm = pystan.StanModel(file="crossbot.stan")
-    fm = sm.sampling(data=munge_data(**data), pars=[
-        'avg_time', 'avg_sat', 'avg_skill', 'avg_date', 'skill_dev', 'date_dev', 'sigma',
-        'beginner_gain', 'beginner_decay',
-    ], iter=1000, chains=4)
+    sm = pystan.StanModel(file="crossbot.stan", pars=[
+        'date_effect', 'skill_effect', 'predictions', 'residuals',
+        'beginner_gain', 'beginner_decay', 'sat_effect', 'mu',
+        'skill_dev', 'date_dev', 'sigma'
+    ])
+    fm = sm.sampling(data=munge_data(**data), iter=1000, chains=4)
     return fm
 
 def drange(data):
@@ -52,80 +53,99 @@ def drange(data):
     mu = data.mean()
     return mu, mu - data[len(data) // 4], data[len(data) * 3 // 4] - mu
 
-def extract_model(fm):
+def extract_model(data, fm):
     params = fm.extract()
     
     dates = []
-    for i, multiplier in enumerate(params["avg_date"].transpose()):
-        date = unindex(DATA['dates'], i + 1)
+    for i, multiplier in enumerate(params["date_effect"].transpose()):
+        date = unindex(data['dates'], i + 1)
         mult_mean, mult_25, mult_75 = drange(multiplier)
-        dates.append({'date': date, 'difficulty': mult_mean, 'difficulty_25': mult_25, 'difficulty_75': mult_75})
+        dates.append({
+            'date': date, 'difficulty': mult_mean,
+            'difficulty_25': mult_25, 'difficulty_75': mult_75
+        })
 
     users = []
-    for i, multiplier in enumerate(params["avg_skill"].transpose()):
-        uid = unindex(DATA['uids'], i + 1)
+    for i, multiplier in enumerate(params["skill_effect"].transpose()):
+        uid = unindex(data['uids'], i + 1)
+        nth = len([date for date, uid_ in zip(data['dates'], data['uids']) if uid == uid_])
         mult_mean, mult_25, mult_75 = drange(multiplier)
-        #rate_mean, rate_25, rate_75 = drange(rate)
-        users.append({ 'uid': uid,
-                       'skill': mult_mean, 'skill_25': mult_25, 'skill_75': mult_75,
-                       #'rate': rate_mean, 'rate_25': rate_25, 'rate_75': rate_75,
+        users.append({
+            'uid': uid, 'nth': nth, 'skill': mult_mean,
+            'skill_25': mult_25, 'skill_75': mult_75,
         })
+
+    recs = []
+    for date, uid, prediction, residual in zip(
+            data["dates"],
+            data["uids"],
+            params["predictions"].transpose(),
+            params["residuals"].transpose()):
+        recs.append({
+            'date': date, 'uid': uid,
+            'prediction': prediction.mean(), 'residual': residual.mean()
+        })
+        
 
     bgain_mean, bgain_25, bgain_75 = drange(params['beginner_gain'])
     bdecay_mean, bdecay_25, bdecay_75 = drange(params['beginner_decay'])
-    time_mean, time_25, time_75 = drange(params['avg_time'])
-    satmult_mean, satmult_25, satmult_75 = drange(params['avg_sat'])
-    return { 'dates': dates, 'users': users, 'time': time_mean, 'time_25': time_25, 'time_75': time_75,
-             'satmult': satmult_mean, 'satmult_25': satmult_25, 'satmult_75': satmult_75,
-             'bgain': bgain_mean, 'bgain_25': bgain_25, 'bgain_75': bgain_75,
-             'bdecay': bdecay_mean, 'bdecay_25': bdecay_25, 'bdecay_75': bdecay_75,
-             'skill_dev': params['skill_dev'].mean(), 'date_dev': params['date_dev'].mean(), 'sigma': params['sigma'].mean(),
+    time_mean, time_25, time_75 = drange(params['mu'])
+    satmult_mean, satmult_25, satmult_75 = drange(params['sat_effect'])
+    return {
+        'dates': dates, 'users': users, 'historic': recs,
+        'time': time_mean, 'time_25': time_25, 'time_75': time_75,
+        'satmult': satmult_mean, 'satmult_25': satmult_25, 'satmult_75': satmult_75,
+        'bgain': bgain_mean, 'bgain_25': bgain_25, 'bgain_75': bgain_75,
+        'bdecay': bdecay_mean, 'bdecay_25': bdecay_25, 'bdecay_75': bdecay_75,
+        'skill_dev': params['skill_dev'].mean(), 'date_dev': params['date_dev'].mean(),
+        'sigma': params['sigma'].mean(),
     }
 
-MODEL_SQL = """
+def save(MODEL):
+    with sqlite3.connect("crossbot.db") as cursor:
+        cursor.executemany("replace into model values(?, ?, ?, ?)", [
+            (rec["uid"], rec["date"], rec["prediction"], rec["residual"])
+            for rec in model["historic"]])
+        
+        cursor.execute("drop table if exists model_users")
+        cursor.execute("""
 CREATE TABLE IF NOT EXISTS model_users (
   uid text not null primary key,
   skill real not null,
   skill_25 real not null,
   skill_75 real not null,
-);
+); """)
+        cursor.executemany("insert into model_user values(?,?,?,?)", [
+            (user["uid"], user["skill"], user["skill_25"], user["skill_75"])
+            for user in model["users"]])
 
+        cursor.execute("drop table if exists model_dates")
+        cursor.execute("""
 CREATE TABLE IF NOT EXISTS model_dates (
   date integer not null primary key,
   difficulty real not null,
   difficulty_25 real not null,
   difficulty_75 real not null,
-);
+); """)
+        cursor.execute("insert into model_dates values(?,?,?,?)", [
+            (date["date"], date["difficulty"], date["difficulty_25"], date["difficulty_75"])
+            for dates in model["dates"]])
 
+        cursor.execute("drop table if exists model_params")
+        cursor.execute("""
 CREATE TABLE IF NOT EXISTS model_params (
   time real, time_25 real, time_75 real,
   satmult real, satmult_25 real, satmult_75 real,
-  skill_dev real, date_dev real, sigma real
-);
-"""
-
-def save(MODEL):
-    with sqlite3.connect("crossbot.db") as cursor:
-        cursor.execute("drop table if exists model_users")
-        cursor.execute("drop table if exists model_dates")
-        cursor.execute("drop table if exists model_params")
-        cursor.execute(MODEL_SQL)
-
-        cursor.executemany(
-            "insert into model_user(uid, skill, skill_25, skill_75) values(?,?,?,?)",
-            [(user["uid"], user["skill"], user["skill_25"], user["skill_75"])
-             for user in model["users"]])
-
-        cursor.execute(
-            "insert into model_dates(date, difficulty, difficulty_25, difficulty_75) values(?,?,?,?)",
-            [(date["date"], date["difficulty"], date["difficulty_25"], date["difficulty_75"])
-             for dates in model["dates"]])
-
-        cursor.execute(
-            "insert into model_params(time, time_25, time_75, satmult, satmult_25, satmult_75, skill_dev, date_dev, sigma) values(?,?,?,?,?,?,?,?,?)",
-            (model["time"], model["time_25"], model["time_75"],
-             model["satmult"], model["satmult_25"], model["satmult_75"],
-             model["skill_dev"], model["date_dev"], model["sigma"]))
+  bgain real, bgain_25 real, bgain_75 real,
+  bdecay real, bdecay_25 real, bdecay_75 real,
+  skill_dev real, date_dev real, sigma real,
+); """)
+        cursor.execute("insert into model_params values(?,?,?,?,?,?,?,?,?)", (
+            model["time"], model["time_25"], model["time_75"],
+            model["satmult"], model["satmult_25"], model["satmult_75"],
+            model['bgain'], model['bgain_25'], model['bgain_75'],
+            model['bdecay'], model['bdecay_25'], model['bdecay_75'],
+            model["skill_dev"], model["date_dev"], model["sigma"]))
 
 def residuals(data, model):
     from math import log, exp
@@ -136,10 +156,10 @@ def residuals(data, model):
         day = [rec for rec in model["dates"] if rec["date"] == date][0]
 
         # Quick and dirty
-        mean = log(model["time"]) \
-            + log(user["skill"]) \
-            + log(day["difficulty"]) \
-            + log(model["satmult"] if dow == '6' else 1) \
+        mean = model["time"] \
+            + user["skill"] \
+            + day["difficulty"] \
+            + (model["satmult"] if dow == '6' else 1) \
             + model['bgain'] * exp(-n / model['bdecay']) \
 
         yield (log(sec if sec >= 0 else 300) - mean) / model["sigma"]
@@ -160,9 +180,6 @@ def plot_dates(model):
     fig = matplotlib.figure.Figure(figsize=(11, 8.5))
     ax = fig.add_subplot(1, 1, 1)
     ax.xaxis_date(None)
-    ax.set_yscale('log')
-    ax.set_yticks([.33, .4, .5, .6, .7, .85, 1, 1.2, 1.4, 1.66, 2, 2.5, 3, 3.5, 4])
-    ax.yaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
     dates = [datetime.strptime(d, "%Y-%m-%d") for d in field('date')]
     dates_ = matplotlib.dates.date2num(dates)
     ax.errorbar(dates_, field('difficulty'), yerr=(field('difficulty_25'), field('difficulty_75')), fmt='o')
@@ -179,16 +196,13 @@ def plot_users(model, nameuser=lambda x: x):
     ax.errorbar(field('skill'), range(len(users)), xerr=(field('skill_25'), field('skill_75')), fmt='o')
     ax.set_yticks(range(len(users)))
     ax.set_yticklabels(map(nameuser, field('uid')))
-    ax.set_xscale('log')
-    ax.set_xticks([.33, .4, .5, .6, .7, .85, 1, 1.2, 1.4, 1.66, 2, 2.5, 3, 4])
-    ax.xaxis.set_major_formatter(matplotlib.ticker.ScalarFormatter())
     return fig
 
-def plot_rdates(data, model):
+def plot_rdates(model):
     fig = matplotlib.figure.Figure(figsize=(11, 8.5))
     ax = fig.add_subplot(1, 1, 1)
     ax.xaxis_date(None)
-    pts = sorted([(d, r) for d, r in zip(data['dates'], residuals(data, model)) if d >= '2017'])
+    pts = sorted([(rec['date'], rec['residual']) for rec in model['historic'] if rec['date'] >= '2017'])
     dates = [datetime.strptime(d, "%Y-%m-%d") for d, r in pts]
     dates_ = matplotlib.dates.date2num(dates)
     ax.plot(dates_, [r for d, r in pts], 'o')
@@ -201,71 +215,52 @@ def plot_rnth(data, model):
     nths = nth(data['uids'], data['dates'], data['ts'])
     fig = matplotlib.figure.Figure(figsize=(11, 8.5))
     ax = fig.add_subplot(1, 1, 1)
-    pts = sorted([(d, r) for d, r in zip(nths, residuals(data, model))])
+    pts = sorted([(d, rec['residual']) for d, rec in zip(nths, model['historic'])])
     ax.plot([d for d, r in pts], [r for d, r in pts], 'o')
     yhat = savgol_filter([r for d, r in pts], 101, 1)
     ax.plot([d for d, r in pts], yhat, 'red')
     ax.plot([d for d, r in pts], [ 0 for n, r in pts ], 'black')
     return fig
 
-
 def plots(data, model, nameuser=lambda x: x):
     agg.FigureCanvasAgg(plot_dates(model)).print_figure("dates.pdf")
     agg.FigureCanvasAgg(plot_users(model, nameuser=nameuser)).print_figure("users.pdf")
-    agg.FigureCanvasAgg(plot_rdates(data, model)).print_figure("res-dates.pdf")
+    agg.FigureCanvasAgg(plot_rdates(model)).print_figure("res-dates.pdf")
     agg.FigureCanvasAgg(plot_rnth(data, model)).print_figure("res-nth.pdf")
 
 def lookup_user(model, uid):
     return [u for u in model["users"] if u["uid"] == uid][0]
 
-def judge_time(data, model, day, todays, person, time):
+def judge_time(model, day, todays, person, time):
     from math import log, exp
     is_sat = datetime.strptime(day, "%Y-%m-%d").strftime("%w") == '6'
 
-    nths = {u: data["uids"].count(u) for u in todays}
-    ynth = data["uids"].count(person)
+    nths = {u: [u_ for u_ in model["users"] if u_["uid"] == u][0]["nth"] for u in todays}
+    ynth = [u_ for u_ in model["users"] if u_["uid"] == person][0]["nth"]
 
     csecs = [log(secs)
-             - log(model["time"])
-             - log(lookup_user(model, user)["skill"])
-             - log(model["satmult"] if is_sat else 1)
+             - model["time"]
+             - lookup_user(model, user)["skill"]
+             - (model["satmult"] if is_sat else 1)
              - model['bgain'] * exp(-nths[user] / model['bdecay']) \
              for user, secs in todays.items()]
-
     difficulty = sum(csecs) / len(csecs)
-    ysecs = log(time) - log(model["time"]) - log(lookup_user(model, person)["skill"]) \
-        - log(model["satmult"] if is_sat else 1) - difficulty \
+
+    ysecs = log(time) - model["time"] - lookup_user(model, person)["skill"] \
+        - (model["satmult"] if is_sat else 1) - difficulty \
         - model['bgain'] * exp(-ynth / model['bdecay'])
     return ysecs / model["sigma"]
         
-def print_judgement(data, model, todays):
-    judgements = { u: (t, judge_time(data, model, datetime.today().strftime("%Y-%m-%d"), TEST, u, t)) for u, t in todays.items() }
+def print_judgement(model, todays, date=None):
+    today = date or datetime.today().strftime("%Y-%m-%d")
+    judgements = { u: (t, judge_time(model, today, TEST, u, t)) for u, t in todays.items() }
     print("TEST = {")
     for u, (t, d) in sorted(judgements.items(), key=lambda x: x[1][0]):
         print("    \"{}\": {:>3}, # {:+.2f}".format(u, t, d))
     print("}")
 
-TEST = {
-    "U0WAPTL1Z":  22, # -0.29
-    "U0GG6DCCA":  22, # -0.80 James
-    "U6MKDAX2P":  29, # -0.14
-    "U0GRSVAJU":  32, # -0.79
-    "U2A6M3L10":  34, # -0.32
-    "U0G3G2L9L":  35, # -0.25
-    "U0G3HALFR":  36, # -1.97 Zach
-    "U1UKHF7FC":  45, # -0.23
-    "U0G3FKDSS":  47, # -0.98 Pavel
-    "U0N95LQQ6":  47, # -0.10
-    "U0GP7RWM8":  54, # -0.60
-    "U0GUBRDNE":  62, # +0.80
-    "U57492YFJ": 100, # +1.78
-    "U0G3RR3EF": 101, # +1.63
-    "U8D4CK7NC": 113, # +0.67
-    "U0G6V794M": 136, # +1.60
-}
-
 DATA = data()
 FIT = fit(DATA)
-MODEL = extract_model(FIT)
+MODEL = extract_model(DATA, FIT)
 summarize(MODEL)
 plots(DATA, MODEL)
