@@ -11,6 +11,13 @@ def init(client):
             help='Get mini crossword link for the most recent day you missed.')
     parser.set_defaults(command=get_missed)
 
+    parser.add_argument(
+        'n',
+        nargs   = '?',
+        default = '1',
+        type    = int,
+        help    = 'Show the nth most recent ones you missed')
+
 def parse_date(d):
     return datetime.strptime(d, crossbot.parser.date_fmt)
 
@@ -32,11 +39,17 @@ def get_missed(client, request):
     completed = set(parse_date(tup[0]) for tup in result)
 
     # find missed day
-    missed = parse_date(crossbot.parser.date('now'))
-    while True:
-        if missed not in completed:
-            break
-        missed -= timedelta(days=1)
+    date = parse_date(crossbot.parser.date('now'))
+    n = request.args.n
+    missed = []
+    for i in range(n):
+        while date in completed:
+            date -= timedelta(days=1)
+        missed.append(date)
+        date -= timedelta(days=1)
 
-    url = mini_url.format(missed.year, missed.month, missed.day)
-    request.reply(url)
+    urls = [
+        mini_url.format(d.year, d.month, d.day)
+        for d in missed
+    ]
+    request.reply('\n'.join(urls))
