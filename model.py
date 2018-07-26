@@ -3,6 +3,7 @@ from __future__ import print_function
 import pystan
 import sqlite3
 from datetime import datetime, timedelta
+import time
 import matplotlib, matplotlib.dates, matplotlib.figure, matplotlib.ticker
 from scipy.signal import savgol_filter
 import matplotlib.backends.backend_agg as agg
@@ -101,9 +102,9 @@ def extract_model(data, fm):
         'sigma': params['sigma'].mean(),
     }
 
-def save(MODEL):
+def save(model):
     with sqlite3.connect("crossbot.db") as cursor:
-        cursor.executemany("replace into model values(?, ?, ?, ?)", [
+        cursor.executemany("replace into mini_crossword_model values(?, ?, ?, ?)", [
             (rec["uid"], rec["date"], rec["prediction"], rec["residual"])
             for rec in model["historic"]])
         
@@ -111,12 +112,13 @@ def save(MODEL):
         cursor.execute("""
 CREATE TABLE IF NOT EXISTS model_users (
   uid text not null primary key,
+  nth integer not null,
   skill real not null,
   skill_25 real not null,
-  skill_75 real not null,
+  skill_75 real not null
 ); """)
-        cursor.executemany("insert into model_user values(?,?,?,?)", [
-            (user["uid"], user["skill"], user["skill_25"], user["skill_75"])
+        cursor.executemany("insert into model_users values(?,?,?,?,?)", [
+            (user["uid"], user["nth"], user["skill"], user["skill_25"], user["skill_75"])
             for user in model["users"]])
 
         cursor.execute("drop table if exists model_dates")
@@ -125,11 +127,11 @@ CREATE TABLE IF NOT EXISTS model_dates (
   date integer not null primary key,
   difficulty real not null,
   difficulty_25 real not null,
-  difficulty_75 real not null,
+  difficulty_75 real not null
 ); """)
-        cursor.execute("insert into model_dates values(?,?,?,?)", [
-            (date["date"], date["difficulty"], date["difficulty_25"], date["difficulty_75"])
-            for dates in model["dates"]])
+        cursor.executemany("insert into model_dates values(?,?,?,?)", [
+            (time.mktime(datetime.strptime(date["date"], "%Y-%m-%d").timetuple()), date["difficulty"], date["difficulty_25"], date["difficulty_75"])
+            for date in model["dates"]])
 
         cursor.execute("drop table if exists model_params")
         cursor.execute("""
@@ -138,14 +140,34 @@ CREATE TABLE IF NOT EXISTS model_params (
   satmult real, satmult_25 real, satmult_75 real,
   bgain real, bgain_25 real, bgain_75 real,
   bdecay real, bdecay_25 real, bdecay_75 real,
-  skill_dev real, date_dev real, sigma real,
+  skill_dev real, date_dev real, sigma real
 ); """)
-        cursor.execute("insert into model_params values(?,?,?,?,?,?,?,?,?)", (
+        cursor.execute("insert into model_params values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
             model["time"], model["time_25"], model["time_75"],
             model["satmult"], model["satmult_25"], model["satmult_75"],
             model['bgain'], model['bgain_25'], model['bgain_75'],
             model['bdecay'], model['bdecay_25'], model['bdecay_75'],
             model["skill_dev"], model["date_dev"], model["sigma"]))
+
+def sqlload(cursor, query, *fields):
+    return [{f: v for f, v in zip(fields, rec)} for rec in cursor.execute(query)]
+
+def load():
+    with sqlite3.connect("crossbot.db") as cursor:
+        model, = sqlload(cursor, "select * from model_params;",
+                         "time", "time_25", "time_75", "satmult", "satmult_25", "satmult_75",
+                         "bgain", "bgain_25", "bgain_75", "bdecay", "bdecay_25", "bdecay_75",
+                         "skill_dev", "date_dev", "sigma")
+
+        model["dates"] = sqlload(cursor, "select * from model_dates",
+                                 "date", "difficulty", "difficulty_25", "difficulty_75")
+        for d in model["dates"]:
+            d["date"] = datetime.fromtimestamp(d["date"]).strftime("%Y-%m-%d")
+        model["users"] = sqlload(cursor, "select * from model_users",
+                                 "uid", "nth", "skill", "skill_25", "skill_75")
+        model["historic"] = sqlload(cursor, "select * from mini_crossword_model",
+                                    "uid", "date", "prediction", "residual")
+        return model
 
 def residuals(data, model):
     from math import log, exp
@@ -200,26 +222,50 @@ def plot_users(model, nameuser=lambda x: x):
 
 def plot_rdates(model):
     fig = matplotlib.figure.Figure(figsize=(11, 8.5))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.xaxis_date(None)
     pts = sorted([(rec['date'], rec['residual']) for rec in model['historic'] if rec['date'] >= '2017'])
+
+    fig = matplotlib.figure.Figure(figsize=(11, 8.5))
+    gs = matplotlib.gridspec.GridSpec(1, 2, width_ratios=[3, 1]) 
+    gs.update(wspace=0.025)
+
+    ax = fig.add_subplot(gs[0])
+    ax.xaxis_date(None)
     dates = [datetime.strptime(d, "%Y-%m-%d") for d, r in pts]
     dates_ = matplotlib.dates.date2num(dates)
-    ax.plot(dates_, [r for d, r in pts], 'o')
+    color = [(0, 0, 1, 1.0 / list(dates_).count(d)) for d in dates_]
+    ax.scatter(dates_, [r for d, r in pts], c=color, marker='o')
     yhat = savgol_filter([r for d, r in pts], 101, 1)
     ax.plot(dates_, yhat, 'red')
     ax.plot(dates_, [ 0 for n, r in pts ], 'black')
+
+    ax2 = fig.add_subplot(gs[1], sharey=ax)
+    ax2.tick_params('both', left=False, labelleft=False, bottom=False, labelbottom=False)
+    ax2.hist([r for d, r in pts], orientation="horizontal")
+
     return fig
 
-def plot_rnth(data, model):
+def plot_rnth(data, model, user=None):
     nths = nth(data['uids'], data['dates'], data['ts'])
+    pts = sorted([(d, rec['residual']) for d, rec in zip(nths, model['historic'])
+                  if user is None or rec["uid"] == user])
+    nths_ = [d for d, r in pts]
+
     fig = matplotlib.figure.Figure(figsize=(11, 8.5))
-    ax = fig.add_subplot(1, 1, 1)
-    pts = sorted([(d, rec['residual']) for d, rec in zip(nths, model['historic'])])
-    ax.plot([d for d, r in pts], [r for d, r in pts], 'o')
-    yhat = savgol_filter([r for d, r in pts], 101, 1)
+    gs = matplotlib.gridspec.GridSpec(1, 2, width_ratios=[3, 1]) 
+    gs.update(wspace=0.025)
+
+    color = [(0, 0, 1, 1.0 / nths_.count(d)) for d, r in pts]
+    ax = fig.add_subplot(gs[0])
+    ax.scatter([d for d, r in pts], [r for d, r in pts], c=color, marker='o')
+    window = 101 if not user else (len(pts) // 10 * 2 + 1)
+    yhat = savgol_filter([r for d, r in pts], window, 1)
     ax.plot([d for d, r in pts], yhat, 'red')
     ax.plot([d for d, r in pts], [ 0 for n, r in pts ], 'black')
+
+    ax2 = fig.add_subplot(gs[1], sharey=ax)
+    ax2.tick_params('both', left=False, labelleft=False, bottom=False, labelbottom=False)
+    ax2.hist([r for d, r in pts], orientation="horizontal")
+
     return fig
 
 def plots(data, model, nameuser=lambda x: x):

@@ -35,10 +35,11 @@ query_shorthands(
   UNIQUE(name)
 );
 
-CREATE TABLE IF NOT EXISTS model (
+CREATE TABLE IF NOT EXISTS
+mini_crossword_model(
   userid TEXT NOT NULL,
   date INTEGER NOT NULL,
   prediction INTEGER NOT NULL,
-  residual REAL NOT NULL
+  residual REAL NOT NULL,
   UNIQUE(userid, date)
 );
