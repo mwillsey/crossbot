@@ -40,12 +40,12 @@ def munge_data(uids, dates, dows, secs, ts):
     }
 
 def fit(data):
-    sm = pystan.StanModel(file="crossbot.stan", pars=[
+    sm = pystan.StanModel(file="crossbot.stan")
+    fm = sm.sampling(data=munge_data(**data), iter=1000, chains=4, pars=[
         'date_effect', 'skill_effect', 'predictions', 'residuals',
         'beginner_gain', 'beginner_decay', 'sat_effect', 'mu',
         'skill_dev', 'date_dev', 'sigma'
     ])
-    fm = sm.sampling(data=munge_data(**data), iter=1000, chains=4)
     return fm
 
 def drange(data):
@@ -231,14 +231,23 @@ def plots(data, model, nameuser=lambda x: x):
 def lookup_user(model, uid):
     return [u for u in model["users"] if u["uid"] == uid][0]
 
+def corrected_time(time):
+    return time if 0 <= time < 300 else 300
+
 def judge_time(model, day, todays, person, time):
     from math import log, exp
     is_sat = datetime.strptime(day, "%Y-%m-%d").strftime("%w") == '6'
 
+    for u in todays:
+        if not any(u_ for u_ in model["users"] if u_["uid"] == u):
+            del todays[u] # No judgement assigned to users not in the model
+    if person not in todays:
+        return 0.0 # Residual of zero for new users
+
     nths = {u: [u_ for u_ in model["users"] if u_["uid"] == u][0]["nth"] for u in todays}
     ynth = [u_ for u_ in model["users"] if u_["uid"] == person][0]["nth"]
 
-    csecs = [log(secs)
+    csecs = [log(corrected_time(secs))
              - model["time"]
              - lookup_user(model, user)["skill"]
              - (model["satmult"] if is_sat else 1)
@@ -246,7 +255,7 @@ def judge_time(model, day, todays, person, time):
              for user, secs in todays.items()]
     difficulty = sum(csecs) / len(csecs)
 
-    ysecs = log(time) - model["time"] - lookup_user(model, person)["skill"] \
+    ysecs = log(corrected_time(time)) - model["time"] - lookup_user(model, person)["skill"] \
         - (model["satmult"] if is_sat else 1) - difficulty \
         - model['bgain'] * exp(-ynth / model['bdecay'])
     return ysecs / model["sigma"]
