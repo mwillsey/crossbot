@@ -314,8 +314,8 @@ def print_judgement(model, todays, date=None):
         print("    \"{}\": {:>3}, # {:+.2f}".format(u, t, d))
     print("}")
 
-DATA = data()
-FIT = fit(DATA)
-MODEL = extract_model(DATA, FIT)
-summarize(MODEL)
-plots(DATA, MODEL)
+if __name__ == "__main__":
+    DATA = data()
+    FIT = fit(DATA)
+    MODEL = extract_model(DATA, FIT)
+    save(MODEL)
