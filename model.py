@@ -86,7 +86,6 @@ def extract_model(data, fm):
             'date': date, 'uid': uid,
             'prediction': prediction.mean(), 'residual': residual.mean()
         })
-        
 
     bgain_mean, bgain_25, bgain_75 = drange(params['beginner_gain'])
     bdecay_mean, bdecay_25, bdecay_75 = drange(params['beginner_decay'])
@@ -99,8 +98,15 @@ def extract_model(data, fm):
         'bgain': bgain_mean, 'bgain_25': bgain_25, 'bgain_75': bgain_75,
         'bdecay': bdecay_mean, 'bdecay_25': bdecay_25, 'bdecay_75': bdecay_75,
         'skill_dev': params['skill_dev'].mean(), 'date_dev': params['date_dev'].mean(),
-        'sigma': params['sigma'].mean(),
+        'sigma': params['sigma'].mean(), "lp": params["lp__"].mean(),
     }
+
+def sqlsave(cursor, table, models, fields):
+    cursor.executemany("insert into {} values({})".format(table, ",".join("?" for f in fields)), [
+        [model[f] for f in fields] for model in models])
+
+def sqldefs(*fields):
+    return ", ".join(f + " real not null" for f in fields)
 
 def save(model):
     with sqlite3.connect("crossbot.db") as cursor:
@@ -108,64 +114,44 @@ def save(model):
             (rec["uid"], rec["date"], rec["prediction"], rec["residual"])
             for rec in model["historic"]])
         
+        user_fields = ["skill", "skill_25", "skill_75"]
         cursor.execute("drop table if exists model_users")
-        cursor.execute("""
-CREATE TABLE IF NOT EXISTS model_users (
-  uid text not null primary key,
-  nth integer not null,
-  skill real not null,
-  skill_25 real not null,
-  skill_75 real not null
-); """)
-        cursor.executemany("insert into model_users values(?,?,?,?,?)", [
-            (user["uid"], user["nth"], user["skill"], user["skill_25"], user["skill_75"])
-            for user in model["users"]])
+        cursor.execute("CREATE TABLE model_users (uid text not null primary key, nth integer not null, {});"
+                       .format(sqldefs(*user_fields)))
+        sqlsave(cursor, "model_users", model["users"], ["uid", "nth"] + user_fields)
 
+        date_fields = ["difficulty", "difficulty_25", "difficulty_75"]
         cursor.execute("drop table if exists model_dates")
-        cursor.execute("""
-CREATE TABLE IF NOT EXISTS model_dates (
-  date integer not null primary key,
-  difficulty real not null,
-  difficulty_25 real not null,
-  difficulty_75 real not null
-); """)
+        cursor.execute("CREATE TABLE model_dates (date integer not null primary key, {});"
+                       .format(sqldefs(*date_fields)))
         cursor.executemany("insert into model_dates values(?,?,?,?)", [
             (time.mktime(datetime.strptime(date["date"], "%Y-%m-%d").timetuple()), date["difficulty"], date["difficulty_25"], date["difficulty_75"])
             for date in model["dates"]])
 
+        param_fields = ["time", "time_25", "time_75", "satmult", "satmult_25", "satmult_75",
+                        "bgain", "bgain_25", "bgain_75", "bdecay", "bdecay_25", "bdecay_75",
+                        "skill_dev", "date_dev", "sigma", "lp"]
         cursor.execute("drop table if exists model_params")
-        cursor.execute("""
-CREATE TABLE IF NOT EXISTS model_params (
-  time real, time_25 real, time_75 real,
-  satmult real, satmult_25 real, satmult_75 real,
-  bgain real, bgain_25 real, bgain_75 real,
-  bdecay real, bdecay_25 real, bdecay_75 real,
-  skill_dev real, date_dev real, sigma real
-); """)
-        cursor.execute("insert into model_params values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", (
-            model["time"], model["time_25"], model["time_75"],
-            model["satmult"], model["satmult_25"], model["satmult_75"],
-            model['bgain'], model['bgain_25'], model['bgain_75'],
-            model['bdecay'], model['bdecay_25'], model['bdecay_75'],
-            model["skill_dev"], model["date_dev"], model["sigma"]))
+        cursor.execute("CREATE TABLE model_params ({});".format(sqldefs(*param_fields)))
+        sqlsave(cursor, "model_params", [model], param_fields)
 
-def sqlload(cursor, query, *fields):
-    return [{f: v for f, v in zip(fields, rec)} for rec in cursor.execute(query)]
+def sqlload(cursor, table, *fields):
+    return [{f: v for f, v in zip(fields, rec)} for rec in cursor.execute("select * from " + table)]
 
 def load():
     with sqlite3.connect("crossbot.db") as cursor:
-        model, = sqlload(cursor, "select * from model_params;",
+        model, = sqlload(cursor, "model_params;",
                          "time", "time_25", "time_75", "satmult", "satmult_25", "satmult_75",
                          "bgain", "bgain_25", "bgain_75", "bdecay", "bdecay_25", "bdecay_75",
-                         "skill_dev", "date_dev", "sigma")
+                         "skill_dev", "date_dev", "sigma", "lp")
 
-        model["dates"] = sqlload(cursor, "select * from model_dates",
+        model["dates"] = sqlload(cursor, "model_dates",
                                  "date", "difficulty", "difficulty_25", "difficulty_75")
         for d in model["dates"]:
             d["date"] = datetime.fromtimestamp(d["date"]).strftime("%Y-%m-%d")
-        model["users"] = sqlload(cursor, "select * from model_users",
+        model["users"] = sqlload(cursor, "model_users",
                                  "uid", "nth", "skill", "skill_25", "skill_75")
-        model["historic"] = sqlload(cursor, "select * from mini_crossword_model",
+        model["historic"] = sqlload(cursor, "mini_crossword_model",
                                     "uid", "date", "prediction", "residual")
         return model
 
