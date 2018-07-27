@@ -30,13 +30,11 @@ parameters {
     real<lower=0> date_dev;
 
     real sat_effect;
+    real beginner_gain;
+    real<lower=0> beginner_decay;
 }
 
 transformed parameters {
-    // These should be learned, but they don't learn well
-    real beginner_gain = 0.2;
-    real beginner_decay = 14;
-
     vector[Ds] nth_effect;
     vector[Ss] predictions;
 
