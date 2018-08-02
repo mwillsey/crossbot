@@ -3,7 +3,7 @@
 # monkey patching should come first
 from gevent import monkey
 monkey.patch_all(thread=False, socket=False)
-from gevent.wsgi import WSGIServer
+from gevent.pywsgi import WSGIServer
 from gevent import Greenlet, sleep
 
 import datetime
@@ -18,11 +18,18 @@ import logging
 log = logging.getLogger(__name__)
 
 # grab the necessary slack secrets from the environment
-client_id = os.environ.get("SLACK_CLIENT_ID")
-client_secret = os.environ.get("SLACK_CLIENT_SECRET")
-verification = os.environ.get("SLACK_VERIFICATION_TOKEN")
-api_token = os.environ.get("SLACK_API_TOKEN")
-api_bot_token = os.environ.get("SLACK_API_BOT_TOKEN")
+
+secrets={}
+with open('secrets') as f:
+    for line in f.readlines():
+        k,v = line.split('=')
+        secrets[k.strip()] = v.strip()
+
+client_id = secrets["SLACK_CLIENT_ID"]
+client_secret = secrets["SLACK_CLIENT_SECRET"]
+verification = secrets["SLACK_VERIFICATION_TOKEN"]
+api_token = secrets["SLACK_API_TOKEN"]
+api_bot_token = secrets["SLACK_API_BOT_TOKEN"]
 
 slack_client = SlackClient(api_token)
 slack_bot_client = SlackClient(api_bot_token)
@@ -195,5 +202,5 @@ if __name__ == '__main__':
 
     Greenlet.spawn(recurring, announce, start_dt, delay)
 
-    server = WSGIServer(('', 51234,), app.server)
+    server = WSGIServer(('0.0.0.0', 51234,), app.server)
     server.serve_forever()
