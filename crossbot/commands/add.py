@@ -44,6 +44,9 @@ def add(client, request):
 
             con.execute(query, (request.userid, args.date, args.time, datetime.now()))
 
+            request.reply('Added {} for {}'.format(args.time, args.date),
+                          direct=True)
+
         except sqlite3.IntegrityError:
             query = '''
             SELECT seconds
