@@ -1,3 +1,4 @@
+import re
 from crossbot.commands import sql
 import sqlite3
 from datetime import datetime
@@ -12,6 +13,11 @@ def init(client):
     parser.add_argument('--save', action='store_true', help='Create or overwrite a stored query')
     parser.add_argument('params', nargs='*', help='Parameters for the stored query or, if saving, the query itself, with question marks for parameters')
 
+date_regex = re.compile(r'((\d\d\d\d)-(\d\d)-(\d\d))')
+    
+def linkify_dates(s):
+    return date_regex.sub(r'<https://www.nytimes.com/crosswords/game/mini/\2/\3/\4|\1>', s)
+    
 def query(client, request):
     if request.args.save:
         cmd = sql.format_sql_cmd(" ".join(request.args.params))
@@ -40,6 +46,7 @@ def query(client, request):
                 result = "you cant dos me even with saved queries, incident reported"
 
             result = sql.format_sql_result(result, client)
+            result = linkify_dates(result)
             request.reply(result)
         else:
             request.reply("No known command `{}`".format(request.args.name))
