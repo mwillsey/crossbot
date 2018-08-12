@@ -100,6 +100,7 @@ def extract_model(data, fm):
         'bdecay': bdecay_mean, 'bdecay_25': bdecay_25, 'bdecay_75': bdecay_75,
         'skill_dev': params['skill_dev'].mean(), 'date_dev': params['date_dev'].mean(),
         'sigma': params['sigma'].mean(), "lp": params["lp__"].mean(),
+        'when': time.time()
     }
 
 def sqlsave(cursor, table, models, fields):
@@ -131,7 +132,7 @@ def save(model):
 
         param_fields = ["time", "time_25", "time_75", "satmult", "satmult_25", "satmult_75",
                         "bgain", "bgain_25", "bgain_75", "bdecay", "bdecay_25", "bdecay_75",
-                        "skill_dev", "date_dev", "sigma", "lp"]
+                        "skill_dev", "date_dev", "sigma", "lp", "when"]
         cursor.execute("drop table if exists model_params")
         cursor.execute("CREATE TABLE model_params ({});".format(sqldefs(*param_fields)))
         sqlsave(cursor, "model_params", [model], param_fields)
@@ -233,19 +234,6 @@ def plots(data, model, nameuser=lambda x: x):
     agg.FigureCanvasAgg(plot_rdates(model)).print_figure("res-dates.pdf")
     agg.FigureCanvasAgg(plot_rnth(data, model)).print_figure("res-nth.pdf")
 
-def baseline_error(data):
-    avg = sum(math.log(s if s > 0 else 300) for s in data["secs"]) / len(data["secs"])
-    overall = 0
-    for s in data["secs"]:
-        overall += (math.log(s if s > 0 else 300) - avg) ** 2
-    return overall / len(data["secs"])
-
-def compute_error(data, model):
-    overall = 0
-    for s, rec in zip(data["secs"], model["historic"]):
-        p = rec["prediction"]
-        overall += (math.log(s if s > 0 else 300) - p) ** 2
-    return overall / len(data["secs"])
 
 if __name__ == "__main__":
     DATA = data()
