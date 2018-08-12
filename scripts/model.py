@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from __future__ import print_function
 
 import pystan
@@ -19,13 +20,13 @@ def unindex(l, i):
 
 def data():
     with sqlite3.connect("crossbot.db") as cursor:
-         uids, dates, dows, secs, ts = zip(*cursor.execute("select userid, date, strftime('%w', date), seconds, timestamp from mini_crossword_time"))
+         uids, dates, dows, secs, ts = zip(*cursor.execute("select userid, date, strftime('%w', date), seconds, case when timestamp is null then date else timestamp end from mini_crossword_time"))
          return { 'uids': uids, 'dates': dates, 'dows': dows, 'secs': secs, 'ts': ts }
 
 def nth(uids, dates, ts):
     uid_dates = { the_uid: sorted([date for uid, date in zip(uids, dates) if uid == the_uid])
                  for the_uid in set(uids)}
-    return [ bisect.bisect(uid_dates[uid], ts.split(" ")[0] if ts else date) + 1
+    return [ bisect.bisect(uid_dates[uid], ts.split(" ")[0]) + 1
              for uid, date, ts in zip(uids, dates, ts) ]
 
 def munge_data(uids, dates, dows, secs, ts):
@@ -155,34 +156,6 @@ def load():
                                     "uid", "date", "prediction", "residual")
         return model
 
-def residuals(data, model):
-    from math import log, exp
-    for uid, date, dow, sec, n \
-        in zip(data["uids"], data["dates"], data["dows"], data["secs"],
-               nth(data["uids"], data["dates"], data["ts"])):
-        user = [rec for rec in model["users"] if rec["uid"] == uid][0]
-        day = [rec for rec in model["dates"] if rec["date"] == date][0]
-
-        # Quick and dirty
-        mean = model["time"] \
-            + user["skill"] \
-            + day["difficulty"] \
-            + (model["satmult"] if dow == '6' else 1) \
-            + model['bgain'] * exp(-n / model['bdecay']) \
-
-        yield (log(sec if sec >= 0 else 300) - mean) / model["sigma"]
-
-def summarize(model, nameuser=lambda x: x):
-    for date in model['dates']:
-        print("{0[date]:>10}: {0[difficulty]: 6.3f} (-{0[difficulty_25]: 4.3f} {0[difficulty_75]:=+.3f})".format(date))
-    print("")
-
-    for user in sorted(model['users'], key=lambda x: x['skill']):
-        name = nameuser(user['uid'])
-        print(("{0:>20}: {1[skill]: 6.3f} (-{1[skill_25]: 4.3f} {1[skill_75]:=+6.3f})"
-               #+ " {1[rate]:=+9.05f} t"
-        ).format(name, user))
-
 def plot_dates(model):
     field = lambda f: [x[f] for x in model['dates'] if x['date'] >= '2017']
     fig = matplotlib.figure.Figure(figsize=(11, 8.5))
@@ -260,48 +233,23 @@ def plots(data, model, nameuser=lambda x: x):
     agg.FigureCanvasAgg(plot_rdates(model)).print_figure("res-dates.pdf")
     agg.FigureCanvasAgg(plot_rnth(data, model)).print_figure("res-nth.pdf")
 
-def lookup_user(model, uid):
-    return [u for u in model["users"] if u["uid"] == uid][0]
+def baseline_error(data):
+    avg = sum(math.log(s if s > 0 else 300) for s in data["secs"]) / len(data["secs"])
+    overall = 0
+    for s in data["secs"]:
+        overall += (math.log(s if s > 0 else 300) - avg) ** 2
+    return overall / len(data["secs"])
 
-def corrected_time(time):
-    return time if 0 <= time < 300 else 300
-
-def judge_time(model, day, todays, person, time):
-    from math import log, exp
-    is_sat = datetime.strptime(day, "%Y-%m-%d").strftime("%w") == '6'
-
-    for u in todays:
-        if not any(u_ for u_ in model["users"] if u_["uid"] == u):
-            del todays[u] # No judgement assigned to users not in the model
-    if person not in todays:
-        return 0.0 # Residual of zero for new users
-
-    nths = {u: [u_ for u_ in model["users"] if u_["uid"] == u][0]["nth"] for u in todays}
-    ynth = [u_ for u_ in model["users"] if u_["uid"] == person][0]["nth"]
-
-    csecs = [log(corrected_time(secs))
-             - model["time"]
-             - lookup_user(model, user)["skill"]
-             - (model["satmult"] if is_sat else 1)
-             - model['bgain'] * exp(-nths[user] / model['bdecay']) \
-             for user, secs in todays.items()]
-    difficulty = sum(csecs) / len(csecs)
-
-    ysecs = log(corrected_time(time)) - model["time"] - lookup_user(model, person)["skill"] \
-        - (model["satmult"] if is_sat else 1) - difficulty \
-        - model['bgain'] * exp(-ynth / model['bdecay'])
-    return ysecs / model["sigma"]
-        
-def print_judgement(model, todays, date=None):
-    today = date or datetime.today().strftime("%Y-%m-%d")
-    judgements = { u: (t, judge_time(model, today, TEST, u, t)) for u, t in todays.items() }
-    print("TEST = {")
-    for u, (t, d) in sorted(judgements.items(), key=lambda x: x[1][0]):
-        print("    \"{}\": {:>3}, # {:+.2f}".format(u, t, d))
-    print("}")
+def compute_error(data, model):
+    overall = 0
+    for s, rec in zip(data["secs"], model["historic"]):
+        p = rec["prediction"]
+        overall += (math.log(s if s > 0 else 300) - p) ** 2
+    return overall / len(data["secs"])
 
 if __name__ == "__main__":
     DATA = data()
     FIT = fit(DATA)
     MODEL = extract_model(DATA, FIT)
     save(MODEL)
+    print("MSE: {:.3f} vs {:.3f} baseline", compute_error(DATA, MODEL), baseline_error(DATA))
