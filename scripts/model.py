@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 import time
 import matplotlib, matplotlib.dates, matplotlib.figure, matplotlib.ticker
 from scipy.signal import savgol_filter
+from scipy.stats import norm
 import matplotlib.backends.backend_agg as agg
 import bisect
 import math
@@ -234,6 +235,41 @@ def plots(data, model, nameuser=lambda x: x):
     agg.FigureCanvasAgg(plot_rdates(model)).print_figure("res-dates.pdf")
     agg.FigureCanvasAgg(plot_rnth(data, model)).print_figure("res-nth.pdf")
 
+def urange(data, user):
+    dates = {d for d, u in zip(data['dates'], data['uids']) if u == user}
+    mi, ma = min(dates), max(dates)
+    out = []
+    since_good = 0
+    for d in sorted(set(data['dates'])):
+        if mi < d < ma:
+            if d in dates: since_good = 0
+            else: since_good += 1
+            if since_good <= 7:
+                out.append((d, d in dates))
+    return out
+
+def selsub(data, model, user):
+    play, dont = set(), set()
+
+    date_diff = {}
+    for d in model["dates"]:
+        date_diff[d["date"]] = d["difficulty"]
+
+    for date, played in urange(data, user):
+        (play if played else dont).add(date_diff[date])
+
+    if len(dont) == 0 or len(play) == 0: return 0
+
+    diff_means = sum(dont) / len(dont) - sum(play) / len(play)
+    stdev = model['date_dev']
+    z_diff = diff_means / (math.sqrt(stdev**2 / len(play) + stdev**2 / len(dont)))
+    return norm.cdf(z_diff)
+
+def selsubs(data, model):
+    info = {user['uid']: cheating(data, model, user['uid']) for user in model['users']}
+    for u, p in sorted(info.items(), key=lambda x: x[1], reverse=True):
+        if p < .99: break
+        print(u, p)
 
 if __name__ == "__main__":
     DATA = data()
