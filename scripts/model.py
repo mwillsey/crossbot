@@ -101,7 +101,7 @@ def extract_model(data, fm):
         'bdecay': bdecay_mean, 'bdecay_25': bdecay_25, 'bdecay_75': bdecay_75,
         'skill_dev': params['skill_dev'].mean(), 'date_dev': params['date_dev'].mean(),
         'sigma': params['sigma'].mean(), "lp": params["lp__"].mean(),
-        'when': time.time()
+        'when_run': time.time()
     }
 
 def sqlsave(cursor, table, models, fields):
@@ -133,7 +133,7 @@ def save(model):
 
         param_fields = ["time", "time_25", "time_75", "satmult", "satmult_25", "satmult_75",
                         "bgain", "bgain_25", "bgain_75", "bdecay", "bdecay_25", "bdecay_75",
-                        "skill_dev", "date_dev", "sigma", "lp", "when"]
+                        "skill_dev", "date_dev", "sigma", "lp", "when_run"]
         cursor.execute("drop table if exists model_params")
         cursor.execute("CREATE TABLE model_params ({});".format(sqldefs(*param_fields)))
         sqlsave(cursor, "model_params", [model], param_fields)
@@ -276,4 +276,4 @@ if __name__ == "__main__":
     FIT = fit(DATA)
     MODEL = extract_model(DATA, FIT)
     save(MODEL)
-    print("MSE: {:.3f} vs {:.3f} baseline", compute_error(DATA, MODEL), baseline_error(DATA))
+    # print("MSE: {:.3f} vs {:.3f} baseline", compute_error(DATA, MODEL), baseline_error(DATA))
