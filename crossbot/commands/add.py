@@ -1,5 +1,6 @@
 import sqlite3
 import math
+import requests
 
 from random import choice
 from datetime import datetime, timedelta
@@ -67,7 +68,8 @@ def add(client, request):
         cur = con.execute("select strftime('%w', ?)", (args.date,))
         day_of_week = int(cur.fetchone()[0])
 
-    request.react(emoji(args.time, args.table, day_of_week))
+    emj = emoji(args.time, args.table, day_of_week)
+    request.react(emj)
 
     # get all the entries for this person
     with sqlite3.connect(crossbot.db_path) as con:
@@ -115,6 +117,11 @@ def add(client, request):
     name = client.user(request.userid)
     print("{} has a streak of {} in {}".format(name, new_sc - 1, args.table))
 
+    if args.table == 'mini_crossword_time':
+        requests.post('http://plseaudio.cs.washington.edu:8087/scroll_text',
+                      data='{}\n{} sec\n:{}:'.format(name, args.time, emj))
+
+
 # STREAKS[streak_num] = list of messages with {name} format option
 STREAKS = {
 #    1:   ["First one in a while, {name}.",
@@ -129,6 +136,7 @@ STREAKS = {
     200: [":two::zero::zero: days in a row!?! Wow! Great work {name}!"],
     300: ["Congrats {name} for doing 300 crosswords in a row!"],
     365: ["Whoa, {name} just finished a full *year of crosswords*! Congratulations! :calendar::partypopper:"],
+    500: ["{name} just completed their 500th in a row! :partypopper:"],
 }
 
 

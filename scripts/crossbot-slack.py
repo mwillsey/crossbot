@@ -9,10 +9,12 @@ from gevent import Greenlet, sleep
 import datetime
 import os
 import re
+from types import SimpleNamespace
 from slackclient import SlackClient
 from slackeventsapi import SlackEventAdapter
 
 import crossbot
+import crossbot.commands as cmds
 
 import logging
 log = logging.getLogger(__name__)
@@ -75,6 +77,7 @@ class SlackCrossbot(crossbot.Crossbot):
 
 # FIXME get bot user id from somewhere
 bot = SlackCrossbot("U7CC1KX70")
+BOT_CHANNEL = 'C58PXJTNU' # TODO get the channel from somewhere else
 
 # recognize commands prefixed by cb, crossbot, or @-mention
 re_prog = re.compile(r'(cb|crossbot|<@{}>)(?:$| +)(.*)'.format(bot.userid))
@@ -121,10 +124,100 @@ class SlackRequest(crossbot.Request):
         os.remove(path)
 
 
+class SlackDelayedRequest(SlackRequest):
+    def __init__(self, userid, args, command):
+        self.replies = []
+        self.direct_replies = []
+        self.reactions = []
+        self.userid = userid
+        self.args = args
+        self.command = command
+
+    def react(self, emoji):
+        self.reactions.append(emoji)
+
+    def reply(self, msg, direct=False):
+        if direct:
+            self.direct_replies.append(msg)
+        else:
+            self.replies.append(msg)
+
+    def execute_delayed(self, message):
+        for emoji in self.reactions:
+            api(
+                "reactions.add",
+                name = emoji,
+                channel = message['channel'],
+                timestamp = message['ts']
+            )
+
+        for text in self.replies:
+            api(
+                "chat.postMessage",
+                channel = message['channel'],
+                text = text
+            )
+
+        # for text in self.direct_replies:
+        #     api(
+        #         "chat.postEphemeral",
+        #         user = self.userid,
+        #         channel = message['channel'],
+        #         text = text
+        #     )
+
+
+def userid_by_name(name):
+    users_list = api('users.list', 'members', as_bot=False)
+    for u in users_list:
+        if u['name'] == name:
+            return u['id']
+    return None
+
+@app.server.route("/add", methods=["POST"])
+def api_add():
+    from flask import request
+    data = request.get_json(force=True)
+    print(data)
+
+    uid = userid_by_name(data['uid'])
+    if not uid:
+        return 'bad user'
+
+    args = SimpleNamespace(
+        table = 'mini_crossword_time',
+        date = crossbot.date(data['date']),
+        time = crossbot.time(data['sec']),
+    )
+    req = SlackDelayedRequest(uid, args, cmds.add.add)
+    bot.handle_request(req, parse=False)
+
+    if crossbot.date(data['date']) == crossbot.date('now'):
+        channel = BOT_CHANNEL
+    else:
+        channel = uid
+
+    msg = api(
+        'chat.postMessage',
+        response_key='message',
+        channel = channel,
+        text = '<@{}> posted a time of {} on the {} crossword'.format(
+            uid,
+            data['sec'],
+            data['date'],
+        ),
+    )
+    # not sure why that key isn't in there
+    msg['channel'] = channel
+
+    req.execute_delayed(msg)
+
+    return 'ok'
+
+
 @app.server.route("/hello", methods=["GET"])
 def thanks():
     return "hello from crossbot"
-
 
 # Using the Slack Events Adapter, when we receive a message event
 @app.on("message")
@@ -173,12 +266,11 @@ def recurring(action, start_dt, delay):
 
         action()
 
-
 def announce():
     message = {
         'user': None,
         'text': 'announce',
-        'channel': 'C58PXJTNU', # TODO get the channel from somewhere else
+        'channel': BOT_CHANNEL,
     }
     req = SlackRequest(message)
     bot.handle_request(req)

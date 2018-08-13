@@ -43,14 +43,18 @@ class Crossbot:
                 print('ERROR: Something went wrong when importing "{}"'.format(mod_name))
                 traceback.print_exc()
 
-    def handle_request(self, request):
+    def handle_request(self, request, parse=True):
         """ Parses the request and calls the right command.
 
         If parsing fails, this raises crossbot.parser.ParserException.
         """
 
-        command, args = self.parser.parse(request.text)
-        request.args = args
+        if parse:
+            command, args = self.parser.parse(request.text)
+            request.args = args
+        else:
+            command = request.command
+
         command(self, request)
 
     def user(self, userid):
