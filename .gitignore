@@ -19,3 +19,5 @@ __pycache__
 
 # ignore your api tokens and secrets
 secrets
+/secrets.py
+static
