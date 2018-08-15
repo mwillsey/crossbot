@@ -4,7 +4,7 @@ import re
 
 import pytz
 
-import crossbot.settings
+import crossbot
 
 
 # use this to prevent ArgumentParser from printing to the commandline
@@ -36,7 +36,7 @@ class Parser:
     def __init__(self, limit_commands):
 
         self.parser = ArgumentParser(
-            prog='@' + crossbot.settings.bot_name,
+            prog='crossbot',
             description = '''
             You can either @ me in a channel or just DM me to give me a command.
             Play here: https://www.nytimes.com/crosswords/game/mini
@@ -50,7 +50,7 @@ class Parser:
         )
 
         self.parser.set_defaults(
-            table = crossbot.tables['mini']
+            table = crossbot.settings.tables['mini']
         )
 
         table_choice = self.parser.add_argument_group('Puzzle Type')\
@@ -60,21 +60,21 @@ class Parser:
             '--mini',
             action = 'store_const',
             dest   = 'table',
-            const  = crossbot.tables['mini'],
+            const  = crossbot.settings.tables['mini'],
             help   = 'Use the scores from the mini crossword.')
 
         table_choice.add_argument(
             '-r', '--regular',
             action = 'store_const',
             dest   = 'table',
-            const  = crossbot.tables['regular'],
+            const  = crossbot.settings.tables['regular'],
             help   = 'Use the scores from the regular crossword.')
 
         table_choice.add_argument(
             '-s', '--sudoku',
             action = 'store_const',
             dest   = 'table',
-            const  = crossbot.tables['sudoku'],
+            const  = crossbot.settings.tables['sudoku'],
             help   = 'Use the scores from the easy sudoku.')
 
         self.subparsers = self.parser.add_subparsers(help = 'subparsers help')

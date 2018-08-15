@@ -19,5 +19,7 @@ __pycache__
 
 # ignore your api tokens and secrets
 secrets
-/secrets.py
+secrets.py
+
+# django stuff
 static
