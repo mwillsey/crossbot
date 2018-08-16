@@ -1,7 +1,7 @@
 import hmac
 import hashlib
 import time
-import secrets
+import keys
 
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.views.decorators.csrf import csrf_exempt
@@ -18,7 +18,7 @@ def validate_slack_request(request):
         return False
 
     my_signature = 'v0=' + hmac.new(
-        key = secrets.SLACK_SECRET_SIGNING_KEY,
+        key = keys.SLACK_SECRET_SIGNING_KEY,
         msg = b'v0:' + bytes(timestamp, 'utf8') + b':' + request.body,
         digestmod = hashlib.sha256
     ).hexdigest()
