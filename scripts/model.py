@@ -25,9 +25,9 @@ def data():
          return { 'uids': uids, 'dates': dates, 'dows': dows, 'secs': secs, 'ts': ts }
 
 def nth(uids, dates, ts):
-    uid_dates = { the_uid: sorted([date for uid, date in zip(uids, dates) if uid == the_uid])
-                 for the_uid in set(uids)}
-    return [ bisect.bisect(uid_dates[uid], ts.split(" ")[0]) + 1
+    uid_dates = { the_uid: sorted([t for uid, t in zip(uids, ts) if uid == the_uid])
+                  for the_uid in set(uids) }
+    return [ bisect.bisect(uid_dates[uid], ts) + 1
              for uid, date, ts in zip(uids, dates, ts) ]
 
 def munge_data(uids, dates, dows, secs, ts):
@@ -265,15 +265,15 @@ def selsub(data, model, user):
     z_diff = diff_means / (math.sqrt(stdev**2 / len(play) + stdev**2 / len(dont)))
     return norm.cdf(z_diff)
 
-def selsubs(data, model):
-    info = {user['uid']: cheating(data, model, user['uid']) for user in model['users']}
+def selsubs(data, model, alpha=0.01):
+    info = {user['uid']: selsub(data, model, user['uid']) for user in model['users']}
+    # Two-tailed test, but no Bonferroni correction since we want all outputs
+    alpha /= 2
     for u, p in sorted(info.items(), key=lambda x: x[1], reverse=True):
-        if p < .99: break
-        print(u, p)
+        if p > 1 - alpha or 0 < p < alpha: print(u, p)
 
 if __name__ == "__main__":
     DATA = data()
     FIT = fit(DATA)
     MODEL = extract_model(DATA, FIT)
     save(MODEL)
-    # print("MSE: {:.3f} vs {:.3f} baseline", compute_error(DATA, MODEL), baseline_error(DATA))
