@@ -39,14 +39,13 @@ def add(client, request):
     with sqlite3.connect(crossbot.db_path) as con:
         try:
             query = '''
-            INSERT INTO {}(userid, date, seconds, timestamp)
-            VALUES(?, date(?), ?, ?)
-            '''.format(args.table)
+             INSERT INTO {}(userid, date, seconds, timestamp)
+             VALUES(?, date(?), ?, ?)
+             '''.format(args.table)
 
             con.execute(query, (request.userid, args.date, args.time, datetime.now()))
 
-            request.reply('Added {} for {}'.format(args.time, args.date),
-                          direct=True)
+            request.reply('Added {} for {}'.format(args.time, args.date), direct=True)
 
         except sqlite3.IntegrityError:
             query = '''
