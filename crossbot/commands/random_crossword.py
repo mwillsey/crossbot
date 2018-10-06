@@ -28,9 +28,9 @@ def init(client):
 mini_url = "https://www.nytimes.com/crosswords/game/mini/{:04}/{:02}/{:02}"
 
 first_date = '2014-08-21'
-first_dt = datetime.datetime.strptime('2014-08-21', date_fmt)
+first_dt = datetime.datetime.strptime('2014-08-21', date_fmt).date()
 
-def random_date_url(client, request):
+def random_date_url(request):
 
     start = request.args.start_date
     end   = request.args.end_date
@@ -52,4 +52,3 @@ def random_date_url(client, request):
     rand = start + random.random() * (end - start)
 
     request.reply(mini_url.format(rand.year, rand.month, rand.day))
-

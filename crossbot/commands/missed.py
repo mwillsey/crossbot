@@ -18,28 +18,15 @@ def init(client):
         type    = int,
         help    = 'Show the nth most recent ones you missed')
 
-def parse_date(d):
-    return datetime.strptime(d, crossbot.parser.date_fmt)
-
 mini_url = "https://www.nytimes.com/crosswords/game/mini/{:04}/{:02}/{:02}"
 
-def get_missed(client, request):
+def get_missed(request):
 
-    # get all the entries for this person
-    with sqlite3.connect(crossbot.db_path) as con:
-        query = '''
-        SELECT date
-        FROM {}
-        WHERE userid = ?
-        '''.format(request.args.table)
-
-        result = con.execute(query, (request.userid,))
-
-    # sort dates completed from most recent to oldest
-    completed = set(parse_date(tup[0]) for tup in result)
+    all_entries = request.args.table.objects.filter(user = request.user)
+    completed = set(e.date for e in all_entries)
 
     # find missed day
-    date = parse_date(crossbot.parser.date('now'))
+    date = crossbot.parser.date('now')
     n = request.args.n
     missed = []
     for i in range(n):

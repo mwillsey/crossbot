@@ -21,9 +21,7 @@ class Request:
         print(path)
 
 
-class Crossbot:
-    '''Crossbot objects are passed around crossbot to allow it to behave
-    similarly on the command line and on Slack'''
+class Handler:
 
     def __init__(self, limit_commands=False):
         self.parser = Parser(limit_commands)
@@ -55,9 +53,4 @@ class Crossbot:
         else:
             command = request.command
 
-        command(self, request)
-
-    def user(self, userid):
-        '''A dumb user lookup that should be overridden if you have access to
-        Slack.'''
-        return userid
+        return command(request)

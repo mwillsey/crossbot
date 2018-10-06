@@ -175,8 +175,15 @@ def date(date_str, default='now'):
         if dt > release_dt:
             dt += datetime.timedelta(days=1)
 
+    elif date_str.startswith('-'):
+        try:
+            days = int(date_str)
+            dt = date('now') + datetime.timedelta(days=days)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                'Cannot parse date "{}", should look like "YYYY-MM-DD" or "now".'
+                .format(date_str))
     else:
-
         try:
             dt = datetime.datetime.strptime(date_str, date_fmt)
         except ValueError:
@@ -184,4 +191,7 @@ def date(date_str, default='now'):
                 'Cannot parse date "{}", should look like "YYYY-MM-DD" or "now".'
                 .format(date_str))
 
-    return dt.strftime(date_fmt)
+    if type(dt) == datetime.date:
+        return dt
+    else:
+        return dt.date()

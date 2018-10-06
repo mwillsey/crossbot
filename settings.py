@@ -17,7 +17,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # TODO maybe use USE_X_FORWARDED_HOST
-FORCE_SCRIPT_NAME = '/testbot'
+# FORCE_SCRIPT_NAME = '/testbot'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -25,12 +25,12 @@ FORCE_SCRIPT_NAME = '/testbot'
 SECRET_KEY = keys.DJANGO_SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = bool(int(os.environ.get('DJANGO_DEBUG', True)))
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATIC_URL = FORCE_SCRIPT_NAME + '/static/'
+STATIC_URL = '/testbot/static/'
 
 ALLOWED_HOSTS = [
     'localhost',
@@ -91,6 +91,24 @@ DATABASES = {
     },
 }
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': 'debug.log',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+    },
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators

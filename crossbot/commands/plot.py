@@ -387,7 +387,7 @@ def get_times(entries, args):
             times[e.userid][e.date] = e.seconds
 
     # Set base to 30s for mini crossword, 5 min for regular or sudoku
-    sec = 30 if args.table == crossbot.tables['mini'] else 60 * 5
+    sec = 30 if args.table == crossbot.models.MiniCrosswordTime else 60 * 5
     ticker = matplotlib.ticker.MultipleLocator(base=sec)
     formatter = matplotlib.ticker.FuncFormatter(fmt_min) # 1:30
 

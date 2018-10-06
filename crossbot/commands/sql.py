@@ -3,6 +3,7 @@ import html
 import re
 from multiprocessing import Pool, TimeoutError
 
+from crossbot.models import MiniCrosswordTime
 import crossbot
 
 
@@ -18,13 +19,33 @@ def init(client):
         help = 'sql command to run again at table of (user, date, seconds)')
 
 SAFE_SQL_OPS = (
-    sqlite3.SQLITE_SELECT, 
+    sqlite3.SQLITE_SELECT,
     sqlite3.SQLITE_READ,
     31, # sqlite3.SQLITE_FUNCTION
 )
 
+ALLOWED_TABLES = {
+    MiniCrosswordTime._meta.db_table: ["mini_crossword_time"]
+}
+
+def replace_table_names(query):
+    result = query
+    for db_table, names in ALLOWED_TABLES.items():
+        for name in names:
+            result = result.replace(name, db_table)
+    return result
+
 def allow_only_select(operation, arg1, arg2, db_name, trigger):
     if operation in SAFE_SQL_OPS:
+        if operation == sqlite3.SQLITE_READ:
+            table_name = arg1
+            print('should allow?: ', operation, arg1, arg2)
+            print(table_name in ALLOWED_TABLES)
+            if table_name in ALLOWED_TABLES:
+                return sqlite3.SQLITE_OK
+            else:
+                return sqlite3.SQLITE_DENY
+
         return sqlite3.SQLITE_OK
     else:
         return sqlite3.SQLITE_DENY
@@ -45,6 +66,7 @@ def fmt_tup(tup):
 def do_sql(cmd, *args):
     with sqlite3.connect(crossbot.db_path) as con:
         con.set_authorizer(allow_only_select)
+        con.create_function('user_str', 1, user_str)
         try:
             rows = con.execute(cmd, args).fetchall()
             if len(rows) > 20:
@@ -62,7 +84,13 @@ def format_sql_cmd(cmd):
     cmd = html.unescape(cmd)
     cmd = re.sub(r'<@(\w+)>', replace_with_id, cmd)
     cmd = cmd.replace(u"\u2018", "'").replace(u"\u2019", "'").replace(u"\u201c","'").replace(u"\u201d", "'")
-    return cmd
+
+    return replace_table_names(cmd)
+
+def user_str(pk):
+    from crossbot.models import MyUser
+    u = MyUser.objects.get(pk=pk)
+    return str(u)
 
 def format_sql_result(result, client):
     def replace_with_name(match):
@@ -71,7 +99,7 @@ def format_sql_result(result, client):
     result = re.sub(r'\w{9}', replace_with_name, result)
     return result
 
-def sql(client, request):
+def sql(request):
     '''Run a sql command.'''
 
     cmd = ' '.join(request.args.sql_command)
@@ -85,6 +113,6 @@ def sql(client, request):
     except TimeoutError:
         result = "dont try to dos me, this incident has been reported"
 
-    result = format_sql_result(result, client)
+    # result = format_sql_result(result, client)
 
     request.reply(result)

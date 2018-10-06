@@ -16,20 +16,16 @@ def init(client):
 
     # TODO add a command-line only --user parameter
 
-def delete(client, request):
+def delete(request):
     '''Delete entry for today or given date (`delete 2017-05-05`).'''
 
-    with sqlite3.connect(crossbot.db_path) as con:
-        query = '''
-        DELETE FROM {}
-        WHERE userid=? AND date=date(?)
-        '''.format(request.args.table)
+    table = request.args.table
+    user = request.user
+    date = request.args.date
 
-        cur = con.cursor()
-        cur.execute(query, (request.userid, request.args.date))
-
-        if cur.rowcount == 0:
-            request.reply("You didn't have an entry for this date.",
-                         direct=True)
-        else:
-            request.react('x')
+    try:
+        time = table.objects.get(date=date, user=user)
+        time.delete()
+        request.reply('Deleted this time: ' + str(time))
+    except table.DoesNotExist:
+        request.reply('No entry for {}'.format(date))

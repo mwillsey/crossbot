@@ -1,21 +1,20 @@
 from django.db import models
+from django.utils import timezone
 from django.contrib.auth.models import User
 
 import crossbot.slack
 
 
 class MyUser(User):
-    def display_name(self):
-        return 'bob'
 
     class Meta:
         proxy = True
 
     def __str__(self):
-        slack_user = SlackUser.objects.get(user=self)
-        if slack_user:
+        try:
+            slack_user = SlackUser.objects.get(user=self)
             return str(slack_user)
-        else:
+        except SlackUser.DoesNotExist:
             return self.username
 
 
@@ -44,9 +43,10 @@ class CommonTime(models.Model):
     user = models.ForeignKey(MyUser, null=True, on_delete=models.SET_NULL)
     seconds = models.IntegerField()
     date = models.DateField()
-    timestamp = models.DateTimeField(null=True)
+    timestamp = models.DateTimeField(null=True, auto_now_add=True)
 
     class Meta:
+        unique_together = ("user", "date")
         abstract = True
 
     def time_str(self):
