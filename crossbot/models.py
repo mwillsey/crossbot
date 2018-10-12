@@ -264,6 +264,38 @@ class CommonTime(models.Model):
     def __str__(self):
         return '{} - {} - {}'.format(self.user, self.time_str(), self.date)
 
+    @staticmethod
+    def streaks(qs):
+        """Takes a query set times and returns the streaks clumped together."""
+
+        streaks = []
+        current_streak = []
+
+        one_day = datetime.timedelta(days=1)
+
+        for entry in qs.order_by('date'):
+            if not current_streak or entry.date == current_streak[
+                    -1].date + one_day:
+                # either there wasn't a streak so we should start one, or we maintained a streak
+                current_streak.append(entry)
+            else:
+                # we broke it, create a new one
+                streaks.append(current_streak)
+                current_streak = [entry]
+
+        if current_streak:
+            streaks.append(current_streak)
+
+        return streaks
+
+    @classmethod
+    def participation_streak(cls, user, filter_q=None):
+        times = cls.objects.filter(seconds__isnull=False, user_id=user)
+        if filter_q:
+            times = times.filter(filter_q)
+
+        return cls.streaks(times)
+
 
 class MiniCrosswordTime(CommonTime):
     pass

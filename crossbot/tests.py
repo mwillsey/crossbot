@@ -178,6 +178,37 @@ class ModelTests(TestCase):
         self.assertEqual(t.date, parse_date(None))
         self.assertTrue(t.is_fail())
 
+    def test_streak(self):
+        alice = CBUser.from_slackid('UALICE', 'alice')
+
+        # set up a broken 10 streak
+        _, t1 = alice.add_mini_crossword_time(18, parse_date('2018-01-01'))
+        _, t2 = alice.add_mini_crossword_time(12, parse_date('2018-01-02'))
+        _, t3 = alice.add_mini_crossword_time(12, parse_date('2018-01-03'))
+        _, t4 = alice.add_mini_crossword_time(15, parse_date('2018-01-04'))
+        # t5 is missing
+        _, t6 = alice.add_mini_crossword_time(15, parse_date('2018-01-06'))
+        _, t7 = alice.add_mini_crossword_time(15, parse_date('2018-01-07'))
+        _, t8 = alice.add_mini_crossword_time(15, parse_date('2018-01-08'))
+        _, t9 = alice.add_mini_crossword_time(15, parse_date('2018-01-09'))
+        _, t0 = alice.add_mini_crossword_time(18, parse_date('2018-01-10'))
+
+        # make sure the streak is broken
+        streaks = MiniCrosswordTime.participation_streak(alice)
+        self.assertListEqual(streaks, [[t1, t2, t3, t4], [t6, t7, t8, t9, t0]])
+
+        # fix the broken streak
+        _, t5 = alice.add_mini_crossword_time(15, parse_date('2018-01-05'))
+
+        streaks = MiniCrosswordTime.participation_streak(alice)
+        self.assertListEqual(streaks,
+                             [[t1, t2, t3, t4, t5, t6, t7, t8, t9, t0]])
+
+        # now break it again with a deleted time (t2)
+        alice.remove_mini_crossword_time(parse_date('2018-01-02'))
+        streaks = MiniCrosswordTime.participation_streak(alice)
+        self.assertListEqual(streaks, [[t1], [t3, t4, t5, t6, t7, t8, t9, t0]])
+
     def test_crossbucks_add_remove(self):
         # Checks that removing a time actually removes crossbucks
         alice = CBUser.from_slackid('UALICE', 'alice')
