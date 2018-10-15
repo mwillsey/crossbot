@@ -32,11 +32,12 @@ DEBUG = bool(int(os.environ.get('DJANGO_DEBUG', True)))
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATIC_URL = '/testbot/static/'
+STATIC_URL = '/static/'
 
 ALLOWED_HOSTS = [
     'localhost',
     'mwillsey.com',
+    'crossbot.uwplse.org',
 ]
 
 
