@@ -10,6 +10,9 @@ venv:
 static: venv
 	${activate} && ./manage.py collectstatic --no-input
 
+update_slacknames: venv
+	${activate} && ./manage.py shell -c "import crossbot.models as m; m.CBUser.update_slacknames()"
+
 migrate: venv
 	${activate} && ./manage.py migrate
 
