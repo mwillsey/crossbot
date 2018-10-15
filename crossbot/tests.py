@@ -12,10 +12,13 @@ from django.urls import reverse
 from crossbot.slack.commands import parse_date
 from crossbot.slack.api import SLACK_URL
 from crossbot.views import slash_command
-from crossbot.models import (CBUser,
-                             MiniCrosswordTime,
-                             CrosswordTime,
-                             EasySudokuTime)
+from crossbot.models import (
+    CBUser,
+    MiniCrosswordTime,
+    CrosswordTime,
+    EasySudokuTime,
+    QueryShorthand,
+)
 
 
 class MockResponse:
@@ -222,6 +225,9 @@ class SlackAppTests(SlackTestCase):
         response = self.slack_post(text='')
         self.assertIn('usage:', response['text'])
 
+        response = self.slack_post(text='   ')
+        self.assertIn('usage:', response['text'])
+
         response = self.slack_post(text='-h')
         self.assertIn('usage:', response['text'])
 
@@ -242,3 +248,38 @@ class SlackAppTests(SlackTestCase):
         # Ensure the time doesn't show up in the times list
         response = self.slack_post(text='times 2018-08-01')
         self.assertNotIn(':23', response['text'])
+
+    def test_sql(self):
+        # should be able to handle an empty query
+        response = self.slack_post(text='sql')
+        self.assertIn('Please type', response['text'])
+        response = self.slack_post(text='sql  ')
+        self.assertIn('Please type', response['text'])
+
+        response = self.slack_post(text='sql select count(*) from mini_crossword_time')
+        # just check that we can turn the response into an int
+        # because we are just making raw sqlite, the django testing thing
+        # doesn't clear out the model
+        int(response['text'])
+
+    def test_query(self):
+        # make sure the command tells you how to do it if there are no saved queries
+        response = self.slack_post(text='query')
+        self.assertIn('no saved', response['text'])
+        self.assertIn('query --save', response['text'])
+
+        # make sure we can save a new query
+        query_text = 'select count(*) from mini_crossword_time'
+        response = self.slack_post('query --save num_minis ' + query_text)
+        self.assertIn('Saved new', response['text'])
+
+        # make sure it's the right command
+        query = QueryShorthand.objects.first()
+        self.assertEqual(query.command, query_text)
+        self.assertEqual(query.user_id, 'UALICE')
+
+        # make sure we can run it
+        # again, we can only check that the result is an int because we aren't
+        # going through the django testing thing
+        response = self.slack_post('query num_minis')
+        int(response['text'])

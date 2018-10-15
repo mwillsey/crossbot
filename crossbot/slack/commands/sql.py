@@ -40,7 +40,7 @@ def _allow_only_select(operation, arg1, arg2, db_name, trigger):
         return sqlite3.SQLITE_OK
 
     table_name = arg1
-    logging.debug('should allow %s %s %s? %s',
+    logger.debug('should allow %s %s %s? %s',
                   operation, arg1, arg2, table_name in ALLOWED_TABLES)
 
     if table_name not in ALLOWED_TABLES:
@@ -113,15 +113,15 @@ def _format_sql_cmd(cmd):
     return cmd
 
 
-def run_sql_command(cmd, *args):
+def run_sql_command(cmd, args):
     """Formats the command and runs it safely."""
 
-    logging.debug("raw command: %s | %s", cmd, args)
+    logger.debug("raw command: %s | %s", cmd, args)
 
     cmd = _format_sql_cmd(cmd)
     args = [_format_sql_cmd(arg) for arg in args]
 
-    logging.debug("formatted command: %s | %s", cmd, args)
+    logger.debug("formatted command: %s | %s", cmd, args)
 
     try:
         with multiprocessing.Pool() as pool:
@@ -132,4 +132,8 @@ def run_sql_command(cmd, *args):
 
 def sql(request):
     '''Run a sql command.'''
-    request.reply(run_sql_command(request.args.sql_command))
+    if request.args.sql_command:
+        cmd = ' '.join(request.args.sql_command)
+        request.reply(run_sql_command(cmd))
+    else:
+        request.reply("Please type some sql.", direct=True)
