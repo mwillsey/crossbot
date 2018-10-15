@@ -22,6 +22,12 @@ secrets
 secrets.py
 keys.py
 
+# ignore user-uploaded files
+uploaded_files
+
 # django stuff
 static
 venv
+
+# sublime stuff
+*.sublime-workspace

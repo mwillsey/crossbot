@@ -1,8 +1,10 @@
-import sqlite3
-from datetime import datetime, timedelta
+from django.utils.timezone import timedelta
 
-import crossbot
-import crossbot.parser
+from . import parse_date
+
+
+MINI_URL = "https://www.nytimes.com/crosswords/game/mini/{:04}/{:02}/{:02}"
+
 
 def init(client):
 
@@ -18,15 +20,14 @@ def init(client):
         type    = int,
         help    = 'Show the nth most recent ones you missed')
 
-mini_url = "https://www.nytimes.com/crosswords/game/mini/{:04}/{:02}/{:02}"
 
 def get_missed(request):
 
-    all_entries = request.args.table.objects.filter(user = request.user)
-    completed = set(e.date for e in all_entries)
+    completed = set(request.user.times(request.args.table)
+                    .values_list('date', flat=True))
 
     # find missed day
-    date = crossbot.parser.date('now')
+    date = parse_date('now')
     n = request.args.n
     missed = []
     for i in range(n):
@@ -36,7 +37,7 @@ def get_missed(request):
         date -= timedelta(days=1)
 
     urls = [
-        mini_url.format(d.year, d.month, d.day)
-        for d in missed
+        MINI_URL.format(date.year, date.month, date.day)
+        for date in missed
     ]
     request.reply('\n'.join(urls))

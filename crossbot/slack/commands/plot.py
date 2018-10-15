@@ -1,12 +1,12 @@
 
 import datetime
-import sqlite3
 import statistics
-import numpy as np
 
 from collections import defaultdict, namedtuple
 from itertools import cycle, groupby, count
 from tempfile import NamedTemporaryFile
+
+import numpy as np
 
 # don't use matplotlib gui
 import matplotlib
@@ -14,13 +14,11 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-import crossbot
 
-from crossbot.parser import date_fmt
+from . import parse_date, date_fmt, models
 
 
 def init(client):
-
     parser = client.parser.subparsers.add_parser('plot', help='plot something')
     parser.set_defaults(
         command   = plot,
@@ -31,8 +29,8 @@ def init(client):
         score_function = get_normalized_scores,
     )
 
-    ptype = parser.add_argument_group('Plot type')\
-                    .add_mutually_exclusive_group()
+    ptype = (parser.add_argument_group('Plot type')
+             .add_mutually_exclusive_group())
 
     ptype.add_argument(
         '--times',
@@ -93,7 +91,7 @@ def init(client):
 
     dates = parser.add_argument_group('Date range')
 
-    def date_none(date_str): return crossbot.date(date_str, default=None)
+    def date_none(date_str): return parse_date(date_str, default=None)
 
     dates.add_argument(
         '--start-date',
@@ -160,7 +158,7 @@ def plot(client, request):
         else:
             end_dt = start_dt + delta
     else:
-        end_dt = date_dt(end_date if end_date else crossbot.date('now'))
+        end_dt = date_dt(end_date if end_date else parse_date('now'))
         start_dt = end_dt - delta
 
     # reformat the dates based on the above dt calculations
@@ -190,17 +188,10 @@ def plot(client, request):
         start_dt -= datetime.timedelta(days=int(1 / (1 - args.smooth)))
         start_date = start_dt.strftime(date_fmt)
 
-    with sqlite3.connect(crossbot.db_path) as con:
-        query = '''
-        SELECT userid, date, seconds
-        FROM {}
-        WHERE date
-          BETWEEN date(?)
-          AND     date(?)
-        ORDER BY date, userid'''.format(args.table)
-
-        cur = con.execute(query, (start_date, end_date))
-        entries = [Entry._make(tup) for tup in cur]
+    entries = (args.table.all_times()
+        .filter(date__gte=start_date, date__lte=end_date)
+        .order_by('date', 'user__slackid')
+        .values('user', 'seconds', 'date'))
 
     scores_by_user, ticker, formatter = args.score_function(entries, args)
 
@@ -387,7 +378,7 @@ def get_times(entries, args):
             times[e.userid][e.date] = e.seconds
 
     # Set base to 30s for mini crossword, 5 min for regular or sudoku
-    sec = 30 if args.table == crossbot.models.MiniCrosswordTime else 60 * 5
+    sec = 30 if args.table == models.MiniCrosswordTime else 60 * 5
     ticker = matplotlib.ticker.MultipleLocator(base=sec)
     formatter = matplotlib.ticker.FuncFormatter(fmt_min) # 1:30
 
