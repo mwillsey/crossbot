@@ -218,6 +218,20 @@ class SlackAppTests(SlackTestCase):
         self.assertIn('alice', lines[1])
         self.assertIn(':fire:', lines[1])
 
+    def test_help(self):
+        response = self.slack_post(text='')
+        self.assertIn('usage:', response['text'])
+
+        response = self.slack_post(text='-h')
+        self.assertIn('usage:', response['text'])
+
+        response = self.slack_post(text='help')
+        self.assertIn('usage:', response['text'])
+
+        # this is an actual bad command, should respond with a different error
+        response = self.slack_post(text='asdfasdiufpasdfa')
+        self.assertIn('invalid choice:', response['text'])
+
     def test_add_delete(self):
         self.slack_post(text='add :23 2018-08-01')
 

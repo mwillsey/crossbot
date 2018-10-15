@@ -3,7 +3,7 @@ import traceback
 
 from . import commands
 from .commands import COMMANDS
-from .parser import Parser
+from .parser import Parser, ParserException
 from .api import *
 from ..models import CBUser
 
@@ -36,13 +36,16 @@ class Handler:
         If parsing fails, this raises crossbot.parser.ParserException.
         """
 
-        if parse:
-            command, args = self.parser.parse(request.text)
-            request.args = args
-        else:
-            command = request.command
+        try:
+            if parse:
+                command, args = self.parser.parse(request.text)
+                request.args = args
+            else:
+                command = request.command
 
-        return command(request)
+            return command(request)
+        except ParserException as exn:
+            request.reply(str(exn), direct=True)
 
 
 class Request:
