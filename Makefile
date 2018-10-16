@@ -1,17 +1,30 @@
 
+.PHONY: migrate kill fmt
+
+
+# inside travis the virtualenv is already set up, so just mock these commands
+ifeq ($(TRAVIS),true)
+activate = true
+venv:
+	mkdir -p venv
+else
 activate = . venv/bin/activate
-
-.PHONY: migrate kill
-
 venv:
 	virtualenv --quiet --python python3 --no-site-packages $@
 	${activate} && pip install --quiet -r requirements.txt
+endif
 
 static: venv
 	${activate} && ./manage.py collectstatic --no-input
 
 update_slacknames: venv
 	${activate} && ./manage.py shell -c "import crossbot.models as m; m.CBUser.update_slacknames()"
+
+fmt: venv
+	${activate} && yapf -pri crossbot/ *.py
+
+check_fmt: venv
+	${activate} && yapf -pr --diff crossbot/ *.py
 
 migrate: venv
 	${activate} && ./manage.py migrate

@@ -19,3 +19,4 @@ six==1.11.0
 typing==3.6.4
 urllib3==1.23
 wcwidth==0.1.7
+yapf==0.24.0

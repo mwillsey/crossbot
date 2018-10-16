@@ -1,4 +1,5 @@
 # crossbot
+[![Build Status](https://travis-ci.org/mwillsey/crossbot.svg?branch=master)](https://travis-ci.org/mwillsey/crossbot)
 
 A Slack bot to make you really competitive on the New York Times
 [mini crossword](http://www.nytimes.com/crosswords/game/mini).
@@ -25,7 +26,7 @@ python setup.py install
 
 ### Isolation
 
-To create a virtual environment, try 
+To create a virtual environment, try
 [virtualenvwrapper](http://virtualenvwrapper.readthedocs.io/en/latest/index.html).
 The following command will create the virtual environment and immediately use
 it.
@@ -69,4 +70,3 @@ When you're developing, make sure to run `./setup.py install` to get
 `crossbot.py` to reflect your changes. If you add or rename files, you might
 want to do `./setup.py clean --all` followed by `./setup.py install` to have it
 start fresh.
-
