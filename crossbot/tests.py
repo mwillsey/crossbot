@@ -9,6 +9,7 @@ from django.test import TestCase
 from django.test.client import RequestFactory
 from django.urls import reverse
 
+from settings import MEDIA_URL
 from crossbot.slack.commands import parse_date
 from crossbot.slack.api import SLACK_URL
 from crossbot.views import slash_command
@@ -292,3 +293,11 @@ class SlackAppTests(SlackTestCase):
         # going through the django testing thing
         response = self.slack_post('query num_minis')
         int(response['text'].split('\n')[-1])
+
+    def test_plot(self):
+        self.slack_post(text='add :10 2018-08-01')
+        self.slack_post(text='add :10 2018-08-02')
+        self.slack_post(text='add :10 2018-08-03')
+        self.slack_post(text='add :10 2018-08-04')
+        response = self.slack_post(text='plot')
+        self.assertIn(MEDIA_URL, response['attachments'][0]['image_url'])

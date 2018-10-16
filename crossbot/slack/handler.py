@@ -41,6 +41,7 @@ class Handler:
                 command, args = self.parser.parse(request.text)
                 request.args = args
             else:
+
                 command = request.command
 
             return command(request)
@@ -61,7 +62,7 @@ class Request:
         prefix = '@user - ' if direct else ''
         logger.debug(prefix + msg)
 
-    def upload(self, name, path):
+    def attach(self, name, path):
         logger.debug(path)
 
 
@@ -79,6 +80,7 @@ class SlashCommandRequest:
 
         self.in_channel = in_channel
         self.replies = []
+        self.attachments = []
 
     def reply(self, msg, direct=False):
         self.replies.append(msg)
@@ -88,8 +90,16 @@ class SlashCommandRequest:
         timestamp = post_message(self.channel, text=msg)
         react(emoji, self.channel, timestamp)
 
+    def attach(self, name, path):
+        self.attachments.append({
+            'fallback': 'its a picture',
+            'pretext': name,
+            'image_url': path
+        })
+
     def response_json(self):
         return {
             'response_type': 'in_channel' if self.in_channel else 'ephemeral',
-            'text': '\n'.join(self.replies)
+            'text': '\n'.join(self.replies),
+            'attachments': self.attachments,
         }
