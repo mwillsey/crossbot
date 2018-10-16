@@ -1,5 +1,5 @@
 
-.PHONY: migrate kill fmt check_fmt link check
+.PHONY: migrate kill fmt check_fmt check lint lint_all
 
 
 # inside travis the virtualenv is already set up, so just mock these commands
@@ -30,6 +30,10 @@ migrate: venv
 	${activate} && ./manage.py migrate
 
 lint: venv
+  # only show errors when "regular" linting. Useful for CI
+	${activate} && pylint --disable=all --enable=E,I --load-plugins pylint_django crossbot/
+
+lint_all: venv
 	${activate} && pylint --load-plugins pylint_django crossbot/
 
 check: venv check_fmt lint test
