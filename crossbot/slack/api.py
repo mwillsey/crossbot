@@ -1,14 +1,14 @@
 """Methods for sending requests directly to Slack."""
 
 import requests
-import keys
+import settings
 
 SLACK_URL = 'https://slack.com/api/'
 
 
 def _slack_api(endpoint, method, **kwargs):
     assert method in ['GET', 'POST']
-    headers = {'Authorization': 'Bearer ' + keys.SLACK_OAUTH_ACCESS_TOKEN}
+    headers = {'Authorization': 'Bearer ' + settings.SLACK_OAUTH_ACCESS_TOKEN}
     url = SLACK_URL + endpoint
 
     if method == 'GET':

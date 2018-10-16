@@ -21,6 +21,7 @@ __pycache__
 secrets
 secrets.py
 keys.py
+/settings/prod.py
 
 # ignore user-uploaded files
 uploaded_files

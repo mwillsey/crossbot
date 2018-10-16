@@ -77,8 +77,8 @@ class SlackTestCase(MockedRequestTestCase):
 
         self.slack_sk = b'8f742231b10e8888abcd99yyyzzz85a5'
 
-        self.patch('keys.SLACK_SECRET_SIGNING_KEY', self.slack_sk)
-        self.patch('keys.SLACK_OAUTH_ACCESS_TOKEN', 'oauth_token')
+        self.patch('settings.SLACK_SECRET_SIGNING_KEY', self.slack_sk)
+        self.patch('settings.SLACK_OAUTH_ACCESS_TOKEN', 'oauth_token')
 
     def patch(self, *args, **kwargs):
         patcher = patch(*args, **kwargs)

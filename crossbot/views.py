@@ -6,7 +6,7 @@ import logging
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 
-import keys
+import settings
 
 from .slack import handle_slash_command
 
@@ -23,7 +23,7 @@ def validate_slack_request(request):
         return False
 
     my_signature = 'v0=' + hmac.new(
-        key=keys.SLACK_SECRET_SIGNING_KEY,
+        key=settings.SLACK_SECRET_SIGNING_KEY,
         msg=b'v0:' + bytes(timestamp, 'utf8') + b':' + request.body,
         digestmod=hashlib.sha256).hexdigest()
 

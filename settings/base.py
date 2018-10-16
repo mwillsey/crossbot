@@ -13,18 +13,14 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 import os
 import warnings
 
-import keys
-
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # TODO maybe use USE_X_FORWARDED_HOST
 # FORCE_SCRIPT_NAME = '/testbot'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
-
-SECRET_KEY = keys.DJANGO_SECRET_KEY
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = bool(int(os.environ.get('DJANGO_DEBUG', True)))
