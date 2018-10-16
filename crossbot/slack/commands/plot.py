@@ -244,7 +244,7 @@ def plot(request):
             starts_and_lens = [((date_dt(min(seq)[0]) - start_dt).days,
                                 len(seq)) for seq in date_seqs]
             starts, lens = zip(*starts_and_lens)
-            ax.barh(i, lens, thickness, starts, tick_label=name)
+            ax.barh(i, lens, thickness, starts, tick_label=label)
 
         plt.yticks(
             np.arange(len(user_seqs)) * thickness,
