@@ -1,6 +1,5 @@
-import sqlite3
+from . import parse_date
 
-import crossbot
 
 def init(client):
 
@@ -11,7 +10,7 @@ def init(client):
         'date',
         nargs   = '?',
         default = 'now',
-        type    = crossbot.date,
+        type    = parse_date,
         help    = 'Date to delete a score for.')
 
     # TODO add a command-line only --user parameter
@@ -19,13 +18,9 @@ def init(client):
 def delete(request):
     '''Delete entry for today or given date (`delete 2017-05-05`).'''
 
-    table = request.args.table
-    user = request.user
     date = request.args.date
-
-    try:
-        time = table.objects.get(date=date, user=user)
-        time.delete()
-        request.reply('Deleted this time: ' + str(time))
-    except table.DoesNotExist:
+    deleted_time = request.user.remove_time(request.args.table, date)
+    if deleted_time:
+        request.reply('Deleted this time: ' + str(deleted_time))
+    else:
         request.reply('No entry for {}'.format(date))

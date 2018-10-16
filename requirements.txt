@@ -5,6 +5,7 @@ curtsies==0.3.0
 cycler==0.10.0
 Django==2.1
 greenlet==0.4.14
+gunicorn==19.9.0
 idna==2.7
 kiwisolver==1.0.1
 matplotlib==2.2.3

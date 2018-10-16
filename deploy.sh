@@ -1,5 +1,8 @@
-#!/bin/bash 
+#!/bin/bash
 
-rsync -a --itemize-changes --progress --exclude "__pycache__" --exclude "*.pyc" --chown www-data:www-data settings.py urls.py uwsgi.ini static/ crossbot/ venv/ /var/www/crossbot/
+set -e
 
-touch /var/www/crossbot/uwsgi.ini
+backup="/tmp/crossbot.db.$(date -Iseconds)"
+scp uwplse.org:/var/www/crossbot/crossbot.db $backup
+echo "Backed up to $backup"
+rsync -rz --delete --itemize-changes --progress --exclude-from .gitignore --exclude .git . uwplse.org:/var/www/crossbot

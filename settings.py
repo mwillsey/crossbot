@@ -10,8 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
-import keys
 import os
+import warnings
+
+import keys
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -30,11 +32,15 @@ DEBUG = bool(int(os.environ.get('DJANGO_DEBUG', True)))
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATIC_URL = '/testbot/static/'
+STATIC_URL = '/static/'
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
 
 ALLOWED_HOSTS = [
     'localhost',
     'mwillsey.com',
+    'crossbot.uwplse.org',
 ]
 
 
@@ -95,17 +101,35 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'handlers': {
+        'console': {
+            'level': os.environ.get('LOGLEVEL', 'INFO').upper(),
+            'class': 'logging.StreamHandler',
+        },
         'file': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'filename': 'debug.log',
         },
+        'null': {
+            'class':'logging.NullHandler',
+        },
     },
     'loggers': {
+        'crossbot': {
+            'level': 'DEBUG',
+            'propagate': True,
+            'handlers': ['console', 'file']
+        },
         'django': {
             'handlers': ['file'],
             'level': 'DEBUG',
             'propagate': True,
+        },
+        # make the sql logs chill out
+        'django.db.backends': {
+            'handlers': ['null'],
+            'propagate': False,
+            'level':'DEBUG',
         },
     },
 }
@@ -141,3 +165,10 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
+
+
+# Cause naive datetimes to trigger exceptions
+warnings.filterwarnings(
+    'error', r"DateTimeField .* received a naive datetime",
+    RuntimeWarning, r'django\.db\.models\.fields',
+)

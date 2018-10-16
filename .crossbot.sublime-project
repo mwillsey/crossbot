@@ -1,0 +1,31 @@
+{
+	"build_systems":
+	[
+		{
+			"file_regex": "^[ ]*File \"(...*?)\", line ([0-9]*)",
+			"name": "Anaconda Python Builder",
+			"selector": "source.python",
+			"shell_cmd": "\"python\" -u \"$file\""
+		}
+	],
+	"folders":
+	[
+		{
+			"name": "Crossbot",
+			"path": ".",
+			"folder_exclude_patterns": [
+				"__pycache__",
+			],
+			"file_exclude_patterns": [
+				"*.sublime-project",
+				"*.sublime-workspace",
+			]
+		}
+	],
+	"settings":
+	{
+		"SublimeLinter.linters.pydocstyle.executable": "~/.virtualenvs/crossbot/bin/pydocstyle",
+		"SublimeLinter.linters.pylint.executable": "~/.virtualenvs/crossbot/bin/pylint",
+		"SublimeLinter.linters.pylint.args": ["--load-plugins=pylint_django"]
+	}
+}

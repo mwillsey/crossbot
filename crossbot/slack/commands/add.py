@@ -1,33 +1,30 @@
-import sqlite3
 import math
-import requests
+import logging
 
 from random import choice
-from copy import copy
-from datetime import datetime, timedelta
-
-import crossbot
-from crossbot.parser import date_fmt
 
 from django.utils import timezone
-from django.db.utils import IntegrityError
+
+from . import models, parse_date, parse_time
+
+
+logger = logging.getLogger(__name__)
 
 
 def init(client):
-
     parser = client.parser.subparsers.add_parser('add', help='Add a time.')
     parser.set_defaults(command=add)
 
     parser.add_argument(
         'time',
-        type    = crossbot.time,
+        type    = parse_time,
         help    = 'Score to add. eg. ":32", "2:45", "fail"')
 
     parser.add_argument(
         'date',
         nargs   = '?',
         default = 'now',
-        type    = crossbot.date,
+        type    = parse_date,
         help    = 'Date to add a score for.')
 
     # TODO add a command-line only --user parameter
@@ -39,61 +36,37 @@ def add(request):
 
     args = request.args
 
-    try:
-        time = args.table(user = request.user, date = args.date, seconds = args.time)
-        time.save()
-    except IntegrityError:
-        time = args.table.objects.get(user = request.user, date = args.date)
+    was_added, time = request.user.add_time(args.table, args.time, args.date)
 
+    if not was_added:
         request.reply('I could not add this to the database, '
                       'because you already have an entry '
                       '({}) for this date.'.format(time.time_str()),
                       direct=True)
         return
 
+    # XXX: Isn't this wrong for historical adds?
     day_of_week = timezone.now().weekday()
-
     emj = emoji(args.time, args.table, day_of_week)
 
     request.message_and_react('<@{}>: {}'.format(request.slackid, request.text), emj)
     request.reply('Submitted {} for {}'.format(time.time_str(), request.args.date))
 
-    all_entries = args.table.objects.filter(user = request.user)
-    dates_completed = set(e.date for e in all_entries)
+    new_sc, old_sc, _, _ = request.user.streaks(args.table, args.date)
 
-    # calculate the backwards streak
-    check_date = copy(request.args.date)
-    back_streak_count = 0
-    while check_date in dates_completed:
-        back_streak_count += 1
-        check_date -= timedelta(days=1)
 
-    # calculate the forwards streak
-    check_date = copy(request.args.date)
-    forward_streak_count = 0
-    while check_date in dates_completed:
-        forward_streak_count += 1
-        check_date += timedelta(days=1)
-
-    name = str(request.user)
-
-    # the previous streak count this user had was the max of the forward and back
-    # the new one is the sum - 1 (this date is double counted)
-    # so give them every streak award between the two
-    old_sc = max(back_streak_count, forward_streak_count)
-    new_sc = back_streak_count + forward_streak_count
-    for streak_count in range(old_sc, new_sc):
+    for streak_count in range(old_sc + 1, new_sc + 1):
         streak_messages = STREAKS.get(streak_count)
         if streak_messages:
-            msg = choice(streak_messages).format(name=name)
+            msg = choice(streak_messages).format(name=request.user)
             try:
                 # try here because we might fail if the reaction already exists.
                 request.react("achievement")
             except:
-                print("Achievement reaction failed!")
+                logger.warning("Achievement reaction failed!")
             request.reply(msg)
 
-    print("{} has a streak of {} in {}".format(name, new_sc - 1, args.table))
+    logger.debug("{} has a streak of {} in {}".format(request.user, new_sc, args.table))
 
     # if args.table == 'mini_crossword_time':
     #     requests.post('http://plseaudio.cs.washington.edu:8087/scroll_text',
@@ -178,11 +151,11 @@ SPEED_EMOJI = [
 
 def emoji(time, table, day_of_week):
 
-    if table == crossbot.models.MiniCrosswordTime:
+    if table == models.MiniCrosswordTime:
         times_list = MINI_TIMES
-    elif table == crossbot.models.CrosswordTime:
+    elif table == models.CrosswordTime:
         times_list = REGULAR_TIMES
-    elif table == crossbot.models.EasySudokuTime:
+    elif table == models.EasySudokuTime:
         times_list = SUDOKU_TIMES
     else:
         raise RuntimeError('Unknown table {}'.format(table))

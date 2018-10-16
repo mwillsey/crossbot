@@ -1,12 +1,13 @@
 
+import logging
 import datetime
-import sqlite3
 import statistics
+
+from collections import defaultdict
+from itertools import cycle, groupby, count
+
 import numpy as np
 
-from collections import defaultdict, namedtuple
-from itertools import cycle, groupby, count
-from tempfile import NamedTemporaryFile
 
 # don't use matplotlib gui
 import matplotlib
@@ -14,13 +15,15 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-import crossbot
+from . import parse_date, date_fmt, models
 
-from crossbot.parser import date_fmt
+from settings import MEDIA_URL, MEDIA_ROOT
+
+
+logger = logging.getLogger(__name__)
 
 
 def init(client):
-
     parser = client.parser.subparsers.add_parser('plot', help='plot something')
     parser.set_defaults(
         command   = plot,
@@ -31,8 +34,8 @@ def init(client):
         score_function = get_normalized_scores,
     )
 
-    ptype = parser.add_argument_group('Plot type')\
-                    .add_mutually_exclusive_group()
+    ptype = (parser.add_argument_group('Plot type')
+             .add_mutually_exclusive_group())
 
     ptype.add_argument(
         '--times',
@@ -93,7 +96,7 @@ def init(client):
 
     dates = parser.add_argument_group('Date range')
 
-    def date_none(date_str): return crossbot.date(date_str, default=None)
+    def date_none(date_str): return parse_date(date_str, default=None)
 
     dates.add_argument(
         '--start-date',
@@ -121,10 +124,6 @@ def init(client):
         help    = 'Slack name of player to focus the plot on. Can be used multiple times.')
 
 
-# a nice way to convert db entries into objects
-Entry = namedtuple('Entry', ['userid', 'date', 'seconds'])
-
-
 def fmt_min(sec, pos):
     minutes, seconds = divmod(int(sec), 60)
     return '{}:{:02}'.format(minutes, seconds)
@@ -132,10 +131,21 @@ def fmt_min(sec, pos):
 
 # "date" means a date string, "dt" means a datetime object
 def date_dt(date):
+    if isinstance(date, datetime.datetime):
+        return date.date()
+    if isinstance(date, datetime.date):
+        return date
     return datetime.datetime.strptime(date, date_fmt).date()
 
+def username_from_slackid(slackid):
+    user = models.CBUser.from_slackid(slackid, create=False)
+    if user:
+        return str(user)
+    else:
+        logger.debug("Can't find slack name for %s", slackid)
+    return slackid
 
-def plot(client, request):
+def plot(request):
     '''Plot everyone's times in a date range.
     `smoothing` is between 0 (no smoothing) and 1 exclusive. .6 default
     You can provide either `num_days` or `start_date` and `end_date`.
@@ -160,7 +170,7 @@ def plot(client, request):
         else:
             end_dt = start_dt + delta
     else:
-        end_dt = date_dt(end_date if end_date else crossbot.date('now'))
+        end_dt = date_dt(end_date if end_date else parse_date('now'))
         start_dt = end_dt - delta
 
     # reformat the dates based on the above dt calculations
@@ -181,7 +191,8 @@ def plot(client, request):
 
     dt_range = [ start_dt + datetime.timedelta(days=i)
                  for i in range(args.num_days + 1) ]
-    date_range = [dt.strftime(date_fmt) for dt in dt_range]
+    # artifact from old code that worked with strings
+    date_range = dt_range
 
     # For normalized, once date_range is already made, bump the start date
     # back. Normalized uses smoothing, so we don't want the initial point
@@ -190,23 +201,17 @@ def plot(client, request):
         start_dt -= datetime.timedelta(days=int(1 / (1 - args.smooth)))
         start_date = start_dt.strftime(date_fmt)
 
-    with sqlite3.connect(crossbot.db_path) as con:
-        query = '''
-        SELECT userid, date, seconds
-        FROM {}
-        WHERE date
-          BETWEEN date(?)
-          AND     date(?)
-        ORDER BY date, userid'''.format(args.table)
+    entries = (args.table.all_times()
+        .filter(date__gte=start_date, date__lte=end_date)
+        .order_by('date', 'user__slackid'))
 
-        cur = con.execute(query, (start_date, end_date))
-        entries = [Entry._make(tup) for tup in cur]
+    logger.debug('all entries %s', entries)
 
     scores_by_user, ticker, formatter = args.score_function(entries, args)
 
     # find contiguous sequences of dates
     user_seqs = [
-        (userid, [
+        (user, [
             list(g)
             for k, g in groupby((
                 (date, date_scores.get(date))
@@ -214,11 +219,14 @@ def plot(client, request):
             ), lambda ds: ds[1] is not None)
             if k
         ])
-        for userid, date_scores in scores_by_user.items()
+        for user, date_scores in scores_by_user.items()
     ]
 
     # sort by actual username
-    user_seqs.sort(key=lambda tup: client.user(tup[0]))
+    user_seqs.sort(key=lambda tup: str(tup[0]))
+
+    logger.debug('by user %s', scores_by_user)
+    logger.debug('seqs %s', user_seqs)
 
     width, height, dpi = (120*args.num_days), 600, 100
     width = max(400, min(width, 1000))
@@ -237,9 +245,8 @@ def plot(client, request):
         # sort by first date appeared
         user_seqs.sort(key=lambda x: min(x[1][0]))
 
-        for (userid, date_seqs), i, color in zip(user_seqs, count(), colors):
-            name = client.user(userid)
-            label = name
+        for (user, date_seqs), i, color in zip(user_seqs, count(), colors):
+            label = str(user)
             starts_and_lens = [
                 ((date_dt(min(seq)[0]) - start_dt).days, len(seq))
                 for seq in date_seqs
@@ -250,8 +257,8 @@ def plot(client, request):
         plt.yticks(
             np.arange(len(user_seqs)) * thickness,
             [
-                client.user(userid)
-                for userid, seq in user_seqs
+                str(user)
+                for user, seq in user_seqs
             ],
             size = 6,
         )
@@ -259,8 +266,8 @@ def plot(client, request):
     else:
         max_score = -100000
 
-        for (userid, date_seqs), color, marker in zip(user_seqs, colors, markers):
-            name = client.user(userid)
+        for (user, date_seqs), color, marker in zip(user_seqs, colors, markers):
+            name = str(user)
             label = name
             alpha = args.alpha
 
@@ -274,7 +281,6 @@ def plot(client, request):
             for date_seq in date_seqs:
                 dates, scores = zip(*date_seq)
                 max_score = max(max_score, max(scores))
-                dates = [datetime.datetime.strptime(d, date_fmt).date() for d in dates]
 
                 ax.plot_date(mdates.date2num(dates), scores, marker, label=label, color=color, alpha=alpha)
 
@@ -295,12 +301,13 @@ def plot(client, request):
 
     ax.legend(fontsize=6, loc='upper left')
 
-    temp = NamedTemporaryFile(suffix='.pdf', delete=False)
-    fig.savefig(temp, format='pdf', bbox_inches='tight')
-    temp.close()
+    fname = 'plot_{}.png'.format(datetime.datetime.now().timestamp())
+
+    with open(MEDIA_ROOT + '/' + fname, 'wb') as f:
+        fig.savefig(f, format='png', bbox_inches='tight')
     plt.close(fig)
 
-    request.upload('plot', temp.name)
+    request.attach('plot', 'https://crossbot.uwplse.org' + MEDIA_URL + fname)
 
 
 #########################
@@ -322,7 +329,7 @@ def get_normalized_scores(entries, args):
         x = e.seconds
         # if x > 0:
         #     x = np.log(x)
-        times_by_date[e.date][e.userid] = x
+        times_by_date[e.date][e.user] = x
 
     sorted_dates = sorted(times_by_date.keys())
 
@@ -384,10 +391,10 @@ def get_times(entries, args):
     for e in entries:
         if e.seconds >= 0:
             # don't add failures to the times plot
-            times[e.userid][e.date] = e.seconds
+            times[e.user][e.date] = e.seconds
 
     # Set base to 30s for mini crossword, 5 min for regular or sudoku
-    sec = 30 if args.table == crossbot.models.MiniCrosswordTime else 60 * 5
+    sec = 30 if args.table == models.MiniCrosswordTime else 60 * 5
     ticker = matplotlib.ticker.MultipleLocator(base=sec)
     formatter = matplotlib.ticker.FuncFormatter(fmt_min) # 1:30
 
@@ -404,7 +411,7 @@ def get_win_streaks(entries, args):
     times = defaultdict(dict)
     for e in entries:
         if e.seconds == best_time[e.date]:
-            times[e.userid][e.date] = e.seconds
+            times[e.user][e.date] = e.seconds
 
     ticker = None
     formatter = None
@@ -416,7 +423,7 @@ def get_streaks(entries, args):
 
     times = defaultdict(dict)
     for e in entries:
-        times[e.userid][e.date] = e.seconds
+        times[e.user][e.date] = e.seconds
 
     ticker = None
     formatter = None

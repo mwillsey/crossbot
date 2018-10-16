@@ -4,7 +4,7 @@ import re
 
 import pytz
 
-import crossbot
+from crossbot.models import MiniCrosswordTime, CrosswordTime, EasySudokuTime
 
 
 # use this to prevent ArgumentParser from printing to the commandline
@@ -50,7 +50,7 @@ class Parser:
         )
 
         self.parser.set_defaults(
-            table = crossbot.models.MiniCrosswordTime,
+            table = MiniCrosswordTime,
         )
 
         table_choice = self.parser.add_argument_group('Puzzle Type')\
@@ -60,21 +60,21 @@ class Parser:
             '--mini',
             action = 'store_const',
             dest   = 'table',
-            const  = crossbot.models.MiniCrosswordTime,
+            const  = MiniCrosswordTime,
             help   = 'Use the scores from the mini crossword.')
 
         table_choice.add_argument(
             '-r', '--regular',
             action = 'store_const',
             dest   = 'table',
-            const  = crossbot.models.CrosswordTime,
+            const  = CrosswordTime,
             help   = 'Use the scores from the regular crossword.')
 
         table_choice.add_argument(
             '-s', '--sudoku',
             action = 'store_const',
             dest   = 'table',
-            const  = crossbot.models.EasySudokuTime,
+            const  = EasySudokuTime,
             help   = 'Use the scores from the easy sudoku.')
 
         self.subparsers = self.parser.add_subparsers(help = 'subparsers help')
