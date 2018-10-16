@@ -1,5 +1,5 @@
 
-.PHONY: migrate kill fmt check_fmt check lint lint_all
+.PHONY: migrate kill fmt check_fmt check lint lint_all deploy run
 
 
 # inside travis the virtualenv is already set up, so just mock these commands
@@ -45,5 +45,8 @@ test: venv
 kill:
 	kill `cat /tmp/crossbot.pid` || true
 
-run: kill venv static migrate
+deploy: kill venv static migrate
 	${activate} && gunicorn --daemon --workers 4 --pid /tmp/crossbot.pid --bind "unix:/tmp/crossbot.sock" "wsgi:application"
+
+run: venv migrate
+	${activate} && ./manange runserver
