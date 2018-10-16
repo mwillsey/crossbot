@@ -12,6 +12,7 @@ from .slack import handle_slash_command
 
 logger = logging.getLogger(__name__)
 
+
 # taken from https://api.slack.com/docs/verifying-requests-from-slack#a_recipe_for_security
 def validate_slack_request(request):
     timestamp = request.META['HTTP_X_SLACK_REQUEST_TIMESTAMP']
@@ -24,8 +25,7 @@ def validate_slack_request(request):
     my_signature = 'v0=' + hmac.new(
         key=keys.SLACK_SECRET_SIGNING_KEY,
         msg=b'v0:' + bytes(timestamp, 'utf8') + b':' + request.body,
-        digestmod=hashlib.sha256
-    ).hexdigest()
+        digestmod=hashlib.sha256).hexdigest()
 
     slack_signature = request.META['HTTP_X_SLACK_SIGNATURE']
 
@@ -33,6 +33,7 @@ def validate_slack_request(request):
 
 
 # re_prog = re.compile(r'(cb|crossbot)(?:$| +)(.*)')
+
 
 @csrf_exempt
 def event(request):

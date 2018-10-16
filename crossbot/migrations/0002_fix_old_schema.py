@@ -12,15 +12,18 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name=model_name,
             name='id',
-            field=models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID'))
-        for model_name in [
-            'CrosswordTime',
-            'EasySudokuTime',
-            'MiniCrosswordModel',
-            'MiniCrosswordTime',
-            'ModelDates',
-            'ModelParams',
-            'ModelUsers',
-            'QueryShorthands',
-        ]
+            field=models.AutoField(
+                auto_created=True,
+                primary_key=True,
+                serialize=False,
+                verbose_name='ID')) for model_name in [
+                    'CrosswordTime',
+                    'EasySudokuTime',
+                    'MiniCrosswordModel',
+                    'MiniCrosswordTime',
+                    'ModelDates',
+                    'ModelParams',
+                    'ModelUsers',
+                    'QueryShorthands',
+                ]
     ]

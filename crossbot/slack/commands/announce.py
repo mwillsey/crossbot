@@ -10,10 +10,10 @@ def init(client):
 
     parser.add_argument(
         'date',
-        nargs   = '?',
-        default = 'now',
-        type    = parse_date,
-        help    = 'Date to announce for.')
+        nargs='?',
+        default='now',
+        type=parse_date,
+        help='Date to announce for.')
 
 
 def best(table, date, offset=0):
@@ -21,8 +21,9 @@ def best(table, date, offset=0):
 
     # TODO: move all of this function into models
     # Filter out fails
-    times_for_date = [t for t in table.times_for_date(date=date - offset)
-                      if not t.is_fail()]
+    times_for_date = [
+        t for t in table.times_for_date(date=date - offset) if not t.is_fail()
+    ]
 
     if not times_for_date:
         return []
@@ -59,15 +60,15 @@ def announce(request):
 
     for user in streaks:
         n = 2
-        while user in best(table, date, n+1):
+        while user in best(table, date, n + 1):
             n += 1
         message += (
             '{} is on a {}-day streak! {}\nCan they keep it up?\n'.format(
                 user, n, ':fire:' * n))
 
     games = {
-        "mini crossword" : "https://www.nytimes.com/crosswords/game/mini",
-        "easy sudoku"    : "https://www.nytimes.com/crosswords/game/sudoku/easy"
+        "mini crossword": "https://www.nytimes.com/crosswords/game/mini",
+        "easy sudoku": "https://www.nytimes.com/crosswords/game/sudoku/easy"
     }
 
     message += "Play today's:"

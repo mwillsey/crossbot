@@ -11,11 +11,10 @@ from settings import DATABASES
 import importlib
 import pkgutil
 
-
 DB_PATH = DATABASES['default']['NAME']
 
 COMMANDS = []
-for _, module_name, _ in  pkgutil.walk_packages(__path__):
+for _, module_name, _ in pkgutil.walk_packages(__path__):
     module_full_name = __name__ + '.' + module_name
     importlib.import_module(module_full_name)
     COMMANDS.append(module_name)

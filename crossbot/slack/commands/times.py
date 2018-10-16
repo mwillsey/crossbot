@@ -7,14 +7,14 @@ from .add import emoji
 def init(client):
 
     parser = client.parser.subparsers.add_parser('times', help='show times')
-    parser.set_defaults(command= times)
+    parser.set_defaults(command=times)
 
     parser.add_argument(
         'date',
-        nargs   = '?',
-        default = 'now',
-        type    = parse_date,
-        help    = 'Date to get times for.')
+        nargs='?',
+        default='now',
+        type=parse_date,
+        help='Date to get times for.')
 
 
 def times(request):

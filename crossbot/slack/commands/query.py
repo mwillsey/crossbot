@@ -3,37 +3,32 @@ import re
 
 from . import sql, models
 
-
 logger = logging.getLogger(__name__)
 
 
 def init(client):
-    parser = client.parser.subparsers.add_parser('query', help='Run a saved query')
+    parser = client.parser.subparsers.add_parser(
+        'query', help='Run a saved query')
     parser.set_defaults(command=query)
 
-    parser.add_argument(
-        'name',
-        nargs='?',
-        help='Stored query name to run'
-    )
+    parser.add_argument('name', nargs='?', help='Stored query name to run')
     parser.add_argument(
         '--save',
         action='store_true',
-        help='Create or overwrite a stored query'
-    )
+        help='Create or overwrite a stored query')
     parser.add_argument(
         'params',
         nargs='*',
         help='Parameters for the stored query or, if saving, the query itself, '
-             'with question marks for parameters'
-    )
+        'with question marks for parameters')
 
 
 DATE_REGEX = re.compile(r'((\d\d\d\d)-(\d\d)-(\d\d))')
 
 
 def linkify_dates(s):
-    return DATE_REGEX.sub(r'<https://www.nytimes.com/crosswords/game/mini/\2/\3/\4|\1>', s)
+    return DATE_REGEX.sub(
+        r'<https://www.nytimes.com/crosswords/game/mini/\2/\3/\4|\1>', s)
 
 
 def query(request):
@@ -49,8 +44,7 @@ def query(request):
             defaults={
                 'user': request.user,
                 'command': ' '.join(args.params),
-            }
-        )
+            })
 
         request.reply("Saved new query `{}` from {}".format(
             request.args.name, request.user))

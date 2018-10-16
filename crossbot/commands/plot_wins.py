@@ -1,4 +1,3 @@
-
 import datetime
 import sqlite3
 import statistics
@@ -19,50 +18,50 @@ import crossbot
 
 from crossbot.parser import date_fmt
 
+
 def init(client):
 
     parser = client.parser.subparsers.add_parser('plot-wins', help='plot wins')
     parser.set_defaults(
-        command   = plot_wins,
-        alpha     = 0.7,
-        num_days  = 7,
+        command=plot_wins,
+        alpha=0.7,
+        num_days=7,
     )
-
 
     appearance = parser.add_argument_group('Plot appearance')
 
     appearance.add_argument(
         '--alpha',
-        type = float,
-        help = 'Transparency for plotted points.'
+        type=float,
+        help='Transparency for plotted points.'
         ' Default %(default)s.')
 
     dates = parser.add_argument_group('Date range')
 
-    def date_none(date_str): return crossbot.date(date_str, default=None)
+    def date_none(date_str):
+        return crossbot.date(date_str, default=None)
 
     dates.add_argument(
         '--start-date',
-        type    = date_none,
-        metavar = 'START',
-        help    = 'Date to start plotting from.')
+        type=date_none,
+        metavar='START',
+        help='Date to start plotting from.')
     dates.add_argument(
         '--end-date',
-        type    = date_none,
-        metavar = 'END',
-        help    = 'Date to end plotting at. Defaults to today.')
+        type=date_none,
+        metavar='END',
+        help='Date to end plotting at. Defaults to today.')
     dates.add_argument(
-        '-n', '--num-days',
-        type    = int,
-        metavar = 'N',
-        help    = 'Number of days since today to plot.'
+        '-n',
+        '--num-days',
+        type=int,
+        metavar='N',
+        help='Number of days since today to plot.'
         ' Ignored if both start-date and end-date given.'
         ' Default %(default)s.')
 
-    parser.add_argument(
-        'users',
-        nargs   = '+',
-        help    = 'Slack names of player')
+    parser.add_argument('users', nargs='+', help='Slack names of player')
+
 
 # a nice way to convert db entries into objects
 Entry = namedtuple('Entry', ['userid', 'date', 'seconds', 'timestamp'])
@@ -106,6 +105,7 @@ def plot_wins(client, request):
     # get the users
     def replace_with_id(match):
         return match.group(1)
+
     userids = []
     for u in args.users:
         s = html.unescape(u)
@@ -114,9 +114,9 @@ def plot_wins(client, request):
         client.user(uid)
         userids.append(uid)
 
-
-    dt_range = [ start_dt + datetime.timedelta(days=i)
-                 for i in range(args.num_days + 1) ]
+    dt_range = [
+        start_dt + datetime.timedelta(days=i) for i in range(args.num_days + 1)
+    ]
     date_range = [dt.strftime(date_fmt) for dt in dt_range]
 
     with sqlite3.connect(crossbot.db_path) as con:
@@ -135,13 +135,15 @@ def plot_wins(client, request):
 
     wins = {u: 0 for u in userids}
     points = []
+
     def add_point(dt):
         points.append((dt, dict(wins)))
 
     by_date = defaultdict(dict)
     for e in entries:
         if e.timestamp:
-            ts = datetime.datetime.strptime(e.timestamp, '%Y-%m-%d %H:%M:%S.%f')
+            ts = datetime.datetime.strptime(e.timestamp,
+                                            '%Y-%m-%d %H:%M:%S.%f')
         else:
             ts = datetime.datetime.strptime(e.date, '%Y-%m-%d')
         this_date = by_date[e.date]
@@ -166,20 +168,22 @@ def plot_wins(client, request):
 
         add_point(ts)
 
-    width, height, dpi = (120*args.num_days), 600, 100
+    width, height, dpi = (120 * args.num_days), 600, 100
     width = max(400, min(width, 1000))
 
-    fig = plt.figure(figsize=(width/dpi, height/dpi), dpi=dpi)
-    ax = fig.add_subplot(1,1,1)
+    fig = plt.figure(figsize=(width / dpi, height / dpi), dpi=dpi)
+    ax = fig.add_subplot(1, 1, 1)
 
-    x,ys = zip(*(
-        (dt, wins) for dt, wins in points
-        if start_dt <= dt.date() and dt.date() <= end_dt
-    ))
+    x, ys = zip(*((dt, wins) for dt, wins in points
+                  if start_dt <= dt.date() and dt.date() <= end_dt))
 
     for u in userids:
         name = client.user(u)
-        ax.plot_date(mdates.date2num(x), [y[u] for y in ys], linestyle='-', marker = None, label = name)
+        ax.plot_date(
+            mdates.date2num(x), [y[u] for y in ys],
+            linestyle='-',
+            marker=None,
+            label=name)
 
     ax.legend(fontsize=6, loc='upper left')
 

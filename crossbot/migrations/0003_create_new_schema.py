@@ -14,7 +14,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ModelDate',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(
+                     auto_created=True,
+                     primary_key=True,
+                     serialize=False,
+                     verbose_name='ID')),
                 ('date', models.IntegerField()),
                 ('difficulty', models.FloatField()),
                 ('difficulty_25', models.FloatField()),
@@ -28,7 +33,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='ModelUser',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(
+                     auto_created=True,
+                     primary_key=True,
+                     serialize=False,
+                     verbose_name='ID')),
                 ('uid', models.TextField(unique=True)),
                 ('nth', models.IntegerField()),
                 ('skill', models.FloatField()),
@@ -45,7 +55,13 @@ class Migration(migrations.Migration):
             fields=[
                 ('slackid', models.CharField(max_length=10, primary_key=True)),
                 ('slackname', models.CharField(blank=True, max_length=100)),
-                ('auth_user', models.OneToOneField(null=True, blank=True, on_delete=django.db.models.deletion.SET_NULL, related_name='cb_user', to=settings.AUTH_USER_MODEL)),
+                ('auth_user',
+                 models.OneToOneField(
+                     null=True,
+                     blank=True,
+                     on_delete=django.db.models.deletion.SET_NULL,
+                     related_name='cb_user',
+                     to=settings.AUTH_USER_MODEL)),
             ],
             options={
                 'verbose_name': 'CBUser',
@@ -57,18 +73,32 @@ class Migration(migrations.Migration):
             fields=[
                 ('name', models.CharField(max_length=100, primary_key=True)),
                 ('command', models.TextField()),
-                ('timestamp', models.DateTimeField(null=True, auto_now_add=True)),
-                ('user', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='crossbot.CBUser')),
+                ('timestamp', models.DateTimeField(
+                    null=True, auto_now_add=True)),
+                ('user',
+                 models.ForeignKey(
+                     null=True,
+                     on_delete=django.db.models.deletion.SET_NULL,
+                     to='crossbot.CBUser')),
             ],
         ),
         migrations.CreateModel(
             name='TempCrosswordTime',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(
+                     auto_created=True,
+                     primary_key=True,
+                     serialize=False,
+                     verbose_name='ID')),
                 ('seconds', models.IntegerField()),
                 ('date', models.DateField()),
-                ('timestamp', models.DateTimeField(auto_now_add=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='crossbot.CBUser')),
+                ('timestamp', models.DateTimeField(
+                    auto_now_add=True, null=True)),
+                ('user',
+                 models.ForeignKey(
+                     on_delete=django.db.models.deletion.CASCADE,
+                     to='crossbot.CBUser')),
             ],
             options={
                 'abstract': False,
@@ -77,11 +107,20 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='TempEasySudokuTime',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(
+                     auto_created=True,
+                     primary_key=True,
+                     serialize=False,
+                     verbose_name='ID')),
                 ('seconds', models.IntegerField()),
                 ('date', models.DateField()),
-                ('timestamp', models.DateTimeField(auto_now_add=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='crossbot.CBUser')),
+                ('timestamp', models.DateTimeField(
+                    auto_now_add=True, null=True)),
+                ('user',
+                 models.ForeignKey(
+                     on_delete=django.db.models.deletion.CASCADE,
+                     to='crossbot.CBUser')),
             ],
             options={
                 'abstract': False,
@@ -90,11 +129,20 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='TempMiniCrosswordTime',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id',
+                 models.AutoField(
+                     auto_created=True,
+                     primary_key=True,
+                     serialize=False,
+                     verbose_name='ID')),
                 ('seconds', models.IntegerField()),
                 ('date', models.DateField()),
-                ('timestamp', models.DateTimeField(auto_now_add=True, null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='crossbot.CBUser')),
+                ('timestamp', models.DateTimeField(
+                    auto_now_add=True, null=True)),
+                ('user',
+                 models.ForeignKey(
+                     on_delete=django.db.models.deletion.CASCADE,
+                     to='crossbot.CBUser')),
             ],
             options={
                 'abstract': False,
@@ -102,7 +150,10 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterModelOptions(
             name='modelparams',
-            options={'managed': False, 'verbose_name_plural': 'ModelParams'},
+            options={
+                'managed': False,
+                'verbose_name_plural': 'ModelParams'
+            },
         ),
         migrations.AlterUniqueTogether(
             name='tempminicrosswordtime',

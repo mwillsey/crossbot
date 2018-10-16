@@ -43,7 +43,6 @@ ALLOWED_HOSTS = [
     'crossbot.uwplse.org',
 ]
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -86,7 +85,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
@@ -111,7 +109,7 @@ LOGGING = {
             'filename': 'debug.log',
         },
         'null': {
-            'class':'logging.NullHandler',
+            'class': 'logging.NullHandler',
         },
     },
     'loggers': {
@@ -129,7 +127,7 @@ LOGGING = {
         'django.db.backends': {
             'handlers': ['null'],
             'propagate': False,
-            'level':'DEBUG',
+            'level': 'DEBUG',
         },
     },
 }
@@ -139,19 +137,22 @@ LOGGING = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME':
+        'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
@@ -166,9 +167,10 @@ USE_L10N = True
 
 USE_TZ = True
 
-
 # Cause naive datetimes to trigger exceptions
 warnings.filterwarnings(
-    'error', r"DateTimeField .* received a naive datetime",
-    RuntimeWarning, r'django\.db\.models\.fields',
+    'error',
+    r"DateTimeField .* received a naive datetime",
+    RuntimeWarning,
+    r'django\.db\.models\.fields',
 )

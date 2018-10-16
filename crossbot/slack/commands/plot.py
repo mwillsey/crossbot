@@ -1,4 +1,3 @@
-
 import logging
 import datetime
 import statistics
@@ -7,7 +6,6 @@ from collections import defaultdict
 from itertools import cycle, groupby, count
 
 import numpy as np
-
 
 # don't use matplotlib gui
 import matplotlib
@@ -19,109 +17,108 @@ from . import parse_date, date_fmt, models
 
 from settings import MEDIA_URL, MEDIA_ROOT
 
-
 logger = logging.getLogger(__name__)
 
 
 def init(client):
     parser = client.parser.subparsers.add_parser('plot', help='plot something')
     parser.set_defaults(
-        command   = plot,
-        smooth    = 0.7,
-        alpha     = 0.7,
-        num_days  = 7,
-        scale     = 'linear',
-        score_function = get_normalized_scores,
+        command=plot,
+        smooth=0.7,
+        alpha=0.7,
+        num_days=7,
+        scale='linear',
+        score_function=get_normalized_scores,
     )
 
-    ptype = (parser.add_argument_group('Plot type')
-             .add_mutually_exclusive_group())
+    ptype = (
+        parser.add_argument_group('Plot type').add_mutually_exclusive_group())
 
     ptype.add_argument(
         '--times',
-        action = 'store_const',
-        dest   = 'score_function',
-        const  = get_times,
-        help   = 'Plot the raw times.')
+        action='store_const',
+        dest='score_function',
+        const=get_times,
+        help='Plot the raw times.')
 
     ptype.add_argument(
         '--normalized',
-        action  = 'store_const',
-        dest    = 'score_function',
-        const   = get_normalized_scores,
-        help    = 'Plot smoothed, normalized scores.'
+        action='store_const',
+        dest='score_function',
+        const=get_normalized_scores,
+        help='Plot smoothed, normalized scores.'
         ' Higher is better. (Default)')
 
     ptype.add_argument(
         '--streaks',
-        action  = 'store_const',
-        dest    = 'score_function',
-        const   = get_streaks,
-        help    = 'Plot completion streaks')
+        action='store_const',
+        dest='score_function',
+        const=get_streaks,
+        help='Plot completion streaks')
 
     ptype.add_argument(
         '--win-streaks',
-        action  = 'store_const',
-        dest    = 'score_function',
-        const   = get_win_streaks,
-        help    = 'Plot win streaks')
+        action='store_const',
+        dest='score_function',
+        const=get_win_streaks,
+        help='Plot win streaks')
 
     appearance = parser.add_argument_group('Plot appearance')
     scales = appearance.add_mutually_exclusive_group()
 
     scales.add_argument(
-        '--log',
-        action = 'store_const',
-        dest   = 'scale',
-        const  = 'symlog')
+        '--log', action='store_const', dest='scale', const='symlog')
     scales.add_argument(
-        '--linear',
-        action = 'store_const',
-        dest   = 'scale',
-        const  = 'linear')
+        '--linear', action='store_const', dest='scale', const='linear')
 
     appearance.add_argument(
-        '-s', '--smooth',
-        type    = float,
-        metavar = 'S',
-        help = 'Smoothing factor between 0 and 0.95.'
+        '-s',
+        '--smooth',
+        type=float,
+        metavar='S',
+        help='Smoothing factor between 0 and 0.95.'
         ' Default %(default)s.'
         ' Only applies to plot type `normalized`.')
 
     appearance.add_argument(
         '--alpha',
-        type = float,
-        help = 'Transparency for plotted points.'
+        type=float,
+        help='Transparency for plotted points.'
         ' Default %(default)s.')
 
     dates = parser.add_argument_group('Date range')
 
-    def date_none(date_str): return parse_date(date_str, default=None)
+    def date_none(date_str):
+        return parse_date(date_str, default=None)
 
     dates.add_argument(
         '--start-date',
-        type    = date_none,
-        metavar = 'START',
-        help    = 'Date to start plotting from.')
+        type=date_none,
+        metavar='START',
+        help='Date to start plotting from.')
     dates.add_argument(
         '--end-date',
-        type    = date_none,
-        metavar = 'END',
-        help    = 'Date to end plotting at. Defaults to today.')
+        type=date_none,
+        metavar='END',
+        help='Date to end plotting at. Defaults to today.')
     dates.add_argument(
-        '-n', '--num-days',
-        type    = int,
-        metavar = 'N',
-        help    = 'Number of days since today to plot.'
+        '-n',
+        '--num-days',
+        type=int,
+        metavar='N',
+        help='Number of days since today to plot.'
         ' Ignored if both start-date and end-date given.'
         ' Default %(default)s.')
 
     parser.add_argument(
-        '-f', '--focus',
-        action  = 'append',
-        type    = str,
-        metavar = 'USER',
-        help    = 'Slack name of player to focus the plot on. Can be used multiple times.')
+        '-f',
+        '--focus',
+        action='append',
+        type=str,
+        metavar='USER',
+        help=
+        'Slack name of player to focus the plot on. Can be used multiple times.'
+    )
 
 
 def fmt_min(sec, pos):
@@ -137,6 +134,7 @@ def date_dt(date):
         return date
     return datetime.datetime.strptime(date, date_fmt).date()
 
+
 def username_from_slackid(slackid):
     user = models.CBUser.from_slackid(slackid, create=False)
     if user:
@@ -144,6 +142,7 @@ def username_from_slackid(slackid):
     else:
         logger.debug("Can't find slack name for %s", slackid)
     return slackid
+
 
 def plot(request):
     '''Plot everyone's times in a date range.
@@ -189,8 +188,9 @@ def plot(request):
         request.reply('start date should be before end_date', direct=True)
         return
 
-    dt_range = [ start_dt + datetime.timedelta(days=i)
-                 for i in range(args.num_days + 1) ]
+    dt_range = [
+        start_dt + datetime.timedelta(days=i) for i in range(args.num_days + 1)
+    ]
     # artifact from old code that worked with strings
     date_range = dt_range
 
@@ -201,26 +201,20 @@ def plot(request):
         start_dt -= datetime.timedelta(days=int(1 / (1 - args.smooth)))
         start_date = start_dt.strftime(date_fmt)
 
-    entries = (args.table.all_times()
-        .filter(date__gte=start_date, date__lte=end_date)
-        .order_by('date', 'user__slackid'))
+    entries = (args.table.all_times().filter(
+        date__gte=start_date, date__lte=end_date).order_by(
+            'date', 'user__slackid'))
 
     logger.debug('all entries %s', entries)
 
     scores_by_user, ticker, formatter = args.score_function(entries, args)
 
     # find contiguous sequences of dates
-    user_seqs = [
-        (user, [
-            list(g)
-            for k, g in groupby((
-                (date, date_scores.get(date))
-                for date in date_range
-            ), lambda ds: ds[1] is not None)
-            if k
-        ])
-        for user, date_scores in scores_by_user.items()
-    ]
+    user_seqs = [(user, [
+        list(g) for k, g in groupby((
+            (date, date_scores.get(date))
+            for date in date_range), lambda ds: ds[1] is not None) if k
+    ]) for user, date_scores in scores_by_user.items()]
 
     # sort by actual username
     user_seqs.sort(key=lambda tup: str(tup[0]))
@@ -228,11 +222,11 @@ def plot(request):
     logger.debug('by user %s', scores_by_user)
     logger.debug('seqs %s', user_seqs)
 
-    width, height, dpi = (120*args.num_days), 600, 100
+    width, height, dpi = (120 * args.num_days), 600, 100
     width = max(400, min(width, 1000))
 
-    fig = plt.figure(figsize=(width/dpi, height/dpi), dpi=dpi)
-    ax = fig.add_subplot(1,1,1)
+    fig = plt.figure(figsize=(width / dpi, height / dpi), dpi=dpi)
+    ax = fig.add_subplot(1, 1, 1)
 
     cmap = plt.get_cmap('nipy_spectral')
     markers = cycle(['-o', '-X', '-s', '-^'])
@@ -247,26 +241,22 @@ def plot(request):
 
         for (user, date_seqs), i, color in zip(user_seqs, count(), colors):
             label = str(user)
-            starts_and_lens = [
-                ((date_dt(min(seq)[0]) - start_dt).days, len(seq))
-                for seq in date_seqs
-            ]
+            starts_and_lens = [((date_dt(min(seq)[0]) - start_dt).days,
+                                len(seq)) for seq in date_seqs]
             starts, lens = zip(*starts_and_lens)
             ax.barh(i, lens, thickness, starts, tick_label=name)
 
         plt.yticks(
             np.arange(len(user_seqs)) * thickness,
-            [
-                str(user)
-                for user, seq in user_seqs
-            ],
-            size = 6,
+            [str(user) for user, seq in user_seqs],
+            size=6,
         )
 
     else:
         max_score = -100000
 
-        for (user, date_seqs), color, marker in zip(user_seqs, colors, markers):
+        for (user, date_seqs), color, marker in zip(user_seqs, colors,
+                                                    markers):
             name = str(user)
             label = name
             alpha = args.alpha
@@ -282,11 +272,16 @@ def plot(request):
                 dates, scores = zip(*date_seq)
                 max_score = max(max_score, max(scores))
 
-                ax.plot_date(mdates.date2num(dates), scores, marker, label=label, color=color, alpha=alpha)
+                ax.plot_date(
+                    mdates.date2num(dates),
+                    scores,
+                    marker,
+                    label=label,
+                    color=color,
+                    alpha=alpha)
 
                 # make sure that we don't but anyone in the legend twice
                 label = '_nolegend_'
-
 
         ax.set_yscale(args.scale)
         ax.yaxis.set_major_locator(ticker)
@@ -294,7 +289,7 @@ def plot(request):
 
     fig.autofmt_xdate()
     ax.xaxis.set_major_locator(mdates.DayLocator())
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %-d')) # May 3
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %-d'))  # May 3
 
     # hack to prevent crashes on the regular crosswords
     ax.xaxis.get_major_locator().MAXTICKS = 10000
@@ -313,7 +308,6 @@ def plot(request):
 #########################
 ### Scoring Functions ###
 #########################
-
 
 # these should all take a list of Entry objects and the args object, and a
 # return a dict that looks like this:
@@ -352,16 +346,15 @@ def get_normalized_scores(entries, args):
         times = [t for t in user_times.values() if t is not None]
         # make failures 1 minute worse than the worst time
         times = [t if t >= 0 else max(times) + 60 for t in times]
-        q1, q3 = np.percentile(times, [25,75])
-        stdev  = statistics.pstdev(times)
+        q1, q3 = np.percentile(times, [25, 75])
+        stdev = statistics.pstdev(times)
         o1, o3 = q1 - stdev, q3 + stdev
-        times  = [t for t in times if o1 <= t <= o3]
-        mean  = statistics.mean(times)
-        stdev  = statistics.pstdev(times, mean)
+        times = [t for t in times if o1 <= t <= o3]
+        mean = statistics.mean(times)
+        stdev = statistics.pstdev(times, mean)
         scores[date] = {
             userid: mk_score(mean, t, stdev)
-            for userid, t in user_times.items()
-            if t is not None
+            for userid, t in user_times.items() if t is not None
         }
 
     new_score_weight = 1 - args.smooth
@@ -396,9 +389,10 @@ def get_times(entries, args):
     # Set base to 30s for mini crossword, 5 min for regular or sudoku
     sec = 30 if args.table == models.MiniCrosswordTime else 60 * 5
     ticker = matplotlib.ticker.MultipleLocator(base=sec)
-    formatter = matplotlib.ticker.FuncFormatter(fmt_min) # 1:30
+    formatter = matplotlib.ticker.FuncFormatter(fmt_min)  # 1:30
 
     return times, ticker, formatter
+
 
 def get_win_streaks(entries, args):
     """Just get the times, keeping failures because we're just going for completion"""
@@ -417,6 +411,7 @@ def get_win_streaks(entries, args):
     formatter = None
 
     return times, ticker, formatter
+
 
 def get_streaks(entries, args):
     """Just get the times, keeping failures because we're just going for completion"""

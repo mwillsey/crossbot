@@ -16,7 +16,6 @@ class ParserException(Exception):
 # subclass ArgumentParser so it doesn't just exit the program on error
 # also we want the help messages to go to slack if we are using slack
 class ArgumentParser(argparse.ArgumentParser):
-
     def print_help(self):
         raise ParserException(self.format_help())
 
@@ -32,12 +31,11 @@ class ArgumentParser(argparse.ArgumentParser):
 
 
 class Parser:
-
     def __init__(self, limit_commands):
 
         self.parser = ArgumentParser(
             prog='crossbot',
-            description = '''
+            description='''
             You can either @ me in a channel or just DM me to give me a command.
             Play here: https://www.nytimes.com/crosswords/game/mini
             I live here: https://github.com/mwillsey/crossbot
@@ -46,41 +44,40 @@ class Parser:
             `now` or omitted dates will automatically become tomorrow if the
             crossword has already been released (10pm weekdays, 6pm weekends).
             Here are my commands:\n\n
-            '''
-        )
+            ''')
 
-        self.parser.set_defaults(
-            table = MiniCrosswordTime,
-        )
+        self.parser.set_defaults(table=MiniCrosswordTime, )
 
         table_choice = self.parser.add_argument_group('Puzzle Type')\
                                   .add_mutually_exclusive_group()
 
         table_choice.add_argument(
             '--mini',
-            action = 'store_const',
-            dest   = 'table',
-            const  = MiniCrosswordTime,
-            help   = 'Use the scores from the mini crossword.')
+            action='store_const',
+            dest='table',
+            const=MiniCrosswordTime,
+            help='Use the scores from the mini crossword.')
 
         table_choice.add_argument(
-            '-r', '--regular',
-            action = 'store_const',
-            dest   = 'table',
-            const  = CrosswordTime,
-            help   = 'Use the scores from the regular crossword.')
+            '-r',
+            '--regular',
+            action='store_const',
+            dest='table',
+            const=CrosswordTime,
+            help='Use the scores from the regular crossword.')
 
         table_choice.add_argument(
-            '-s', '--sudoku',
-            action = 'store_const',
-            dest   = 'table',
-            const  = EasySudokuTime,
-            help   = 'Use the scores from the easy sudoku.')
+            '-s',
+            '--sudoku',
+            action='store_const',
+            dest='table',
+            const=EasySudokuTime,
+            help='Use the scores from the easy sudoku.')
 
-        self.subparsers = self.parser.add_subparsers(help = 'subparsers help')
+        self.subparsers = self.parser.add_subparsers(help='subparsers help')
 
         help_parser = self.subparsers.add_parser('help')
-        help_parser.set_defaults(command = 'help')
+        help_parser.set_defaults(command='help')
         help_parser.add_argument('help_subcommands', nargs='*')
 
         if not limit_commands:
@@ -110,7 +107,7 @@ class Parser:
         command = getattr(args, 'command', None)
 
         if command is None or command == 'help':
-            self.print_help(args) # should raise
+            self.print_help(args)  # should raise
             raise RuntimeError('Should never be here')
 
         return command, args
@@ -132,11 +129,10 @@ def time(time_str):
     h_match = h_time_rx.match(time_str)
     m_match = m_time_rx.match(time_str)
     if h_match:
-        hours, minutes, seconds = ( int(x) if x else 0
-                                    for x in h_match.groups() )
+        hours, minutes, seconds = (int(x) if x else 0
+                                   for x in h_match.groups())
     elif m_match:
-        minutes, seconds = ( int(x) if x else 0
-                             for x in m_match.groups() )
+        minutes, seconds = (int(x) if x else 0 for x in m_match.groups())
         hours = 0
     else:
         raise argparse.ArgumentTypeError(
@@ -169,7 +165,8 @@ def date(date_str, default='now'):
         dt = datetime.datetime.now(nyt_timezone)
 
         release_hour = 22 if dt.weekday() < 5 else 18
-        release_dt = dt.replace(hour=release_hour, minute=0, second=30, microsecond=0)
+        release_dt = dt.replace(
+            hour=release_hour, minute=0, second=30, microsecond=0)
 
         # if it's already been released (with a small buffer), use tomorrow
         if dt > release_dt:

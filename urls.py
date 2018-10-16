@@ -19,10 +19,12 @@ from django.contrib import admin
 from django.urls import path, include
 from django.http import HttpResponse
 
+
 def index(request):
     now = datetime.datetime.now()
     html = "<html><body>It is now %s. crossbot is up and running!</body></html>" % now
     return HttpResponse(html)
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),

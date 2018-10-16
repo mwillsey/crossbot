@@ -2,6 +2,7 @@ from .handler import Handler, SlashCommandRequest
 
 _HANDLER = Handler()
 
+
 def handle_slash_command(slash_command):
     """Convenience methods used to handle slash commands.
 

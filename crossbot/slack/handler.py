@@ -7,7 +7,6 @@ from .parser import Parser, ParserException
 from .api import *
 from ..models import CBUser
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +26,8 @@ class Handler:
                 else:
                     logger.warning('plugin "%s" has no init()', mod.__name__)
             except:
-                logger.error('Something went wrong when importing "%s"', mod_name)
+                logger.error('Something went wrong when importing "%s"',
+                             mod_name)
                 traceback.print_exc()
 
     def handle_request(self, request, parse=True):
@@ -67,7 +67,6 @@ class Request:
 
 
 class SlashCommandRequest:
-
     def __init__(self, post_data, in_channel=False):
         self.text = post_data['text']
         self.response_url = post_data['response_url']
@@ -75,8 +74,8 @@ class SlashCommandRequest:
         self.channel = post_data['channel_id']
 
         self.slackid = post_data['user_id']
-        self.user = CBUser.from_slackid(slackid=post_data['user_id'],
-                                        slackname=post_data['user_name'])
+        self.user = CBUser.from_slackid(
+            slackid=post_data['user_id'], slackname=post_data['user_name'])
 
         self.in_channel = in_channel
         self.replies = []

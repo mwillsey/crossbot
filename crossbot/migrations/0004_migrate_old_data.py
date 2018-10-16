@@ -5,6 +5,7 @@ from django.utils.timezone import is_aware, make_aware, override
 
 TIME_MODELS = ['CrosswordTime', 'MiniCrosswordTime', 'EasySudokuTime']
 
+
 def convert_timestamp(timestamp):
     """Convenience method to convert (possible naive) timestamps."""
     if timestamp is None:
@@ -19,12 +20,14 @@ def convert_timestamp(timestamp):
 
     return timestamp
 
+
 def make_users(apps, schema_editor):
     CBUser = apps.get_model('crossbot', 'CBUser')
 
     for model_name in TIME_MODELS + ['QueryShorthands']:
         for item in apps.get_model('crossbot', model_name).objects.all():
             CBUser(slackid=item.userid, slackname='').save()
+
 
 def transfer_times(apps, schema_editor):
     for model_name in TIME_MODELS:
@@ -37,6 +40,7 @@ def transfer_times(apps, schema_editor):
                 date=item.date,
                 timestamp=convert_timestamp(item.timestamp),
             ).save()
+
 
 def transfer_queries(apps, schema_editor):
     CBUser = apps.get_model('crossbot', 'CBUser')
@@ -60,9 +64,7 @@ class Migration(migrations.Migration):
         migrations.RunPython(make_users),
         migrations.RunPython(transfer_times),
         migrations.RunPython(transfer_queries),
-    ] + [
-        migrations.DeleteModel(model_name) for model_name in TIME_MODELS
-    ] + [
+    ] + [migrations.DeleteModel(model_name) for model_name in TIME_MODELS] + [
         migrations.RenameModel('Temp' + model_name, model_name)
         for model_name in TIME_MODELS
     ] + [

@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 #       https://stackoverflow.com/questions/39332010/django-how-to-rollback-transaction-atomic-without-raising-exception
 class CBUser(models.Model):
     """Main user model used by the rest of the app."""
+
     class Meta:
         verbose_name = "CBUser"
         verbose_name_plural = "CBUsers"
@@ -24,9 +25,12 @@ class CBUser(models.Model):
     slackid = models.CharField(max_length=10, primary_key=True)
     slackname = models.CharField(max_length=100, blank=True)
 
-    auth_user = models.OneToOneField(User, null=True, blank=True,
-                                     on_delete=models.SET_NULL,
-                                     related_name='cb_user')
+    auth_user = models.OneToOneField(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='cb_user')
 
     @classmethod
     def from_slackid(cls, slackid, slackname=None, create=True):
@@ -53,9 +57,7 @@ class CBUser(models.Model):
     def update_slacknames(cls):
         from crossbot.slack.api import slack_users
 
-        users = {
-            u['id']: u for u in slack_users()
-        }
+        users = {u['id']: u for u in slack_users()}
 
         for user in cls.objects.all():
             user.slackname = users[user.slackid]['name']
@@ -75,8 +77,8 @@ class CBUser(models.Model):
         assert isinstance(date, datetime.date)
 
         try:
-            return time_model.objects.get(user=self, date=date,
-                                          seconds__isnull=False)
+            return time_model.objects.get(
+                user=self, date=date, seconds__isnull=False)
         except time_model.DoesNotExist:
             return None
 
@@ -104,9 +106,7 @@ class CBUser(models.Model):
         if time:
             return (False, time)
 
-        time = time_model.objects.create(user=self,
-                                         date=date,
-                                         seconds=seconds)
+        time = time_model.objects.create(user=self, date=date, seconds=seconds)
         return (True, time)
 
     def remove_time(self, time_model, date):
@@ -151,7 +151,7 @@ class CBUser(models.Model):
             self.times(time_model).values_list('date', flat=True))
 
         # calculate the backwards streak
-        check_date = copy(date) # why is this copied? Does -= change value?
+        check_date = copy(date)  # why is this copied? Does -= change value?
         backward_streak_count = 0
         while check_date in dates_completed:
             backward_streak_count += 1
@@ -174,8 +174,8 @@ class CBUser(models.Model):
         if old_streak_count > 0:
             old_streak_count -= 1
 
-        return (streak_count, old_streak_count,
-                forward_streak_count, backward_streak_count)
+        return (streak_count, old_streak_count, forward_streak_count,
+                backward_streak_count)
 
     def get_mini_crossword_time(self, *args, **kwargs):
         return self.get_time(MiniCrosswordTime, *args, **kwargs)
@@ -245,8 +245,10 @@ class CommonTime(models.Model):
 class MiniCrosswordTime(CommonTime):
     pass
 
+
 class CrosswordTime(CommonTime):
     pass
+
 
 class EasySudokuTime(CommonTime):
     pass
@@ -256,12 +258,13 @@ class MiniCrosswordModel(models.Model):
     class Meta:
         managed = False
         db_table = 'mini_crossword_model'
-        unique_together = (('userid', 'date'),)
+        unique_together = (('userid', 'date'), )
 
     userid = models.TextField()
     date = models.IntegerField()
     prediction = models.IntegerField()
     residual = models.FloatField()
+
 
 class ModelUser(models.Model):
     class Meta:
@@ -274,6 +277,7 @@ class ModelUser(models.Model):
     skill_25 = models.FloatField()
     skill_75 = models.FloatField()
 
+
 class ModelDate(models.Model):
     class Meta:
         managed = False
@@ -283,6 +287,7 @@ class ModelDate(models.Model):
     difficulty = models.FloatField()
     difficulty_25 = models.FloatField()
     difficulty_75 = models.FloatField()
+
 
 class ModelParams(models.Model):
     class Meta:
@@ -328,11 +333,12 @@ class QueryShorthand(models.Model):
     def __str__(self):
         nargs = self.num_args()
         if nargs:
-            arg_str = ' (takes {} arg{})'.format(nargs, '' if nargs == 1 else 's')
+            arg_str = ' (takes {} arg{})'.format(nargs,
+                                                 '' if nargs == 1 else 's')
         else:
             arg_str = ''
 
         # return '{} - {}'.format(self.name, self.user)
 
-        return '*{}* by {}{}:\n {}'.format(
-            self.name, self.user, arg_str, self.command)
+        return '*{}* by {}{}:\n {}'.format(self.name, self.user, arg_str,
+                                           self.command)

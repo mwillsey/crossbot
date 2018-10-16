@@ -32,11 +32,12 @@ class MockResponse:
 
 
 class MockedRequestTestCase(TestCase):
-
     def setUp(self):
         self.router = {}
-        self._patcher_get = patch('requests.get', side_effect=self.mocked_requests_get)
-        self._patcher_post = patch('requests.post', side_effect=self.mocked_requests_post)
+        self._patcher_get = patch(
+            'requests.get', side_effect=self.mocked_requests_get)
+        self._patcher_post = patch(
+            'requests.post', side_effect=self.mocked_requests_post)
         self._patcher_get.start()
         self._patcher_post.start()
 
@@ -62,8 +63,8 @@ class MockedRequestTestCase(TestCase):
         else:
             MockResponse(None, 404)
 
-class SlackTestCase(MockedRequestTestCase):
 
+class SlackTestCase(MockedRequestTestCase):
     def setUp(self):
         super().setUp()
         self.factory = RequestFactory()
@@ -99,18 +100,19 @@ class SlackTestCase(MockedRequestTestCase):
         return MockResponse({'ok': True, 'ts': ts}, 200)
 
     def post_valid_request(self, post_data):
-        request = self.factory.post(reverse('slash_command'),
-                                    post_data)
+        request = self.factory.post(reverse('slash_command'), post_data)
         ts = str(time.time())
         request.META['HTTP_X_SLACK_REQUEST_TIMESTAMP'] = ts
         request.META['HTTP_X_SLACK_SIGNATURE'] = 'v0=' + hmac.new(
             key=self.slack_sk,
             msg=b'v0:' + bytes(ts, 'utf8') + b':' + request.body,
-            digestmod=hashlib.sha256
-        ).hexdigest()
+            digestmod=hashlib.sha256).hexdigest()
         return slash_command(request)
 
-    def slack_post(self, text, who='alice', expected_status_code=200,
+    def slack_post(self,
+                   text,
+                   who='alice',
+                   expected_status_code=200,
                    expected_response_type='ephemeral'):
         response = self.post_valid_request({
             'type': 'event_callback',
@@ -131,7 +133,6 @@ class SlackTestCase(MockedRequestTestCase):
 
 
 class ModelTests(TestCase):
-
     def test_add_user(self):
         alice = CBUser.from_slackid('UALICE', 'alice')
         self.assertIsInstance(alice, CBUser)
@@ -163,7 +164,8 @@ class ModelTests(TestCase):
         self.assertEqual(t.user, alice)
         self.assertEqual(t.seconds, 10)
         self.assertEqual(t.date, parse_date(None))
-        self.assertNotEqual(alice.get_mini_crossword_time(parse_date(None)), None)
+        self.assertNotEqual(
+            alice.get_mini_crossword_time(parse_date(None)), None)
 
     def test_add_fail(self):
         alice = CBUser.from_slackid('UALICE', 'alice')
@@ -176,14 +178,14 @@ class ModelTests(TestCase):
 
 class SlackAuthTests(SlackTestCase):
     def test_bad_signature(self):
-        response = self.client.post(reverse('slash_command'),
-                                    HTTP_X_SLACK_REQUEST_TIMESTAMP=str(time.time()),
-                                    HTTP_X_SLACK_SIGNATURE=b'')
+        response = self.client.post(
+            reverse('slash_command'),
+            HTTP_X_SLACK_REQUEST_TIMESTAMP=str(time.time()),
+            HTTP_X_SLACK_SIGNATURE=b'')
         self.assertEqual(response.status_code, 400)
 
 
 class SlackAppTests(SlackTestCase):
-
     def test_add(self):
         self.slack_post(text='add :10')
 
@@ -265,7 +267,8 @@ class SlackAppTests(SlackTestCase):
         # doesn't clear out the model
         int(response['text'].split('\n')[-1])
 
-        response = self.slack_post(text='sql select * from mini_crossword_time')
+        response = self.slack_post(
+            text='sql select * from mini_crossword_time')
         self.assertNotIn('reported', response['text'])
 
     def test_query(self):
