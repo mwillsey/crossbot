@@ -65,7 +65,7 @@ def query(request):
         return
 
     # Finally, just echo the list of all queries
-    msgs = '\n\n'.join(models.QueryShorthand.objects.all())
+    msgs = '\n\n'.join(str(q) for q in models.QueryShorthand.objects.all())
     if msgs:
         request.reply(msgs)
     else:

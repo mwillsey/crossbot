@@ -283,6 +283,10 @@ class SlackAppTests(SlackTestCase):
         self.assertEqual(query.command, query_text)
         self.assertEqual(query.user_id, 'UALICE')
 
+        # make sure the empty query tells you about queries
+        response = self.slack_post('query')
+        self.assertIn('num_minis', response['text'])
+
         # make sure we can run it
         # again, we can only check that the result is an int because we aren't
         # going through the django testing thing
