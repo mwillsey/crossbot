@@ -1,5 +1,5 @@
 
-.PHONY: migrate kill fmt
+.PHONY: migrate kill fmt check_fmt link check
 
 
 # inside travis the virtualenv is already set up, so just mock these commands
@@ -28,6 +28,12 @@ check_fmt: venv
 
 migrate: venv
 	${activate} && ./manage.py migrate
+
+lint: venv
+	${activate} && pylint --load-plugins pylint_django crossbot/
+
+check: venv check_fmt lint test
+	@echo "You did it!"
 
 test: venv
 	${activate} && ./manage.py test
