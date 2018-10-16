@@ -1,124 +1,76 @@
-import sqlite3
 import math
-import requests
+import logging
 
 from random import choice
-from datetime import datetime, timedelta
 
-import crossbot
-from crossbot.parser import date_fmt
+from django.utils import timezone
+
+from . import models, parse_date, parse_time
+
+
+logger = logging.getLogger(__name__)
 
 
 def init(client):
-
     parser = client.parser.subparsers.add_parser('add', help='Add a time.')
     parser.set_defaults(command=add)
 
     parser.add_argument(
         'time',
-        type    = crossbot.time,
+        type    = parse_time,
         help    = 'Score to add. eg. ":32", "2:45", "fail"')
 
     parser.add_argument(
         'date',
         nargs   = '?',
         default = 'now',
-        type    = crossbot.date,
+        type    = parse_date,
         help    = 'Date to add a score for.')
 
     # TODO add a command-line only --user parameter
 
 
-def add(client, request):
+def add(request):
     '''Add entry for today (`add 1:07`) or given date (`add :32 2017-05-05`).
        A zero second time will be interpreted as a failed attempt.'''
 
     args = request.args
 
-    # try to add an entry, report back to the user if they already have one
-    with sqlite3.connect(crossbot.db_path) as con:
-        try:
-            query = '''
-             INSERT INTO {}(userid, date, seconds, timestamp)
-             VALUES(?, date(?), ?, ?)
-             '''.format(args.table)
+    was_added, time = request.user.add_time(args.table, args.time, args.date)
 
-            con.execute(query, (request.userid, args.date, args.time, datetime.now()))
+    if not was_added:
+        request.reply('I could not add this to the database, '
+                      'because you already have an entry '
+                      '({}) for this date.'.format(time.time_str()),
+                      direct=True)
+        return
 
-            request.reply('Added {} for {}'.format(args.time, args.date), direct=True)
-
-        except sqlite3.IntegrityError:
-            query = '''
-            SELECT seconds
-            FROM {}
-            WHERE userid = ? and date = date(?)
-            '''.format(args.table)
-            (seconds,) = con.execute(query, (request.userid, args.date)).fetchone()
-
-            minutes, seconds = divmod(seconds, 60)
-
-            request.reply('I could not add this to the database, '
-                          'because you already have an entry '
-                          '({}:{:02d}) for this date.'.format(minutes, seconds),
-                          direct=True)
-            return
-
-    with sqlite3.connect(crossbot.db_path) as con:
-        cur = con.execute("select strftime('%w', ?)", (args.date,))
-        day_of_week = int(cur.fetchone()[0])
-
+    # XXX: Isn't this wrong for historical adds?
+    day_of_week = timezone.now().weekday()
     emj = emoji(args.time, args.table, day_of_week)
-    request.react(emj)
 
-    # get all the entries for this person
-    with sqlite3.connect(crossbot.db_path) as con:
-        query = '''
-        SELECT date
-        FROM {}
-        WHERE userid = ?
-        '''.format(args.table)
+    request.message_and_react('<@{}>: {}'.format(request.slackid, request.text), emj)
+    request.reply('Submitted {} for {}'.format(time.time_str(), request.args.date))
 
-        result = con.execute(query, (request.userid,))
+    new_sc, old_sc, _, _ = request.user.streaks(args.table, args.date)
 
-        dates_completed = set(tup[0] for tup in result)
 
-    # calculate the backwards streak
-    check_date = datetime.strptime(args.date, date_fmt)
-    back_streak_count = 0
-    while check_date.strftime(date_fmt) in dates_completed:
-        back_streak_count += 1
-        check_date -= timedelta(days=1)
-
-    # calculate the forwards streak
-    check_date = datetime.strptime(args.date, date_fmt)
-    forward_streak_count = 0
-    while check_date.strftime(date_fmt) in dates_completed:
-        forward_streak_count += 1
-        check_date += timedelta(days=1)
-
-    # the previous streak count this user had was the max of the forward and back
-    # the new one is the sum - 1 (this date is double counted)
-    # so give them every streak award between the two
-    old_sc = max(back_streak_count, forward_streak_count)
-    new_sc = back_streak_count + forward_streak_count
-    for streak_count in range(old_sc, new_sc):
+    for streak_count in range(old_sc + 1, new_sc + 1):
         streak_messages = STREAKS.get(streak_count)
         if streak_messages:
-            name = client.user(request.userid)
-            msg = choice(streak_messages).format(name=name)
+            msg = choice(streak_messages).format(name=request.user)
             try:
                 # try here because we might fail if the reaction already exists.
                 request.react("achievement")
             except:
-                print("Achievement reaction failed!")
+                logger.warning("Achievement reaction failed!")
             request.reply(msg)
 
-    name = client.user(request.userid)
-    print("{} has a streak of {} in {}".format(name, new_sc - 1, args.table))
+    logger.debug("{} has a streak of {} in {}".format(request.user, new_sc, args.table))
 
-    if args.table == 'mini_crossword_time':
-        requests.post('http://plseaudio.cs.washington.edu:8087/scroll_text',
-                      data='{}\n{} sec\n:{}:'.format(name, args.time, emj))
+    # if args.table == 'mini_crossword_time':
+    #     requests.post('http://plseaudio.cs.washington.edu:8087/scroll_text',
+    #                   data='{}\n{} sec\n:{}:'.format(name, args.time, emj))
 
 
 # STREAKS[streak_num] = list of messages with {name} format option
@@ -199,11 +151,11 @@ SPEED_EMOJI = [
 
 def emoji(time, table, day_of_week):
 
-    if table == crossbot.tables['mini']:
+    if table == models.MiniCrosswordTime:
         times_list = MINI_TIMES
-    elif table == crossbot.tables['regular']:
+    elif table == models.CrosswordTime:
         times_list = REGULAR_TIMES
-    elif table == crossbot.tables['sudoku']:
+    elif table == models.EasySudokuTime:
         times_list = SUDOKU_TIMES
     else:
         raise RuntimeError('Unknown table {}'.format(table))

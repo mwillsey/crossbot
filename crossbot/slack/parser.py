@@ -4,7 +4,7 @@ import re
 
 import pytz
 
-import crossbot.settings
+from crossbot.models import MiniCrosswordTime, CrosswordTime, EasySudokuTime
 
 
 # use this to prevent ArgumentParser from printing to the commandline
@@ -36,7 +36,7 @@ class Parser:
     def __init__(self, limit_commands):
 
         self.parser = ArgumentParser(
-            prog='@' + crossbot.settings.bot_name,
+            prog='crossbot',
             description = '''
             You can either @ me in a channel or just DM me to give me a command.
             Play here: https://www.nytimes.com/crosswords/game/mini
@@ -50,7 +50,7 @@ class Parser:
         )
 
         self.parser.set_defaults(
-            table = crossbot.tables['mini']
+            table = MiniCrosswordTime,
         )
 
         table_choice = self.parser.add_argument_group('Puzzle Type')\
@@ -60,21 +60,21 @@ class Parser:
             '--mini',
             action = 'store_const',
             dest   = 'table',
-            const  = crossbot.tables['mini'],
+            const  = MiniCrosswordTime,
             help   = 'Use the scores from the mini crossword.')
 
         table_choice.add_argument(
             '-r', '--regular',
             action = 'store_const',
             dest   = 'table',
-            const  = crossbot.tables['regular'],
+            const  = CrosswordTime,
             help   = 'Use the scores from the regular crossword.')
 
         table_choice.add_argument(
             '-s', '--sudoku',
             action = 'store_const',
             dest   = 'table',
-            const  = crossbot.tables['sudoku'],
+            const  = EasySudokuTime,
             help   = 'Use the scores from the easy sudoku.')
 
         self.subparsers = self.parser.add_subparsers(help = 'subparsers help')
@@ -175,8 +175,15 @@ def date(date_str, default='now'):
         if dt > release_dt:
             dt += datetime.timedelta(days=1)
 
+    elif date_str.startswith('-'):
+        try:
+            days = int(date_str)
+            dt = date('now') + datetime.timedelta(days=days)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                'Cannot parse date "{}", should look like "YYYY-MM-DD" or "now".'
+                .format(date_str))
     else:
-
         try:
             dt = datetime.datetime.strptime(date_str, date_fmt)
         except ValueError:
@@ -184,4 +191,7 @@ def date(date_str, default='now'):
                 'Cannot parse date "{}", should look like "YYYY-MM-DD" or "now".'
                 .format(date_str))
 
-    return dt.strftime(date_fmt)
+    if type(dt) == datetime.date:
+        return dt
+    else:
+        return dt.date()

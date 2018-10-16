@@ -19,3 +19,16 @@ __pycache__
 
 # ignore your api tokens and secrets
 secrets
+secrets.py
+keys.py
+
+# ignore user-uploaded files
+uploaded_files
+
+# django stuff
+/static
+/media
+/venv
+
+# sublime stuff
+*.sublime-workspace

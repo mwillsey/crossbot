@@ -1,10 +1,7 @@
-# file name cannot be random because we need to import it
-import crossbot
-
-from crossbot.parser import date_fmt
-
 import datetime
 import random
+
+from . import parse_date, date_fmt
 
 def init(client):
 
@@ -16,21 +13,21 @@ def init(client):
     parser.add_argument(
         '--start-date',
         default = first_dt,
-        type    = crossbot.date,
+        type    = parse_date,
         help    = 'Beginning of random range. Default {}'.format(first_date))
 
     parser.add_argument(
         '--end-date',
         default = 'now',
-        type    = crossbot.date,
+        type    = parse_date,
         help    = 'End of random range. Default today.')
 
 mini_url = "https://www.nytimes.com/crosswords/game/mini/{:04}/{:02}/{:02}"
 
 first_date = '2014-08-21'
-first_dt = datetime.datetime.strptime('2014-08-21', date_fmt)
+first_dt = datetime.datetime.strptime('2014-08-21', date_fmt).date()
 
-def random_date_url(client, request):
+def random_date_url(request):
 
     start = request.args.start_date
     end   = request.args.end_date
@@ -52,4 +49,3 @@ def random_date_url(client, request):
     rand = start + random.random() * (end - start)
 
     request.reply(mini_url.format(rand.year, rand.month, rand.day))
-
