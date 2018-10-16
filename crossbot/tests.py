@@ -2,7 +2,9 @@ import hashlib
 import hmac
 import json
 import time
+import os.path
 
+import unittest
 from unittest.mock import patch, MagicMock
 
 from django.test import TestCase
@@ -252,6 +254,7 @@ class SlackAppTests(SlackTestCase):
         response = self.slack_post(text='times 2018-08-01')
         self.assertNotIn(':23', response['text'])
 
+    @unittest.skipUnless(os.path.isfile('crossbot.db'), 'No existing db found')
     def test_sql(self):
         # should be able to handle an empty query
         response = self.slack_post(text='sql')
@@ -271,6 +274,7 @@ class SlackAppTests(SlackTestCase):
             text='sql select * from mini_crossword_time')
         self.assertNotIn('reported', response['text'])
 
+    @unittest.skipUnless(os.path.isfile('crossbot.db'), 'No existing db found')
     def test_query(self):
         # make sure the command tells you how to do it if there are no saved queries
         response = self.slack_post(text='query')
