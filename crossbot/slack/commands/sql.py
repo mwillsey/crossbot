@@ -3,6 +3,7 @@ import logging
 import multiprocessing
 import re
 import sqlite3
+import traceback
 
 
 from . import models, DB_PATH
@@ -86,14 +87,18 @@ def _do_sql(cmd, *args):
                 user = models.CBUser.from_slackid(slackid, create=False)
                 if user:
                     return str(user)
+                else:
+                    logger.debug("Can't find slack name for %s", slackid)
                 return slackid
 
-            # TODO: this replacement is garbage
-            result = re.sub(r'\w{9}', username_from_slackid, result)
+            logger.debug('result %s', result)
+            result = re.sub(r'(U[A-Z0-9]{8})', username_from_slackid, result)
 
             return result
 
         except Exception as e:
+            tb = traceback.format_exc()
+            logger.info('sql exception. command:\n%s\n exception: %s\n%s', cmd, e, tb)
             return str(e) + ', this incident has been reported'
 
 
@@ -113,19 +118,20 @@ def _format_sql_cmd(cmd):
     return cmd
 
 
-def run_sql_command(cmd, args):
+def run_sql_command(raw_cmd, args):
     """Formats the command and runs it safely."""
 
-    logger.debug("raw command: %s | %s", cmd, args)
+    logger.debug("raw command: %s | %s", raw_cmd, args)
 
-    cmd = _format_sql_cmd(cmd)
+    cmd = _format_sql_cmd(raw_cmd)
     args = [_format_sql_cmd(arg) for arg in args]
 
     logger.debug("formatted command: %s | %s", cmd, args)
 
     try:
         with multiprocessing.Pool() as pool:
-            return pool.apply_async(_do_sql, [cmd] + args).get(1)
+            result = pool.apply_async(_do_sql, [cmd] + args).get(1)
+            return raw_cmd + '\n\n' + result
     except multiprocessing.TimeoutError:
         return "dont try to dos me, this incident has been reported"
 
@@ -134,6 +140,6 @@ def sql(request):
     '''Run a sql command.'''
     if request.args.sql_command:
         cmd = ' '.join(request.args.sql_command)
-        request.reply(run_sql_command(cmd))
+        request.reply(run_sql_command(cmd, []))
     else:
         request.reply("Please type some sql.", direct=True)

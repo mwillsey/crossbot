@@ -256,11 +256,16 @@ class SlackAppTests(SlackTestCase):
         response = self.slack_post(text='sql  ')
         self.assertIn('Please type', response['text'])
 
-        response = self.slack_post(text='sql select count(*) from mini_crossword_time')
+        query_text = 'select count(*) from mini_crossword_time'
+        response = self.slack_post(text='sql ' + query_text)
+        self.assertIn(query_text, response['text'])
         # just check that we can turn the response into an int
         # because we are just making raw sqlite, the django testing thing
         # doesn't clear out the model
-        int(response['text'])
+        int(response['text'].split('\n')[-1])
+
+        response = self.slack_post(text='sql select * from mini_crossword_time')
+        self.assertNotIn('reported', response['text'])
 
     def test_query(self):
         # make sure the command tells you how to do it if there are no saved queries
@@ -282,4 +287,4 @@ class SlackAppTests(SlackTestCase):
         # again, we can only check that the result is an int because we aren't
         # going through the django testing thing
         response = self.slack_post('query num_minis')
-        int(response['text'])
+        int(response['text'].split('\n')[-1])
