@@ -26,8 +26,9 @@ keys.py
 uploaded_files
 
 # django stuff
-static
-venv
+/static
+/media
+/venv
 
 # sublime stuff
 *.sublime-workspace
