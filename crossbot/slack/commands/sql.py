@@ -106,7 +106,7 @@ def _do_sql(cmd, *args):
 
 def _format_sql_cmd(cmd):
     cmd = html.unescape(cmd)
-    cmd = re.sub(r'<@(\w+)>', lambda m: m.group(1), cmd)
+    cmd = re.sub(r'<@(\w+)(\|[^>]*)?>', lambda m: m.group(1), cmd)
     cmd = (cmd.replace(u"\u2018", "'").replace(u"\u2019", "'").replace(
         u"\u201c", "'").replace(u"\u201d", "'"))
 
