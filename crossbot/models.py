@@ -24,6 +24,8 @@ class CBUser(models.Model):
 
     slackid = models.CharField(max_length=10, primary_key=True)
     slackname = models.CharField(max_length=100, blank=True)
+    slack_fullname = models.CharField(max_length=100, blank=True)
+    image_url = models.CharField(max_length=150, blank=True)
 
     auth_user = models.OneToOneField(
         User,
@@ -60,7 +62,11 @@ class CBUser(models.Model):
         users = {u['id']: u for u in slack_users()}
 
         for user in cls.objects.all():
-            user.slackname = users[user.slackid]['name']
+            u = users[user.slackid]
+            user.slackname = u['name']
+            user.slack_fullname = u['profile']['real_name']
+            # image size options: 24 32 48 72 192 512 1024
+            user.image_url = u['profile']['image_48']
             user.save()
 
     def get_time(self, time_model, date):

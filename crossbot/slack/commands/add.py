@@ -49,8 +49,7 @@ def add(request):
     day_of_week = timezone.now().weekday()
     emj = emoji(args.time, args.table, day_of_week)
 
-    request.message_and_react(
-        '<@{}>: {}'.format(request.slackid, request.text), emj)
+    request.message_and_react(request.text, emj, as_user=request.user)
     request.reply('Submitted {} for {}'.format(time.time_str(),
                                                request.args.date))
 

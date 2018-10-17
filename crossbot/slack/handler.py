@@ -85,8 +85,18 @@ class SlashCommandRequest:
         self.replies.append(msg)
 
     # note, this one is not delayed
-    def message_and_react(self, msg, emoji):
-        timestamp = post_message(self.channel, text=msg)
+    def message_and_react(self, msg, emoji, as_user=None):
+        if as_user:
+            name = as_user.slack_fullname or as_user.slackname or 'crossbot'
+            kwargs = {
+                'as_user': 'false',
+                'icon_url': as_user.image_url,
+                'username': name,
+            }
+        else:
+            kwargs = {}
+
+        timestamp = post_message(self.channel, text=msg, **kwargs)
         react(emoji, self.channel, timestamp)
 
     def attach(self, name, path):
