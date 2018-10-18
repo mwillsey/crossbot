@@ -4,7 +4,6 @@ from django.contrib.auth.decorators import login_required
 
 from . import views
 
-
 urlpatterns = [
     path('slack/', views.slash_command, name='slash_command'),
     path('api-event/', views.event, name='event'),

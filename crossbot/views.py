@@ -14,7 +14,6 @@ import settings
 from .slack import handle_slash_command
 from .models import MiniCrosswordTime, CrosswordTime, EasySudokuTime
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -86,6 +85,7 @@ TIME_MODELS = {
     'easysudoku': EasySudokuTime
 }
 
+
 @login_required
 @gzip_page
 @cache_control(max_age=3600)
@@ -101,16 +101,19 @@ def times_rest_api(request, time_model='minicrossword'):
     # if 'start' in request.GET:
     #     start_date = datetime.datetime.strptime(request.GET['start'], '%Y-%m-%d').date()
 
-    times = (TIME_MODELS[time_model].objects
-             .order_by('date')
-             .select_related('user'))
+    times = (TIME_MODELS[time_model].objects.order_by('date').select_related(
+        'user'))
 
     return JsonResponse({
         'times': [{
             'user': str(t.user),
             'date': t.date,
-            'seconds': t.seconds} for t in times],
-        'timemodel': time_model,
-        'start': times[0].date,
-        'end': times[len(times)-1].date,
-        })
+            'seconds': t.seconds
+        } for t in times],
+        'timemodel':
+        time_model,
+        'start':
+        times[0].date,
+        'end':
+        times[len(times) - 1].date,
+    })
