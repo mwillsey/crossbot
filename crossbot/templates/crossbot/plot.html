@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block content %}
+<form id="plot-settings">
+    <input type="radio" checked="checked" name="time-model" value="minicrossword">Mini Crossword
+    <input type="radio" name="time-model" value="crossword">Crossword
+    <input type="radio" name="time-model" value="easysudoku">Easy Sudoku
+
+    <br>
+
+    <input type="radio" checked="checked" name="plot-mode" value="normalized">Normalized
+    <input type="radio" name="plot-mode" value="raw">Raw Times
+    <input type="radio" name="plot-mode" value="streaks">Completion Streaks
+    <input type="radio" name="plot-mode" value="win-streaks">Win Streaks
+
+    <br>
+
+    <input type="radio" checked="checked" name="scale-mode" value="log">Log
+    <input type="radio" name="scale-mode" value="linear">Linear
+
+    <br>
+
+    Smoothing factor:
+    <input type="number" min="0" max="0.95" value="0.7" step="0.05" name="smoothing-factor">
+</form>
+
+<div id="chart"></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="{% static "crossbot/js/plot.js" %}"></script>
+{% endblock %}

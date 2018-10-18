@@ -20,14 +20,14 @@
 </head>
 <body>
     <nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0">
-      <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="#">Crossbot</a>
+      <div class="navbar-brand col-sm-3 col-md-2 mr-0">Crossbot</div>
       <ul class="navbar-nav px-3">
         <li class="nav-item text-nowrap">
           {% block login_logout %}
             {% if user.is_authenticated %}
-              <a class="nav-link" href="/logout/">Log out</a>
+              <a class="nav-link" href="{% url 'logout' %}">Log out</a>
             {% else %}
-              <a class="nav-link" href="/login/">Log in</a>
+              <a class="nav-link" href="{% url 'login' %}">Log in</a>
             {% endif %}
           {% endblock %}
         </li>
@@ -40,13 +40,13 @@
           <div class="sidebar-sticky">
             <ul class="nav flex-column">
               <li class="nav-item">
-                <a class="nav-link" href="/">
+                <a class="nav-link" href="{% url 'home' %}">
                   <i class="fa fa-home"></i> Home
                 </a>
               </li>
               <li class="nav-item">
-                <a class="nav-link" href="/private/">
-                  Private
+                <a class="nav-link" href="{% url 'plot' %}">
+                  <i class="fa fa-line-chart"></i> View Plots
                 </a>
               </li>
             </ul>
