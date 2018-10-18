@@ -1,5 +1,5 @@
 
-.PHONY: migrate kill fmt check_fmt check lint lint_all deploy run
+.PHONY: migrate kill fmt check_fmt check lint lint_all deploy run deps
 
 
 # inside travis the virtualenv is already set up, so just mock these commands
@@ -13,6 +13,9 @@ venv:
 	virtualenv --quiet --python python3 --no-site-packages $@
 	${activate} && pip install --quiet -r requirements.txt
 endif
+
+deps: venv
+	${activate} && pip install --quiet -r requirements.txt
 
 static: venv
 	${activate} && ./manage.py collectstatic --no-input
