@@ -191,6 +191,7 @@ warnings.filterwarnings(
 # Be sure to add this site's hostnames to Oauth Redirect URLs in Slack
 SOCIAL_AUTH_IGNORE_DEFAULT_SCOPE = True
 SOCIAL_AUTH_SLACK_SCOPE = ['identity.basic']
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = True
 SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_details',
     'social_core.pipeline.social_auth.social_uid',
