@@ -49,4 +49,4 @@ deploy: kill venv static migrate
 	${activate} && gunicorn --daemon --workers 4 --pid /tmp/crossbot.pid --bind "unix:/tmp/crossbot.sock" "wsgi:application"
 
 run: venv migrate
-	${activate} && ./manange runserver
+	${activate} && ./manage.py runserver
