@@ -1,5 +1,5 @@
 
-.PHONY: migrate kill fmt check_fmt check lint lint_all deploy run
+.PHONY: migrate kill fmt check_fmt check lint lint_all deploy run static
 
 
 # inside travis the virtualenv is already set up, so just mock these commands
