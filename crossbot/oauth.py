@@ -11,9 +11,10 @@ def auth_correct_team(response, *args, **kwargs):
     team = response.get('team', {}).get('id', None)
     if team is None:
         raise AuthForbidden("No team info returned from Slack.")
-    if (hasattr(settings, 'SOCIAL_AUTH_SLACK_TEAM')
-            and team != settings.SOCIAL_AUTH_SLACK_TEAM):
-        raise AuthForbidden("Team not authorized.")
+    if hasattr(settings, 'CROSSBOT_SOCIAL_AUTH_SLACK_ALLOWED_TEAMS'):
+        allowed_teams = settings.CROSSBOT_SOCIAL_AUTH_SLACK_ALLOWED_TEAMS
+        if allowed_teams and team not in allowed_teams:
+            raise AuthForbidden("Team not authorized.")
 
 
 def slackid_as_username(details, response, *args, **kwargs):

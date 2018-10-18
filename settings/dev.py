@@ -9,6 +9,7 @@ SLACK_SECRET_SIGNING_KEY = b'my_secret_slack_key'
 SLACK_OAUTH_ACCESS_TOKEN = 'my_slack_oauth'
 
 # Slack OAuth stuff
-SOCIAL_AUTH_SLACK_TEAM = 'slack-team-id'
 SOCIAL_AUTH_SLACK_KEY = 'slack-client-id'
 SOCIAL_AUTH_SLACK_SECRET = 'slack-client-secret'
+
+CROSSBOT_SOCIAL_AUTH_SLACK_ALLOWED_TEAMS = [] # Insert team IDs here
