@@ -2,6 +2,8 @@
 
 {% block content %}
 
+<h2>Log in to Crossbot</h2>
+
 {% if form.errors %}
 <p>Your username and password didn't match. Please try again.</p>
 {% endif %}
@@ -15,23 +17,10 @@
     {% endif %}
 {% endif %}
 
-<form method="post" action="{% url 'login' %}">
-{% csrf_token %}
-<table>
-<tr>
-    <td>{{ form.username.label_tag }}</td>
-    <td>{{ form.username }}</td>
-</tr>
-<tr>
-    <td>{{ form.password.label_tag }}</td>
-    <td>{{ form.password }}</td>
-</tr>
-</table>
-
-<input type="submit" value="login">
-<input type="hidden" name="next" value="{{ next }}">
-</form>
-
-<a href="{% url "social:begin" "slack" %}{% if next %}?next={{ next }}{% endif %}">Slack Sign-in</a>
+<a href="{% url "social:begin" "slack" %}{% if next %}?next={{ next }}{% endif %}">
+    <img src="https://platform.slack-edge.com/img/sign_in_with_slack.png" srcset="https://platform.slack-edge.com/img/sign_in_with_slack.png 1x, https://platform.slack-edge.com/img/sign_in_with_slack@2x.png 2x" />
+</a>
 
 {% endblock %}
+
+{% block login_logout %}{% endblock %}

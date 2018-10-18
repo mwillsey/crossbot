@@ -2,15 +2,11 @@ import datetime
 
 from django.urls import path
 from django.http import HttpResponse
+from django.views.generic.base import TemplateView
 from django.contrib.auth.decorators import login_required
 
 from . import views
 
-
-def index(request):
-    now = datetime.datetime.now()
-    html = "<html><body>It is now %s. crossbot is up and running!</body></html>" % now
-    return HttpResponse(html)
 
 @login_required
 def private(request):
@@ -21,6 +17,6 @@ def private(request):
 urlpatterns = [
     path('slack/', views.slash_command, name='slash_command'),
     path('api-event/', views.event, name='event'),
-    path('private/', private, name='event'),
-    path('', index)
+    path('private/', private),
+    path('', TemplateView.as_view(template_name='crossbot/index.html'), name='home')
 ]
