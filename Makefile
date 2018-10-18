@@ -1,5 +1,5 @@
 
-.PHONY: migrate kill fmt check_fmt check lint lint_all deploy run static
+.PHONY: migrate kill fmt check_fmt check lint lint_all deploy run static clean
 
 
 # inside travis the virtualenv is already set up, so just mock these commands
@@ -50,3 +50,7 @@ deploy: kill venv static migrate
 
 run: venv migrate
 	${activate} && ./manage.py runserver
+
+clean:
+	find . -name "*.pyc" -delete
+	rm -r venv/
