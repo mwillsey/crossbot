@@ -18,5 +18,8 @@ urlpatterns = [
     path('slack/', views.slash_command, name='slash_command'),
     path('api-event/', views.event, name='event'),
     path('private/', private),
-    path('', TemplateView.as_view(template_name='crossbot/index.html'), name='home')
+    path(
+        '',
+        TemplateView.as_view(template_name='crossbot/index.html'),
+        name='home')
 ]

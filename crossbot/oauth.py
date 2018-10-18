@@ -11,8 +11,8 @@ def auth_correct_team(response, *args, **kwargs):
     team = response.get('team', {}).get('id', None)
     if team is None:
         raise AuthForbidden("No team info returned from Slack.")
-    if (hasattr(settings, 'SOCIAL_AUTH_SLACK_TEAM') and
-            team != settings.SOCIAL_AUTH_SLACK_TEAM):
+    if (hasattr(settings, 'SOCIAL_AUTH_SLACK_TEAM')
+            and team != settings.SOCIAL_AUTH_SLACK_TEAM):
         raise AuthForbidden("Team not authorized.")
 
 
