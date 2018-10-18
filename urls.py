@@ -13,21 +13,16 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-import datetime
 
+from django.conf import settings
 from django.contrib import admin
+from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import path, include
-from django.http import HttpResponse
-
-
-def index(request):
-    now = datetime.datetime.now()
-    html = "<html><body>It is now %s. crossbot is up and running!</body></html>" % now
-    return HttpResponse(html)
-
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('slack/', include('crossbot.urls')),
-    path('', index),
+    path(settings.LOGIN_URL.lstrip('/'), LoginView.as_view(), name='login'),
+    path('logout/', LogoutView.as_view(), name='logout'),
+    path('', include('social_django.urls', namespace='social')),
+    path('', include('crossbot.urls')),
 ]
