@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'social_django',
 ]
 
 MIDDLEWARE = [
@@ -74,7 +75,7 @@ ROOT_URLCONF = 'urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -158,6 +159,10 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
 # Internationalization
 # https://docs.djangoproject.com/en/2.1/topics/i18n/
 
@@ -177,4 +182,30 @@ warnings.filterwarnings(
     r"DateTimeField .* received a naive datetime",
     RuntimeWarning,
     r'django\.db\.models\.fields',
+)
+
+
+# OAuth setup
+# Be sure to add this site's hostnames to Oauth Redirect URLs in Slack
+SOCIAL_AUTH_IGNORE_DEFAULT_SCOPE = True
+SOCIAL_AUTH_SLACK_SCOPE = ['identity.basic']
+SOCIAL_AUTH_PIPELINE = (
+    'social_core.pipeline.social_auth.social_details',
+    'social_core.pipeline.social_auth.social_uid',
+    'social_core.pipeline.social_auth.auth_allowed',
+    'crossbot.oauth.auth_correct_team', # Check user's Slack team
+    'social_core.pipeline.social_auth.social_user',
+    'crossbot.oauth.slackid_as_username', # Use SlackID as django username
+    'social_core.pipeline.user.get_username',
+    'social_core.pipeline.user.create_user',
+    'social_core.pipeline.social_auth.associate_user',
+    'crossbot.oauth.associate_cb_user', # Associate CBUser with django user
+    'social_core.pipeline.social_auth.load_extra_data',
+    # (only updates name, doesn't touch username, email, etc.)
+    'social_core.pipeline.user.user_details',
+)
+# Add Slack to authentication backends
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.slack.SlackOAuth2',
+    'django.contrib.auth.backends.ModelBackend',
 )
