@@ -61,7 +61,8 @@ def add(request):
             msg = choice(streak_messages).format(name=request.user)
             try:
                 # try here because we might fail if the reaction already exists.
-                request.react("achievement")
+                emj = "achievement"
+                request.message_and_react(msg, emj)
             except:
                 logger.warning("Achievement reaction failed!")
             request.reply(msg)
