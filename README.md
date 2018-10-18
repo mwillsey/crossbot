@@ -1,5 +1,5 @@
 # crossbot
-[![Build Status](https://travis-ci.org/mwillsey/crossbot.svg?branch=master)](https://travis-ci.org/mwillsey/crossbot)
+[![Build Status](https://travis-ci.com/mwillsey/crossbot.svg?branch=master)](https://travis-ci.com/mwillsey/crossbot)
 
 A Slack bot to make you really competitive on the New York Times
 [mini crossword](http://www.nytimes.com/crosswords/game/mini).
