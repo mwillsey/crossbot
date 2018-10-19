@@ -192,6 +192,7 @@ class ModelTests(TestCase):
         alice.add_mini_crossword_time(10, parse_date(None))
         self.assertEqual(alice.crossbucks, CROSSBUCKS_PER_SOLVE)
 
+
 class SlackAuthTests(SlackTestCase):
     def test_bad_signature(self):
         response = self.client.post(
