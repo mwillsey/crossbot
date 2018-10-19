@@ -35,7 +35,7 @@ def model(request):
         predictions = []
         for model in models.MiniCrosswordModel.all():
             try:
-                time = models.MiniCrosswordTime.objects.get(
+                time = models.MiniCrosswordTime.all_times().get(
                     user__slackid=model.uid, date=model.date)
             except models.MiniCrosswordTime.DoesNotExist:
                 logger.warning("Couldn't find time for %s on %s", model.uid,

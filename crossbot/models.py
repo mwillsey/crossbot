@@ -6,8 +6,10 @@ import logging
 from copy import copy
 
 from django.contrib.auth.models import User
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
+
+from .settings import CROSSBUCKS_PER_SOLVE
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +28,8 @@ class CBUser(models.Model):
     slackname = models.CharField(max_length=100, blank=True)
     slack_fullname = models.CharField(max_length=100, blank=True)
     image_url = models.CharField(max_length=150, blank=True)
+
+    crossbucks = models.IntegerField(default=0)
 
     auth_user = models.OneToOneField(
         User,
@@ -88,7 +92,7 @@ class CBUser(models.Model):
         except time_model.DoesNotExist:
             return None
 
-    # TODO: wrap this and other operations in transactions???
+    @transaction.atomic
     def add_time(self, time_model, seconds, date):
         """Add a time for this user for the given date.
 
@@ -113,8 +117,15 @@ class CBUser(models.Model):
             return (False, time)
 
         time = time_model.objects.create(user=self, date=date, seconds=seconds)
+
+        # Give the user crossbucks
+        self.refresh_from_db()  # refresh this object inside the transaction
+        self.crossbucks += CROSSBUCKS_PER_SOLVE
+        self.save()
+
         return (True, time)
 
+    @transaction.atomic
     def remove_time(self, time_model, date):
         """Remove a time record for this user.
 
@@ -129,12 +140,18 @@ class CBUser(models.Model):
         assert isinstance(date, datetime.date)
 
         time = self.get_time(time_model, date)
-        if time:
-            time_str = str(time)
-            time.delete()
-            return time_str
+        if not time:
+            return None
 
-        return None
+        time_str = str(time)
+        time.delete()
+
+        # Take away crossbucks from the user
+        self.refresh_from_db()  # refresh this object inside the transaction
+        self.crossbucks -= CROSSBUCKS_PER_SOLVE
+        self.save()
+
+        return time_str
 
     def times(self, time_model):
         """Returns a QuerySet with times this user has completed."""
@@ -231,7 +248,7 @@ class CommonTime(models.Model):
     @classmethod
     def times_for_date(cls, date):
         """Return a query set with all times for a date."""
-        return cls.objects.filter(date=date)
+        return cls.all_times().filter(date=date)
 
     def is_fail(self):
         return self.seconds < 0
