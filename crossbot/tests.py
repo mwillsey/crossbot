@@ -7,11 +7,11 @@ import os.path
 import unittest
 from unittest.mock import patch, MagicMock
 
+from django.conf import settings
 from django.test import TestCase
 from django.test.client import RequestFactory
 from django.urls import reverse
 
-from settings import MEDIA_URL
 from crossbot.slack.commands import parse_date
 from crossbot.slack.api import SLACK_URL
 from crossbot.views import slash_command
@@ -22,6 +22,7 @@ from crossbot.models import (
     EasySudokuTime,
     QueryShorthand,
 )
+from crossbot.settings import CROSSBUCKS_PER_SOLVE
 
 
 class MockResponse:
@@ -177,6 +178,19 @@ class ModelTests(TestCase):
         self.assertEqual(t.date, parse_date(None))
         self.assertTrue(t.is_fail())
 
+    def test_crossbucks_add_remove(self):
+        # Checks that removing a time actually removes crossbucks
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        alice.add_mini_crossword_time(10, parse_date(None))
+        self.assertEqual(alice.crossbucks, CROSSBUCKS_PER_SOLVE)
+        alice.add_mini_crossword_time(10, parse_date(None))
+        self.assertEqual(alice.crossbucks, CROSSBUCKS_PER_SOLVE)
+        alice.remove_mini_crossword_time(parse_date(None))
+        self.assertEqual(alice.crossbucks, 0)
+        alice.remove_mini_crossword_time(parse_date(None))
+        self.assertEqual(alice.crossbucks, 0)
+        alice.add_mini_crossword_time(10, parse_date(None))
+        self.assertEqual(alice.crossbucks, CROSSBUCKS_PER_SOLVE)
 
 class SlackAuthTests(SlackTestCase):
     def test_bad_signature(self):
@@ -307,4 +321,5 @@ class SlackAppTests(SlackTestCase):
         self.slack_post(text='add :10 2018-08-03')
         self.slack_post(text='add :10 2018-08-04')
         response = self.slack_post(text='plot')
-        self.assertIn(MEDIA_URL, response['attachments'][0]['image_url'])
+        self.assertIn(settings.MEDIA_URL,
+                      response['attachments'][0]['image_url'])
