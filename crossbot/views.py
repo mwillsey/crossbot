@@ -101,8 +101,8 @@ def times_rest_api(request, time_model='minicrossword'):
     # if 'start' in request.GET:
     #     start_date = datetime.datetime.strptime(request.GET['start'], '%Y-%m-%d').date()
 
-    times = (TIME_MODELS[time_model].objects.order_by('date').select_related(
-        'user'))
+    times = (TIME_MODELS[time_model].all_times().order_by('date').
+             select_related('user'))
 
     return JsonResponse({
         'times': [{
