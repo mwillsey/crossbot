@@ -53,7 +53,16 @@ def add(request):
     request.reply('Submitted {} for {}'.format(time.time_str(),
                                                request.args.date))
 
-    new_sc, old_sc, _, _ = request.user.streaks(args.table, args.date)
+    def get_streak_counts(streaks):
+        for streak in streaks:
+            for i, entry in enumerate(streak):
+                if entry.date == args.date:
+                    # i is the old streak count, len is the new one
+                    return i, len(streak)
+        raise ValueError("date wasn't in streaks!")
+
+    streaks = args.table.participation_streaks(request.user)
+    old_sc, new_sc = get_streak_counts(streaks)
 
     for streak_count in range(old_sc + 1, new_sc + 1):
         streak_messages = STREAKS.get(streak_count)

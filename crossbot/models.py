@@ -159,47 +159,6 @@ class CBUser(models.Model):
 
         return time_model.objects.filter(user=self)
 
-    def streaks(self, time_model, date):
-        """Returns the full, forwards, and backwards streaks the user is on.
-
-        Calculates the number of days in a row the user has completed a given
-        puzzle, centered on a given date.
-
-        Returns:
-            (streak_length, old_streak_length, forwards_streak_length,
-             backward_streak_length)
-        """
-
-        dates_completed = set(
-            self.times(time_model).values_list('date', flat=True))
-
-        # calculate the backwards streak
-        check_date = copy(date)  # why is this copied? Does -= change value?
-        backward_streak_count = 0
-        while check_date in dates_completed:
-            backward_streak_count += 1
-            check_date -= datetime.timedelta(days=1)
-
-        # calculate the forwards streak
-        check_date = copy(date)
-        forward_streak_count = 0
-        while check_date in dates_completed:
-            forward_streak_count += 1
-            check_date += datetime.timedelta(days=1)
-
-        streak_count = forward_streak_count + backward_streak_count
-        # Don't double-count date
-        if streak_count > 0:
-            streak_count -= 1
-
-        old_streak_count = max(backward_streak_count, forward_streak_count)
-        # Don't count date in the old_streak_count
-        if old_streak_count > 0:
-            old_streak_count -= 1
-
-        return (streak_count, old_streak_count, forward_streak_count,
-                backward_streak_count)
-
     def get_mini_crossword_time(self, *args, **kwargs):
         return self.get_time(MiniCrosswordTime, *args, **kwargs)
 
@@ -289,7 +248,7 @@ class CommonTime(models.Model):
         return streaks
 
     @classmethod
-    def participation_streak(cls, user, filter_q=None):
+    def participation_streaks(cls, user, filter_q=None):
         times = cls.objects.filter(seconds__isnull=False, user_id=user)
         if filter_q:
             times = times.filter(filter_q)

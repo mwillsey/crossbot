@@ -194,19 +194,19 @@ class ModelTests(TestCase):
         _, t0 = alice.add_mini_crossword_time(18, parse_date('2018-01-10'))
 
         # make sure the streak is broken
-        streaks = MiniCrosswordTime.participation_streak(alice)
+        streaks = MiniCrosswordTime.participation_streaks(alice)
         self.assertListEqual(streaks, [[t1, t2, t3, t4], [t6, t7, t8, t9, t0]])
 
         # fix the broken streak
         _, t5 = alice.add_mini_crossword_time(15, parse_date('2018-01-05'))
 
-        streaks = MiniCrosswordTime.participation_streak(alice)
+        streaks = MiniCrosswordTime.participation_streaks(alice)
         self.assertListEqual(streaks,
                              [[t1, t2, t3, t4, t5, t6, t7, t8, t9, t0]])
 
         # now break it again with a deleted time (t2)
         alice.remove_mini_crossword_time(parse_date('2018-01-02'))
-        streaks = MiniCrosswordTime.participation_streak(alice)
+        streaks = MiniCrosswordTime.participation_streaks(alice)
         self.assertListEqual(streaks, [[t1], [t3, t4, t5, t6, t7, t8, t9, t0]])
 
     def test_crossbucks_add_remove(self):
