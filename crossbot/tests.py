@@ -224,6 +224,45 @@ class ModelTests(TestCase):
         alice.add_mini_crossword_time(10, parse_date(None))
         self.assertEqual(alice.crossbucks, CROSSBUCKS_PER_SOLVE)
 
+    def test_wins(self):
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        bob = CBUser.from_slackid('UBOB', 'bob')
+
+        d = {x: parse_date('2018-01-0' + str(x)) for x in range(1, 5)}
+
+        # alice wins
+        _, a1 = alice.add_mini_crossword_time(10, d[1])
+        _, b1 = bob.add_mini_crossword_time(11, d[1])
+
+        # they tie
+        _, a2 = alice.add_mini_crossword_time(15, d[2])
+        _, b2 = bob.add_mini_crossword_time(15, d[2])
+
+        # bob wins
+        _, a3 = alice.add_mini_crossword_time(21, d[3])
+        _, b3 = bob.add_mini_crossword_time(20, d[3])
+
+        # alice wins
+        _, a4 = alice.add_mini_crossword_time(18, d[4])
+        _, b4 = bob.add_mini_crossword_time(19, d[4])
+
+        # check the winning times
+        winning_times = MiniCrosswordTime.winning_times()
+        expected = {d[1]: 10, d[2]: 15, d[3]: 20, d[4]: 18}
+        self.assertEqual(winning_times, expected)
+
+        # check the actual wins
+        a_wins = MiniCrosswordTime.wins(alice)
+        self.assertEqual(a_wins, [a1, a2, a4])
+        b_wins = MiniCrosswordTime.wins(bob)
+        self.assertEqual(b_wins, [b2, b3])
+
+        # check the streaks
+        a_win_streaks = MiniCrosswordTime.win_streaks(alice)
+        self.assertEqual(a_win_streaks, [[a1, a2], [a4]])
+        b_win_streaks = MiniCrosswordTime.win_streaks(bob)
+        self.assertEqual(b_win_streaks, [[b2, b3]])
+
 
 class SlackAuthTests(SlackTestCase):
     def test_bad_signature(self):

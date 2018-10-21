@@ -3,7 +3,7 @@
 import datetime
 import logging
 
-from copy import copy
+from operator import attrgetter
 
 from django.contrib.auth.models import User
 from django.db import models, transaction
@@ -224,15 +224,15 @@ class CommonTime(models.Model):
         return '{} - {} - {}'.format(self.user, self.time_str(), self.date)
 
     @staticmethod
-    def streaks(qs):
-        """Takes a query set times and returns the streaks clumped together."""
+    def streaks(entries):
+        """Takes an iterable of times and returns the streaks clumped together."""
 
         streaks = []
         current_streak = []
 
         one_day = datetime.timedelta(days=1)
 
-        for entry in qs.order_by('date'):
+        for entry in sorted(entries, key=attrgetter('date')):
             if not current_streak or entry.date == current_streak[
                     -1].date + one_day:
                 # either there wasn't a streak so we should start one, or we maintained a streak
@@ -246,6 +246,26 @@ class CommonTime(models.Model):
             streaks.append(current_streak)
 
         return streaks
+
+    @classmethod
+    def winning_times(cls, qs=None):
+        # TODO is the isnull necessary?
+        qs = qs or cls.objects.filter(seconds__isnull=False, seconds__gt=0)
+        values = qs.values_list('date').annotate(
+            winning_time=models.Min('seconds'))
+
+        return {date: winning_time for date, winning_time in values}
+
+    @classmethod
+    def wins(cls, user):
+        times = cls.objects.filter(seconds__isnull=False, user_id=user)
+        wins = cls.winning_times()
+        return [e for e in times if e.seconds == wins[e.date]]
+
+    @classmethod
+    def win_streaks(cls, user):
+        wins = cls.wins(user)
+        return cls.streaks(wins)
 
     @classmethod
     def participation_streaks(cls, user, filter_q=None):
