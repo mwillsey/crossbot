@@ -45,8 +45,7 @@ def add(request):
             direct=True)
         return
 
-    # XXX: Isn't this wrong for historical adds?
-    day_of_week = timezone.now().weekday()
+    day_of_week = request.args.date.weekday()
     emj = emoji(args.time, args.table, day_of_week)
 
     request.message_and_react(request.text, emj, as_user=request.user)
@@ -105,33 +104,33 @@ STREAKS = {
 
 # (fast_time, slow_time) for each day
 MINI_TIMES = [
-    (15, 3 * 60 + 30),  # Sunday
     (15, 3 * 60 + 30),  # Monday
     (15, 3 * 60 + 30),  # Tuesday
     (15, 3 * 60 + 30),  # Wednesday
     (15, 3 * 60 + 30),  # Thursday
     (15, 3 * 60 + 30),  # Friday
     (30, 5 * 60 + 30),  # Saturday
+    (15, 3 * 60 + 30),  # Sunday
 ]
 
 REGULAR_TIMES = [
-    (45 * 60, 120 * 60),  # Sunday
     (5 * 60, 15 * 60),  # Monday
     (10 * 60, 30 * 60),  # Tuesday
     (15 * 60, 45 * 60),  # Wednesday
     (30 * 60, 60 * 60),  # Thursday
     (30 * 60, 60 * 60),  # Friday
     (45 * 60, 120 * 60),  # Saturday
+    (45 * 60, 120 * 60),  # Sunday
 ]
 
 SUDOKU_TIMES = [
-    (60, 10 * 60),  # Sunday
     (60, 10 * 60),  # Monday
     (60, 10 * 60),  # Tuesday
     (60, 10 * 60),  # Wednesday
     (60, 10 * 60),  # Thursday
     (60, 10 * 60),  # Friday
     (60, 10 * 60),  # Saturday
+    (60, 10 * 60),  # Sunday
 ]
 
 # possible reactions sorted by speed
