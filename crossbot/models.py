@@ -298,6 +298,53 @@ class CommonTime(models.Model):
         return result
 
     @classmethod
+    # TODO: should this be in model?
+    def announcement_message(cls, date):
+
+        # get the long streaks
+        streaks = [(u, s) for u, s in cls.current_win_streaks(date).items()
+                   if len(s) > 1]
+        # sort by streak length, descending
+        streaks.sort(key=lambda x: len(x[1]), reverse=True)
+        streakers = set(u for u, s in streaks)
+
+        # get the winners who were not included in the long streaks
+        winners1 = [
+            w.user for w in cls.winners(date) if w.user not in streakers
+        ]
+        yest = date - datetime.timedelta(days=1)
+        winners2 = [
+            w.user for w in cls.winners(yest) if w.user not in streakers
+        ]
+
+        # start with the streak messages
+        msgs = [
+            '{u} is on a {n}-day streak! {emoji}'.format(
+                u=u, n=len(streak), emoji=':fire:' * len(streak))
+            for u, streak in streaks
+        ]
+
+        # now add the other winners
+        also = ' also' if streakers else ''
+        if winners1:
+            msgs.append(', '.join(str(u) for u in winners1) + also + ' won.')
+        if winners2:
+            msgs.append(', '.join(str(u) for u in winners2) + also +
+                        ' won the day before.')
+
+        games = {
+            "mini crossword": "https://www.nytimes.com/crosswords/game/mini",
+            "easy sudoku":
+            "https://www.nytimes.com/crosswords/game/sudoku/easy"
+        }
+
+        msgs.append("Play today's:")
+        for game in games:
+            msgs.append("{} : {}".format(game, games[game]))
+
+        return '\n'.join(msgs)
+
+    @classmethod
     def participation_streaks(cls, user, filter_q=None):
         times = cls.objects.filter(seconds__isnull=False, user_id=user)
         if filter_q:
