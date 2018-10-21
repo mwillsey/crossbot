@@ -1,7 +1,9 @@
+import logging
 from django.contrib import admin
 
 import crossbot.models as models
 
+logger = logging.getLogger(__name__)
 admin.site.register(models.CBUser)
 
 
@@ -20,7 +22,7 @@ def mk_from_template(template, clsname, base):
 def register_all_subclass_models(base_class, template):
     for c in base_class.__subclasses__():
         a = mk_from_template(template, c.__name__, base_class)
-        print("registering model {} {}".format(c, a))
+        logger.debug("registering model %s %s" % (c, a))
         admin.site.register(c, a)
 
 
