@@ -250,22 +250,52 @@ class CommonTime(models.Model):
     @classmethod
     def winning_times(cls, qs=None):
         # TODO is the isnull necessary?
-        qs = qs or cls.objects.filter(seconds__isnull=False, seconds__gt=0)
+        if qs is None:
+            qs = cls.objects.filter(seconds__isnull=False, seconds__gt=0)
         values = qs.values_list('date').annotate(
             winning_time=models.Min('seconds'))
 
         return {date: winning_time for date, winning_time in values}
 
     @classmethod
-    def wins(cls, user):
-        times = cls.objects.filter(seconds__isnull=False, user_id=user)
-        wins = cls.winning_times()
-        return [e for e in times if e.seconds == wins[e.date]]
+    def winners(cls, date):
+        entries = cls.objects.filter(
+            seconds__isnull=False, seconds__gt=0, date=date)
+        try:
+            best = min(e.seconds for e in entries)
+            winners = [e for e in entries if e.seconds == best]
+            assert winners
+            return winners
+        except ValueError as e:
+            # entries was empty
+            return []
 
     @classmethod
-    def win_streaks(cls, user):
-        wins = cls.wins(user)
+    def wins(cls, user, qs=None):
+        if qs is None:
+            qs = cls.objects
+        qs = qs.filter(seconds__isnull=False, seconds__gt=0, user=user)
+        wins = cls.winning_times()
+        return [e for e in qs if e.seconds == wins[e.date]]
+
+    @classmethod
+    def win_streaks(cls, user, qs=None):
+        wins = cls.wins(user, qs)
         return cls.streaks(wins)
+
+    @classmethod
+    # TODO: should this take a date or a timestamp?
+    def current_win_streaks(cls, date):
+        result = {}
+        # get the win streaks up to this date
+        qs = cls.objects.filter(date__lte=date)
+        for w in cls.winners(date):
+            streaks = cls.win_streaks(w.user, qs)
+            latest_streak = streaks[-1]
+            # only include the streak if it comes up to this day
+            if latest_streak[-1].date == date:
+                result[w.user] = latest_streak
+        return result
 
     @classmethod
     def participation_streaks(cls, user, filter_q=None):

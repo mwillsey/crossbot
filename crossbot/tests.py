@@ -228,7 +228,10 @@ class ModelTests(TestCase):
         alice = CBUser.from_slackid('UALICE', 'alice')
         bob = CBUser.from_slackid('UBOB', 'bob')
 
-        d = {x: parse_date('2018-01-0' + str(x)) for x in range(1, 5)}
+        d = {x: parse_date('2018-01-0' + str(x)) for x in range(1, 6)}
+
+        # make sure winners is empty right now
+        self.assertEqual([], MiniCrosswordTime.winners(d[1]))
 
         # alice wins
         _, a1 = alice.add_mini_crossword_time(10, d[1])
@@ -246,6 +249,12 @@ class ModelTests(TestCase):
         _, a4 = alice.add_mini_crossword_time(18, d[4])
         _, b4 = bob.add_mini_crossword_time(19, d[4])
 
+        # check the winners
+        self.assertEqual([a1], MiniCrosswordTime.winners(d[1]))
+        self.assertEqual([a2, b2], MiniCrosswordTime.winners(d[2]))
+        self.assertEqual([b3], MiniCrosswordTime.winners(d[3]))
+        self.assertEqual([a4], MiniCrosswordTime.winners(d[4]))
+
         # check the winning times
         winning_times = MiniCrosswordTime.winning_times()
         expected = {d[1]: 10, d[2]: 15, d[3]: 20, d[4]: 18}
@@ -262,6 +271,16 @@ class ModelTests(TestCase):
         self.assertEqual(a_win_streaks, [[a1, a2], [a4]])
         b_win_streaks = MiniCrosswordTime.win_streaks(bob)
         self.assertEqual(b_win_streaks, [[b2, b3]])
+
+        # check the win streaks
+        self.assertEqual({
+            alice: [a1, a2],
+            bob: [b2]
+        }, MiniCrosswordTime.current_win_streaks(d[2]))
+        self.assertEqual({
+            bob: [b2, b3]
+        }, MiniCrosswordTime.current_win_streaks(d[3]))
+        self.assertEqual({}, MiniCrosswordTime.current_win_streaks(d[5]))
 
 
 class SlackAuthTests(SlackTestCase):
