@@ -98,6 +98,7 @@ class SlackTestCase(MockedRequestTestCase):
 
     def slack_chat_post(self, method, url, headers, params):
         self.assertEquals(method, 'POST')
+        self.messages.append(params)
         ts = self.slack_timestamp
         self.slack_timestamp += 1
         return MockResponse({'ok': True, 'ts': ts}, 200)
@@ -346,6 +347,25 @@ class SlackAppTests(SlackTestCase):
         # going through the django testing thing
         response = self.slack_post('query num_minis')
         int(response['text'].split('\n')[-1])
+
+    def test_add_streak(self):
+        # build up to a streak of 3
+        self.slack_post(text='add :10 2018-08-01')
+        self.slack_post(text='add :10 2018-08-02')
+        # make sure the message didn't come in early
+        self.assertNotIn('streak', self.messages[-1]['text'])
+
+        # get the streak of 3 and check for acknowledgment
+        self.slack_post(text='add :10 2018-08-03')
+        # the messages for streaks of 3 have the word row in them
+        self.assertIn('3', self.messages[-1]['text'])
+        self.assertIn('row', self.messages[-1]['text'])
+
+        # go for the streak of 10
+        for i in range(4, 11):
+            self.slack_post(text='add :10 2018-08-{:02d}'.format(i))
+        self.assertIn('10', self.messages[-1]['text'])
+        self.assertIn('streak', self.messages[-1]['text'])
 
     def test_plot(self):
         self.slack_post(text='add :10 2018-08-01')
