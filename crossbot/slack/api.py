@@ -2,6 +2,9 @@
 
 import requests
 import settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 SLACK_URL = 'https://slack.com/api/'
 
@@ -26,6 +29,7 @@ def _slack_api_ok(endpoint, method, key, **kwargs):
     if resp.get('ok'):
         return resp[key]
 
+    logger.error('bad response: %s', resp)
     raise ValueError('bad response: ' + resp.get('error'))
 
 
