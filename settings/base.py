@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'social_django',
+    'django_cron',
 ]
 
 MIDDLEWARE = [
@@ -189,6 +190,9 @@ warnings.filterwarnings(
     r'django\.db\.models\.fields',
 )
 
+CRON_CLASSES = [
+    "crossbot.cron.Announce",
+]
 
 # OAuth setup
 # Be sure to add this site's hostnames to Oauth Redirect URLs in Slack
