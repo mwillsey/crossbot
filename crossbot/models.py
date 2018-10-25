@@ -320,11 +320,13 @@ class CommonTime(models.Model):
             "https://www.nytimes.com/crosswords/game/sudoku/easy"
         }
 
-        return {'streaks': streaks,
-                'winners_today': winners1,
-                'winners_yesterday': winners2,
-                'links': games}
-    
+        return {
+            'streaks': streaks,
+            'winners_today': winners1,
+            'winners_yesterday': winners2,
+            'links': games
+        }
+
     @classmethod
     # TODO: should this be in model?
     def announcement_message(cls, date):

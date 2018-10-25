@@ -16,7 +16,7 @@ class ReleaseAnnouncement(CronJobBase):
     code = 'crossbot.release_announcement'
 
     def should_run_now(self, time):
-        if time.isoweekday() in (6,7): # It's Saturday or Sunday
+        if time.isoweekday() in (6, 7):  # It's Saturday or Sunday
             return 14 <= time.hour <= 15
         else:
             return 18 <= time.hour <= 19
@@ -32,7 +32,8 @@ class ReleaseAnnouncement(CronJobBase):
         # now add the other winners
         also = ' also' if announce_data['streaks'] else ''
         if announce_data['winners_today']:
-            msgs.append(', '.join(announce_data['winners_today']) + also + ' won.')
+            msgs.append(', '.join(announce_data['winners_today']) + also +
+                        ' won.')
         if announce_data['winners_yesterday']:
             msgs.append(', '.join(announce_data['winners_yesterday']) + also +
                         ' won yesterday.')
@@ -41,17 +42,19 @@ class ReleaseAnnouncement(CronJobBase):
             msgs.append("{} : {}".format(game, announce_data['links'][game]))
 
         return '\n'.join(msgs)
-        
+
     def do(self):
         now = timezone.now()
         if self.should_run_now(now):
-            announce_data = MiniCrosswordTime.announcement_data(now - timedelta(1))
+            announce_data = MiniCrosswordTime.announcement_data(now -
+                                                                timedelta(1))
             message = self.format_message(announce_data)
             # TODO dont hardcode
             channel = 'C58PXJTNU'
             logger.info("Running announce")
             response = post_message(channel, text=message)
             logger.info(response)
+
 
 class MorningAnnouncement(CronJobBase):
     schedule = Schedule(run_at_times=['08:30'])
@@ -69,7 +72,8 @@ class MorningAnnouncement(CronJobBase):
         # now add the other winners
         also = ' also' if announce_data['streaks'] else ''
         if announce_data['winners_today']:
-            msgs.append(', '.join(announce_data['winners_today']) + also + ' is winning.')
+            msgs.append(', '.join(announce_data['winners_today']) + also +
+                        ' is winning.')
         if announce_data['winners_yesterday']:
             msgs.append(', '.join(announce_data['winners_yesterday']) + also +
                         ' won yesterday.')
@@ -79,7 +83,6 @@ class MorningAnnouncement(CronJobBase):
 
         return '\n'.join(msgs)
 
-    
     def do(self):
         now = timezone.now()
         announce_data = MiniCrosswordTime.announcement_data(now - timedelta(1))
@@ -89,4 +92,3 @@ class MorningAnnouncement(CronJobBase):
         logger.info("Running announce")
         response = post_message(channel, text=message)
         logger.info(response)
-        

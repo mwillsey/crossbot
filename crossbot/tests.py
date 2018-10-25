@@ -24,7 +24,7 @@ from crossbot.models import (
     EasySudokuTime,
     QueryShorthand,
 )
-from crossbot.cron import ReleaseAnnouncement,MorningAnnouncement
+from crossbot.cron import ReleaseAnnouncement, MorningAnnouncement
 from crossbot.settings import CROSSBUCKS_PER_SOLVE
 
 
@@ -448,20 +448,23 @@ class AnnouncementTests(SlackTestCase):
         self.weekday_right_time = datetime(2018, 10, 25, 19, tzinfo=tz)
         self.weekend_wrong_time = datetime(2018, 10, 27, 19, tzinfo=tz)
         self.weekend_right_time = datetime(2018, 10, 27, 15, tzinfo=tz)
-    
+
     def test_release_announcement_should_run_now(self):
-        self.assertFalse(self.release_announcement.should_run_now(self.weekday_wrong_time))
-        self.assertTrue(self.release_announcement.should_run_now(self.weekday_right_time))
-        self.assertFalse(self.release_announcement.should_run_now(self.weekend_wrong_time))
-        self.assertTrue(self.release_announcement.should_run_now(self.weekend_right_time))
+        self.assertFalse(
+            self.release_announcement.should_run_now(self.weekday_wrong_time))
+        self.assertTrue(
+            self.release_announcement.should_run_now(self.weekday_right_time))
+        self.assertFalse(
+            self.release_announcement.should_run_now(self.weekend_wrong_time))
+        self.assertTrue(
+            self.release_announcement.should_run_now(self.weekend_right_time))
 
     def test_release_announcement_run(self):
-        with patch.object(timezone, 'now', return_value=self.weekday_right_time):
+        with patch.object(
+                timezone, 'now', return_value=self.weekday_right_time):
             self.release_announcement.do()
             self.assertEquals(len(self.messages), 1)
 
     def test_morning_announcement_run(self):
         self.morning_announcement.do()
         self.assertEquals(len(self.messages), 1)
-            
-
