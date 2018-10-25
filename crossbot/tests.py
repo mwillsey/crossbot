@@ -3,6 +3,7 @@ import hmac
 import json
 import time
 import os.path
+from datetime import datetime
 
 import unittest
 from unittest.mock import patch, MagicMock
@@ -11,6 +12,7 @@ from django.conf import settings
 from django.test import TestCase
 from django.test.client import RequestFactory
 from django.urls import reverse
+from django.utils import timezone
 
 from crossbot.slack.commands import parse_date
 from crossbot.slack.api import SLACK_URL
@@ -22,6 +24,7 @@ from crossbot.models import (
     EasySudokuTime,
     QueryShorthand,
 )
+from crossbot.cron import ReleaseAnnouncement,MorningAnnouncement
 from crossbot.settings import CROSSBUCKS_PER_SOLVE
 
 
@@ -433,3 +436,32 @@ class SlackAppTests(SlackTestCase):
         response = self.slack_post(text='plot')
         self.assertIn(settings.MEDIA_URL,
                       response['attachments'][0]['image_url'])
+
+
+class AnnouncementTests(SlackTestCase):
+    def setUp(self):
+        super().setUp()
+        self.release_announcement = ReleaseAnnouncement()
+        self.morning_announcement = MorningAnnouncement()
+        tz = timezone.get_default_timezone()
+        self.weekday_wrong_time = datetime(2018, 10, 25, 15, tzinfo=tz)
+        self.weekday_right_time = datetime(2018, 10, 25, 19, tzinfo=tz)
+        self.weekend_wrong_time = datetime(2018, 10, 27, 19, tzinfo=tz)
+        self.weekend_right_time = datetime(2018, 10, 27, 15, tzinfo=tz)
+    
+    def test_release_announcement_should_run_now(self):
+        self.assertFalse(self.release_announcement.should_run_now(self.weekday_wrong_time))
+        self.assertTrue(self.release_announcement.should_run_now(self.weekday_right_time))
+        self.assertFalse(self.release_announcement.should_run_now(self.weekend_wrong_time))
+        self.assertTrue(self.release_announcement.should_run_now(self.weekend_right_time))
+
+    def test_release_announcement_run(self):
+        with patch.object(timezone, 'now', return_value=self.weekday_right_time):
+            self.release_announcement.do()
+            self.assertEquals(len(self.messages), 1)
+
+    def test_morning_announcement_run(self):
+        self.morning_announcement.do()
+        self.assertEquals(len(self.messages), 1)
+            
+
