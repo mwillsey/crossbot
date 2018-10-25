@@ -46,8 +46,7 @@ class ReleaseAnnouncement(CronJobBase):
     def do(self):
         now = timezone.now()
         if self.should_run_now(now):
-            announce_data = MiniCrosswordTime.announcement_data(now -
-                                                                timedelta(1))
+            announce_data = MiniCrosswordTime.announcement_data(now)
             message = self.format_message(announce_data)
             # TODO dont hardcode
             channel = 'C58PXJTNU'
