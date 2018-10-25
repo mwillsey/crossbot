@@ -36,6 +36,7 @@ class MockResponse:
 
 class MockedRequestTestCase(TestCase):
     def setUp(self):
+        super().setUp()
         self.router = {}
         self._patcher_get = patch(
             'requests.get', side_effect=self.mocked_requests_get)
@@ -45,6 +46,7 @@ class MockedRequestTestCase(TestCase):
         self._patcher_post.start()
 
     def tearDown(self):
+        super().tearDown()
         self.router = {}
         self._patcher_get.stop()
         self._patcher_post.stop()
