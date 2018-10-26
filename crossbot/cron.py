@@ -52,7 +52,8 @@ class ReleaseAnnouncement(CronJobBase):
             channel = 'C58PXJTNU'
             response = post_message(channel, text=message)
             return "Ran release announcement at {}\n{}".format(now, message)
-        return "Did not run release announcement at {} (hour={})".format(now,now.hour)
+        return "Did not run release announcement at {} (hour={})".format(
+            now, now.hour)
 
 
 class MorningAnnouncement(CronJobBase):
