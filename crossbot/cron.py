@@ -50,9 +50,9 @@ class ReleaseAnnouncement(CronJobBase):
             message = self.format_message(announce_data)
             # TODO dont hardcode
             channel = 'C58PXJTNU'
-            logger.info("Running announce")
             response = post_message(channel, text=message)
-            logger.info(response)
+            return "Ran release announcement at {}\n{}".format(now, message)
+        return "Did not run release announcement at {}".format(now)
 
 
 class MorningAnnouncement(CronJobBase):
@@ -88,6 +88,5 @@ class MorningAnnouncement(CronJobBase):
         message = self.format_message(announce_data)
         # TODO dont hardcode
         channel = 'C58PXJTNU'
-        logger.info("Running announce")
         response = post_message(channel, text=message)
-        logger.info(response)
+        return "Ran morning announcement at {}\n{}".format(now, message)
