@@ -24,7 +24,7 @@ class ItemOwnershipRecordInline(admin.TabularInline):
 # Adapted from: https://github.com/darklow/django-suit/issues/65#issuecomment-29606850
 class PaginatedInline(admin.TabularInline):
     template = 'admin/edit_inline/tabular_paginated.html'
-    per_page = 20
+    per_page = 10
 
     def get_formset(self, request, obj=None, **kwargs):
         formset_class = super(PaginatedInline, self).get_formset(
@@ -60,7 +60,6 @@ class CommonTimeInline(PaginatedInline):
     extra = 0
     ordering = ['-date']
     readonly_fields = ['timestamp']
-    per_page = 10
 
 
 class MiniCrosswordTimeInline(CommonTimeInline):
