@@ -36,8 +36,7 @@ class PaginatedInline(admin.TabularInline):
 
                 self.query_str = self.prefix + '_page'
 
-                qs = self.queryset
-                paginator = Paginator(qs, self.per_page)
+                paginator = Paginator(self.queryset, self.per_page)
                 try:
                     page_num = int(request.GET.get(self.query_str, '1'))
                 except ValueError:
@@ -49,7 +48,9 @@ class PaginatedInline(admin.TabularInline):
                     page = paginator.get_page(paginator.num_pages)
 
                 self.items = page
-                self._queryset = page.object_list
+
+            def get_queryset(self):
+                return self.items.object_list
 
         PaginationFormSet.per_page = self.per_page
         return PaginationFormSet
