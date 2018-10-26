@@ -1,24 +1,30 @@
 import logging
+
 from django.contrib import admin
+from django import forms
 
 import crossbot.models as models
 
 logger = logging.getLogger(__name__)
 
 
+class ItemOwnershipRecordForm(forms.ModelForm):
+    item_key = forms.ChoiceField(
+        choices=[(key, item.name) for key, item in models.Item.ITEMS.items()])
+
 class ItemOwnershipRecordInline(admin.TabularInline):
     model = models.ItemOwnershipRecord
+    form = ItemOwnershipRecordForm
     extra = 0
 
-
+@admin.register(models.CBUser)
 class CBUserAdmin(admin.ModelAdmin):
     inlines = [
         ItemOwnershipRecordInline,
     ]
 
 
-admin.site.register(models.CBUser, CBUserAdmin)
-
+# TODO: this is unnecessary, just use the @register decorator w/ multiple args
 
 # inspired by https://lukedrummond.net/2014/02/abstract-models-and-the-django-admin/
 def mk_from_template(template, clsname, base):
@@ -37,7 +43,6 @@ def register_all_subclass_models(base_class, template):
         a = mk_from_template(template, c.__name__, base_class)
         logger.debug("registering model %s %s" % (c, a))
         admin.site.register(c, a)
-
 
 class _CommonTimeAdminTemplate(admin.ModelAdmin):
     # allow admins to see but not edit the timestamp

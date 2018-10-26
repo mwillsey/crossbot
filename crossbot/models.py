@@ -586,9 +586,7 @@ class ItemOwnershipRecord(models.Model):
         unique_together = (('owner', 'item_key'), )
 
     owner = models.ForeignKey(CBUser, models.CASCADE)
-    item_key = models.CharField(
-        max_length=20,
-        choices=[(key, item.name) for key, item in Item.ITEMS.items()])
+    item_key = models.CharField(max_length=20)
     quantity = models.IntegerField(default=0)
 
     @property

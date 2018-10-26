@@ -2,7 +2,7 @@
 # key_name:
 #   name: str
 #   droppable: bool (default True)
-#   rarity: float (default 1.0)
+#   rarity: float in (0, FLOAT_MAX], larger is less rare (default 1.0)
 #   image_name: str (default None/no image)
 #   type: str (default None)
 
