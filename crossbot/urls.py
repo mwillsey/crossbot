@@ -6,7 +6,6 @@ from . import views
 
 urlpatterns = [
     path('slack/', views.slash_command, name='slash_command'),
-    path('api-event/', views.event, name='event'),
     path('rest-api/times/<time_model>/', views.times_rest_api),
     path('rest-api/times/', views.times_rest_api),
     path(
