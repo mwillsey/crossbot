@@ -1,0 +1,13 @@
+# SCHEMA:
+# key_name:
+#   name: str
+#   droppable: bool (default True)
+#   rarity: float (default 1.0)
+#   image_name: str (default None/no image)
+#   type: str (default None)
+
+
+tophat:
+  name: Tophat
+  image_name: tophat.png
+  type: hat

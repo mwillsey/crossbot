@@ -4,7 +4,20 @@ from django.contrib import admin
 import crossbot.models as models
 
 logger = logging.getLogger(__name__)
-admin.site.register(models.CBUser)
+
+
+class ItemOwnershipRecordInline(admin.TabularInline):
+    model = models.ItemOwnershipRecord
+    extra = 0
+
+
+class CBUserAdmin(admin.ModelAdmin):
+    inlines = [
+        ItemOwnershipRecordInline,
+    ]
+
+
+admin.site.register(models.CBUser, CBUserAdmin)
 
 
 # inspired by https://lukedrummond.net/2014/02/abstract-models-and-the-django-admin/
