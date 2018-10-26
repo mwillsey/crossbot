@@ -56,28 +56,23 @@ class PaginatedInline(admin.TabularInline):
         return PaginationFormSet
 
 
-class MiniCrosswordTimeInline(PaginatedInline):
+class CommonTimeInline(PaginatedInline):
+    extra = 0
+    ordering = ['-date']
+    readonly_fields = ['timestamp']
+    per_page = 10
+
+
+class MiniCrosswordTimeInline(CommonTimeInline):
     model = models.MiniCrosswordTime
-    extra = 0
-    ordering = ['-date']
-    readonly_fields = ['timestamp']
-    per_page = 10
 
 
-class CrosswordTimeInline(PaginatedInline):
+class CrosswordTimeInline(CommonTimeInline):
     model = models.CrosswordTime
-    extra = 0
-    ordering = ['-date']
-    readonly_fields = ['timestamp']
-    per_page = 10
 
 
-class EasySudokuTimeInline(PaginatedInline):
+class EasySudokuTimeInline(CommonTimeInline):
     model = models.EasySudokuTime
-    extra = 0
-    ordering = ['-date']
-    readonly_fields = ['timestamp']
-    per_page = 10
 
 
 @admin.register(models.CBUser)
