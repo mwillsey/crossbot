@@ -36,33 +36,6 @@ def validate_slack_request(request):
     return my_signature == slack_signature
 
 
-# re_prog = re.compile(r'(cb|crossbot)(?:$| +)(.*)')
-
-
-@csrf_exempt
-def event(request):
-    if request.method == 'POST':
-        if not validate_slack_request(request):
-            return HttpResponseBadRequest("Failed to validate")
-
-        # respond the to slack events challenge
-        if request.POST.get('type') == 'url_verification':
-            return HttpResponse(request.POST['challenge'])
-
-        # assert request.POST['type'] == 'event_callback'
-        # data = request.POST['event']
-
-        # match = re_prog.match(data.get("text"))
-        # if match:
-        #     # get rid of the mention of the app
-        #     data["text"] = match[2]
-
-        #     cbreq = crossbot.slack.SlackEventRequest(data)
-        #     cb.handle_request(cbreq)
-        #     logger.debug('Response: %s', response)
-        #     return JsonResponse(response)
-
-
 @csrf_exempt
 def slash_command(request):
     logger.debug('Request: %s', request)

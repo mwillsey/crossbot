@@ -354,6 +354,36 @@ class CommonTime(models.Model):
         return result
 
     @classmethod
+    def announcement_data(cls, date):
+        streaks = [(u, s) for u, s in cls.current_win_streaks(date).items()
+                   if len(s) > 1]
+        # sort by streak length, descending
+        streaks.sort(key=lambda x: len(x[1]), reverse=True)
+        streakers = set(u for u, s in streaks)
+
+        # get the winners who were not included in the long streaks
+        winners1 = [
+            str(w.user) for w in cls.winners(date) if w.user not in streakers
+        ]
+        yest = date - datetime.timedelta(days=1)
+        winners2 = [
+            str(w.user) for w in cls.winners(yest) if w.user not in streakers
+        ]
+
+        games = {
+            "mini crossword": "https://www.nytimes.com/crosswords/game/mini",
+            "easy sudoku":
+            "https://www.nytimes.com/crosswords/game/sudoku/easy"
+        }
+
+        return {
+            'streaks': streaks,
+            'winners_today': winners1,
+            'winners_yesterday': winners2,
+            'links': games
+        }
+
+    @classmethod
     # TODO: should this be in model?
     def announcement_message(cls, date):
 
