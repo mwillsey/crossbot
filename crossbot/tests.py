@@ -12,6 +12,7 @@ from django.conf import settings
 from django.test import TestCase
 from django.test.client import RequestFactory
 from django.urls import reverse
+from django.contrib.staticfiles import finders
 from django.utils import timezone
 
 from crossbot.slack.commands import parse_date
@@ -23,6 +24,8 @@ from crossbot.models import (
     CrosswordTime,
     EasySudokuTime,
     QueryShorthand,
+    Item,
+    ItemOwnershipRecord,
 )
 from crossbot.cron import ReleaseAnnouncement, MorningAnnouncement
 from crossbot.settings import CROSSBUCKS_PER_SOLVE
@@ -286,6 +289,36 @@ class ModelTests(TestCase):
             bob: [b2, b3]
         }, MiniCrosswordTime.current_win_streaks(d[3]))
         self.assertEqual({}, MiniCrosswordTime.current_win_streaks(d[5]))
+
+    def test_items(self):
+        # Just add one item
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        tophat = Item.from_key('tophat')
+        self.assertEqual(tophat.key, 'tophat')
+        self.assertEqual(alice.quantity_owned(tophat), 0)
+
+        alice.add_item(tophat, amount=2)
+        self.assertEqual(alice.quantity_owned(tophat), 2)
+        self.assertEqual(alice.quantity_owned(Item.from_key('tophat')), 2)
+        record = ItemOwnershipRecord.objects.get(
+            owner=alice, item_key=tophat.key)
+        self.assertEqual(record.quantity, 2)
+        self.assertEqual(record.item, tophat)
+
+        self.assertTrue(alice.remove_item(tophat, amount=2))
+        self.assertEqual(alice.quantity_owned(tophat), 0)
+        try:
+            ItemOwnershipRecord.objects.get(owner=alice, item_key=tophat.key)
+            self.fail()
+        except ItemOwnershipRecord.DoesNotExist:
+            pass
+
+        # Check that the item image actually exists on disk
+        url = tophat.image_url()
+        self.assertEqual(settings.STATIC_URL, url[:len(settings.STATIC_URL)])
+        url = url.replace(settings.STATIC_URL, '', 1)
+        path = finders.find(url)
+        self.assertTrue(os.path.isfile(path))
 
 
 class SlackAuthTests(SlackTestCase):

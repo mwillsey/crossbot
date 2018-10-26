@@ -1,10 +1,32 @@
 import logging
+
 from django.contrib import admin
+from django import forms
 
 import crossbot.models as models
 
 logger = logging.getLogger(__name__)
-admin.site.register(models.CBUser)
+
+
+class ItemOwnershipRecordForm(forms.ModelForm):
+    item_key = forms.ChoiceField(
+        choices=[(key, item.name) for key, item in models.Item.ITEMS.items()])
+
+
+class ItemOwnershipRecordInline(admin.TabularInline):
+    model = models.ItemOwnershipRecord
+    form = ItemOwnershipRecordForm
+    extra = 0
+
+
+@admin.register(models.CBUser)
+class CBUserAdmin(admin.ModelAdmin):
+    inlines = [
+        ItemOwnershipRecordInline,
+    ]
+
+
+# TODO: this is unnecessary, just use the @register decorator w/ multiple args
 
 
 # inspired by https://lukedrummond.net/2014/02/abstract-models-and-the-django-admin/

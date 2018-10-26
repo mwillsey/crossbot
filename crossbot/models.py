@@ -2,14 +2,19 @@
 
 import datetime
 import logging
+import random
 
 from operator import attrgetter
+from os import path
+
+import yaml
 
 from django.contrib.auth.models import User
+from django.contrib.staticfiles.templatetags.staticfiles import static
 from django.db import models, transaction
 from django.utils import timezone
 
-from .settings import CROSSBUCKS_PER_SOLVE
+from .settings import CROSSBUCKS_PER_SOLVE, ITEM_DROP_RATE
 
 logger = logging.getLogger(__name__)
 
@@ -185,6 +190,57 @@ class CBUser(models.Model):
 
     def remove_easy_sudoku_time(self, *args, **kwargs):
         return self.remove_time(EasySudokuTime, *args, **kwargs)
+
+    def add_item(self, item, amount=1):
+        """Add an item to this user's inventory.
+        Args:
+            item: An Item object.
+            amount: An integer > 0.
+        """
+        assert isinstance(item, Item)
+        assert amount > 0
+
+        record, _ = ItemOwnershipRecord.objects.get_or_create(
+            owner=self, item_key=item.key)
+        record.quantity += amount
+        record.save()
+
+    def remove_item(self, item, amount=1):
+        """Remove an item from this user's inventory.
+        Args:
+            item: The Item to remove.
+            amount: An integer > 0.
+        Returns:
+            Whether or not the item was removed.
+        """
+        assert isinstance(item, Item)
+        assert amount > 0
+
+        try:
+            record = ItemOwnershipRecord.objects.get(
+                owner=self, item_key=item.key)
+        except ItemOwnershipRecord.DoesNotExist:
+            return False
+
+        # Check to see if there are enough to safely delete
+        if amount > record.quantity:
+            return False
+
+        record.quantity -= amount
+        if record.quantity == 0:
+            record.delete()
+        else:
+            record.save()
+        return True
+
+    def quantity_owned(self, item):
+        """Return the amount of a given item this user owns."""
+        assert isinstance(item, Item)
+        try:
+            return ItemOwnershipRecord.objects.get(
+                owner=self, item_key=item.key).quantity
+        except ItemOwnershipRecord.DoesNotExist:
+            return 0
 
     def __str__(self):
         if self.slack_fullname:
@@ -487,3 +543,89 @@ class QueryShorthand(models.Model):
 
         return '*{}* by {}{}:\n {}'.format(self.name, self.user, arg_str,
                                            self.command)
+
+
+# Items are stored in YAML (not the DB) but loaded here for convenience
+
+
+class Item:
+    ITEMS = {}
+
+    def __init__(self, key, options):
+        """Only used on initialization, do not call elsewhere."""
+        self.key = key
+        self.name = options['name']
+        # use setattr and defaults in getter methods?
+        self.droppable = options.get('droppable', True)
+        self.image_name = options.get('image_name', None)
+        self.rarity = options.get('rarity', 1.0)
+        self.type = options.get('type', None)
+
+    @classmethod
+    def load_items(cls):
+        with open(path.join(path.dirname(__file__), 'items.yaml')) as f:
+            for key, options in yaml.load(f).items():
+                cls.ITEMS[key] = Item(key, options)
+
+    @classmethod
+    def from_key(cls, key):
+        return cls.ITEMS.get(key, None)
+
+    @classmethod
+    def choose_droppable(cls):
+        """Drop a randomly chosen Item from this class, or None. First, selects
+        whether or not to drop a randomly chosen Item based on the global drop
+        rate, then selects from all droppable items weighted by their rarity.
+        Does not create an ownership record.
+
+        Returns:
+            An Item or None.
+        """
+
+        if random.random() > ITEM_DROP_RATE:
+            return None
+
+        droppables = [item for item in cls.ITEMS.values() if item.droppable]
+
+        if not droppables:
+            return None
+
+        return random.choices(droppables,
+                              [item.rarity for item in droppables])[0]
+
+    def image_url(self):
+        if not self.image_name:
+            return None
+        return static('crossbot/img/items/%s' % self.image_name)
+
+    def is_hat(self):
+        return self.type == 'hat'
+
+    def __str__(self):
+        return self.name
+
+    def __eq__(self, other):
+        return isinstance(other, Item) and self.key == other.key
+
+    def __hash__(self):
+        return hash(self.key)
+
+
+# Load all the items into memory
+Item.load_items()
+
+
+class ItemOwnershipRecord(models.Model):
+    class Meta:
+        unique_together = (('owner', 'item_key'), )
+
+    owner = models.ForeignKey(CBUser, models.CASCADE)
+    item_key = models.CharField(max_length=20)
+    quantity = models.IntegerField(default=0)
+
+    @property
+    def item(self):
+        return Item.from_key(self.item_key)
+
+    def __str__(self):
+        return '%s: %s %s(s)' % (self.owner, self.quantity, self.item)
