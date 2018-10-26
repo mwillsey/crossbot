@@ -53,4 +53,4 @@ run: venv migrate
 
 clean:
 	find . -name "*.pyc" -delete
-	rm -r venv/
+	rm -rf venv/

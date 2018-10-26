@@ -1,0 +1,22 @@
+{# Adapted from: https://github.com/darklow/django-suit/issues/65#issuecomment-29606850 #}
+
+{% include 'admin/edit_inline/tabular.html' %}
+
+{# TODO: add more links to the bottom for more efficient navigation #}
+{# TODO: figure out how to not reset other inline paginations when navigating #}
+
+{% block after_inline %}
+    {% with inline_admin_formset.formset as fs %}
+        <div class="step-links pagination">
+            {% if fs.items.has_previous %}
+                <a href="?{{ fs.query_str }}={{ fs.items.previous_page_number }}"> previous </a>
+            {% endif %}
+            <span class="current">
+                Page {{ fs.items.number }} of {{ fs.items.paginator.num_pages }}
+            </span>
+            {% if fs.items.has_next %}
+                <a href="?{{ fs.query_str }}={{ fs.items.next_page_number }}"> next </a>
+            {% endif %}
+        </div>
+    {% endwith %}
+{% endblock %}
