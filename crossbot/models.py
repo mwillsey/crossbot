@@ -187,7 +187,11 @@ class CBUser(models.Model):
         return self.remove_time(EasySudokuTime, *args, **kwargs)
 
     def __str__(self):
-        return str(self.slackname if self.slackname else self.slackid)
+        if self.slack_fullname:
+            return str(self.slack_fullname)
+        if self.slackname:
+            return str(self.slackname)
+        return str(self.slackid)
 
 
 class CommonTime(models.Model):
