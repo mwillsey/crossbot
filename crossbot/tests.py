@@ -496,7 +496,7 @@ class AnnouncementTests(SlackTestCase):
 
     def test_release_announcement_run(self):
         with patch.object(
-                timezone, 'now', return_value=self.weekday_right_time):
+                timezone, 'localtime', return_value=self.weekday_right_time):
             self.release_announcement.do()
             self.assertEquals(len(self.messages), 1)
 
