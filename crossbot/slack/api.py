@@ -32,6 +32,8 @@ def _slack_api_ok(endpoint, method, key, **kwargs):
     logger.error('bad response: %s', resp)
     raise ValueError('bad response: ' + resp.get('error'))
 
+def slack_user(user_id):
+    return _slack_api_ok('users.info', 'GET', 'user', user=user_id)
 
 def slack_users():
     return _slack_api_ok('users.list', 'GET', 'members')
