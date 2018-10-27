@@ -9,6 +9,8 @@ from os import path
 
 import yaml
 
+from crossbot.util import comma_and
+
 from django.contrib.auth.models import User
 from django.contrib.staticfiles.templatetags.staticfiles import static
 from django.db import models, transaction
@@ -417,10 +419,11 @@ class CommonTime(models.Model):
         # now add the other winners
         also = ' also' if streakers else ''
         if winners1:
-            msgs.append(', '.join(str(u) for u in winners1) + also + ' won.')
+            msgs.append(comma_and(str(u) for u in winners1) + also + ' won.')
         if winners2:
-            msgs.append(', '.join(str(u) for u in winners2) + also +
-                        ' won the day before.')
+            msgs.append(
+                comma_and(str(u)
+                          for u in winners2) + also + ' won the day before.')
 
         games = {
             "mini crossword": "https://www.nytimes.com/crosswords/game/mini",

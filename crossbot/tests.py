@@ -503,3 +503,14 @@ class AnnouncementTests(SlackTestCase):
     def test_morning_announcement_run(self):
         self.morning_announcement.do()
         self.assertEquals(len(self.messages), 1)
+
+
+class MiscTests(TestCase):
+    def test_comma_and(self):
+        from crossbot.util import comma_and
+
+        self.assertEquals('', comma_and([]))
+        self.assertEquals('bob', comma_and(['bob']))
+        self.assertEquals('alice and bob', comma_and(['alice', 'bob']))
+        self.assertEquals('alice, bob, and charlie',
+                          comma_and(['alice', 'bob', 'charlie']))

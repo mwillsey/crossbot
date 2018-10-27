@@ -3,6 +3,7 @@ from django.utils import timezone
 
 from datetime import timedelta
 
+from crossbot.util import comma_and
 from crossbot.models import MiniCrosswordTime
 from crossbot.slack.api import post_message
 
@@ -32,11 +33,12 @@ class ReleaseAnnouncement(CronJobBase):
         # now add the other winners
         also = ' also' if announce_data['streaks'] else ''
         if announce_data['winners_today']:
-            msgs.append(', '.join(announce_data['winners_today']) + also +
-                        ' won.')
+            msgs.append(
+                comma_and(announce_data['winners_today']) + also + ' won.')
         if announce_data['winners_yesterday']:
-            msgs.append(', '.join(announce_data['winners_yesterday']) + also +
-                        ' won yesterday.')
+            msgs.append(
+                comma_and(announce_data['winners_yesterday']) + also +
+                ' won yesterday.')
         msgs.append("Play tomorrow's:")
         for game in announce_data['links']:
             msgs.append("{} : {}".format(game, announce_data['links'][game]))
@@ -72,11 +74,13 @@ class MorningAnnouncement(CronJobBase):
         # now add the other winners
         also = ' also' if announce_data['streaks'] else ''
         if announce_data['winners_today']:
-            msgs.append(', '.join(announce_data['winners_today']) + also +
-                        ' is winning.')
+            msgs.append(
+                comma_and(announce_data['winners_today']) + also +
+                ' is winning.')
         if announce_data['winners_yesterday']:
-            msgs.append(', '.join(announce_data['winners_yesterday']) + also +
-                        ' won yesterday.')
+            msgs.append(
+                comma_and(announce_data['winners_yesterday']) + also +
+                ' won yesterday.')
         msgs.append("Think you can beat them? Play today's:")
         for game in announce_data['links']:
             msgs.append("{} : {}".format(game, announce_data['links'][game]))
