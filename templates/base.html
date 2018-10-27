@@ -1,77 +1,101 @@
 <!DOCTYPE html>
 {% load staticfiles %}
 <html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-  <title>Crossbot</title>
+        <title>Crossbot</title>
 
-  <link rel="shortcut icon" href="{%  static "crossbot/favicon.ico" %}">
+        <link rel="shortcut icon" href="{% static "crossbot/favicon.ico" %}">
 
-  {# Bootstrap #}
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+        {# bootstrap #}
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
+              integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO"
+              crossorigin="anonymous">
 
-  {# Font Awesome #}
-  <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+        {# font awesome #}
+        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 
-  {# Dashboard Example Stylesheet #}
-  <link rel="stylesheet" href="{% static "crossbot/css/dashboard.css" %}">
-</head>
-<body>
-    <nav class="navbar navbar-dark sticky-top bg-dark flex-md-nowrap p-0">
-      <div class="navbar-brand col-sm-3 col-md-2 mr-0">Crossbot</div>
-      <ul class="navbar-nav px-3">
-        <li class="nav-item text-nowrap">
-          {% block login_logout %}
-            {% if user.is_authenticated %}
-              <a class="nav-link" href="{% url 'logout' %}">Log out</a>
-            {% else %}
-              <a class="nav-link" href="{% url 'login' %}">Log in</a>
-            {% endif %}
-          {% endblock %}
-        </li>
-      </ul>
-    </nav>
+        <link rel="stylesheet" href="{% static "crossbot/css/base.css" %}">
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-md navbar-light bg-light">
+            <a class="navbar-brand" href="{% url "home" %}">
+                <img src="{% static "crossbot/img/crossbot-logo.png" %}" width="45" height="45"
+                     class="d-inline-block rounded align-top mr-2" alt="Crossbot">
+            </a>
+            <button class="navbar-toggler"
+                    type="button"
+                    data-toggle="collapse"
+                    data-target="#navbarSupportedContent"
+                    aria-controls="navbarSupportedContent"
+                    aria-expanded="false"
+                    aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-    <div class="container-fluid">
-      <div class="row">
-        <nav class="col-md-2 d-none d-md-block bg-light sidebar">
-          <div class="sidebar-sticky">
-            <ul class="nav flex-column">
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'home' %}">
-                  <i class="fa fa-home"></i> Home
-                </a>
-              </li>
-              <li class="nav-item">
-                <a class="nav-link" href="{% url 'plot' %}">
-                  <i class="fa fa-line-chart"></i> View Plots
-                </a>
-              </li>
-            </ul>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav mr-auto">
+                    {% url 'home' as url %}
+                    <li class="nav-item {% if request.path == url %}active{% endif %}">
+                        <a class="nav-link" href="{{ url }}">Home</a>
+                    </li>
+                    {% url 'plot' as url %}
+                    <li class="nav-item {% if request.path == url %}active{% endif %}">
+                        <a class="nav-link" href="{{ url }}">Plots</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            Example Dropdown
+                        </a>
+                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                            <a class="dropdown-item" href="#">Action</a>
+                            <a class="dropdown-item" href="#">Another action</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#">Something else here</a>
+                        </div>
+                    </li>
+                </ul>
+
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        {% block login_logout %}
+                            {% if user.is_authenticated %}
+                                <a class="nav-link" href="{% url 'logout' %}">Log out</a>
+                            {% else %}
+                                <a class="nav-link" href="{% url 'login' %}">Log in</a>
+                            {% endif %}
+                        {% endblock %}
+                    </li>
+                </ul>
+            </div>
         </nav>
 
         <main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
-          {# Display messages to user #}
-          {# TODO: not all messages should be danger messages #}
-          {% for message in messages %}
-            <div class="alert alert-danger">{{ message }}</div>
-          {% endfor %}
+            {# Display messages to user #}
+            {# TODO: not all messages should be danger messages #}
+            {% for message in messages %}
+                <div class="alert alert-danger">{{ message }}</div>
+            {% endfor %}
 
-          {% block content %}{% endblock %}
+            {% block content %}{% endblock %}
         </main>
-      </div>
-    </div>
-</body>
 
-{# jQuery #}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-{# Popper.js #}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
-{# Bootstrap.js #}
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+        <hr class="w-75">
+        <footer>
+            Page generated at {% now "Y-m-d h:i:s T" %}.
+            Edit me on <a href="https://github.com/mwillsey/crossbot">GitHub</a>.
+        </footer>
+    </body>
 
-{% block scripts %}{% endblock %}
+    {# jQuery #}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+    {# Popper.js #}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    {# Bootstrap.js #}
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+
+    {% block scripts %}{% endblock %}
 
 </html>
