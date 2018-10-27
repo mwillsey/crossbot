@@ -43,7 +43,7 @@ def slash_command(request):
         if not validate_slack_request(request):
             return HttpResponseBadRequest("Failed to validate")
 
-        response = handle_slash_command(request.POST)
+        response = handle_slash_command(request)
         logger.debug('Slash command response: %s', response)
         if response:
             return JsonResponse(response)

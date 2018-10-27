@@ -142,4 +142,4 @@ def sql(request):
         cmd = ' '.join(request.args.sql_command)
         request.reply(run_sql_command(cmd, []))
     else:
-        request.reply("Please type some sql.", direct=True)
+        request.reply("Please type some sql.")

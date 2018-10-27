@@ -302,7 +302,7 @@ def plot(request):
         fig.savefig(f, format='png', bbox_inches='tight')
     plt.close(fig)
 
-    request.attach('plot', 'https://crossbot.uwplse.org' + MEDIA_URL + fname)
+    request.attach_image('plot', request.build_absolute_uri(MEDIA_URL + fname))
 
 
 #########################

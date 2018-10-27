@@ -35,6 +35,7 @@ class CBUser(models.Model):
     image_url = models.CharField(max_length=150, blank=True)
 
     crossbucks = models.IntegerField(default=0)
+    hat_key = models.CharField(max_length=20, null=True, blank=True)
 
     auth_user = models.OneToOneField(
         User,
@@ -241,6 +242,17 @@ class CBUser(models.Model):
                 owner=self, item_key=item.key).quantity
         except ItemOwnershipRecord.DoesNotExist:
             return 0
+
+    @property
+    def hat(self):
+        """Return the hat Item for a person, or None if they have no hat. :-("""
+        return Item.from_key(self.hat_key)
+
+    @property
+    def is_staff(self):
+        if not self.auth_user:
+            return False
+        return self.auth_user.is_staff
 
     def __str__(self):
         if self.slack_fullname:
