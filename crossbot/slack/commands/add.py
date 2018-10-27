@@ -41,8 +41,7 @@ def add(request):
         request.reply(
             'I could not add this to the database, '
             'because you already have an entry '
-            '({}) for this date.'.format(time.time_str()),
-        )
+            '({}) for this date.'.format(time.time_str()), )
         return
 
     day_of_week = request.args.date.weekday()
@@ -54,13 +53,16 @@ def add(request):
         request.as_user_image = True
 
         attachment = {
-            'fallback': request.text,
-            'author_name': str(request.user),
-            'author_icon': request.user.image_url,
-            'text': "*Mini Added:* %s - %s  :%s:" % (
-                time.date,
-                'Fail' if time.is_fail() else ("%s s" % args.time),
-                emj),
+            'fallback':
+            request.text,
+            'author_name':
+            str(request.user),
+            'author_icon':
+            request.user.image_url,
+            'text':
+            "*Mini Added:* %s - %s  :%s:" %
+            (time.date, 'Fail' if time.is_fail() else
+             ("%s s" % args.time), emj),
         }
 
         request.attach(attachment)
@@ -68,7 +70,7 @@ def add(request):
     else:
         request.message_and_react(request.text, emj, as_user=request.user)
         request.reply('Submitted {} for {}'.format(time.time_str(),
-                                               request.args.date))
+                                                   request.args.date))
 
     def get_streak_counts(streaks):
         for streak in streaks:
