@@ -44,7 +44,7 @@ class ReleaseAnnouncement(CronJobBase):
         return '\n'.join(msgs)
 
     def do(self):
-        now = timezone.now()
+        now = timezone.localtime()
         if self.should_run_now(now):
             announce_data = MiniCrosswordTime.announcement_data(now)
             message = self.format_message(announce_data)
@@ -84,7 +84,7 @@ class MorningAnnouncement(CronJobBase):
         return '\n'.join(msgs)
 
     def do(self):
-        now = timezone.now()
+        now = timezone.localtime()
         announce_data = MiniCrosswordTime.announcement_data(now)
         message = self.format_message(announce_data)
         # TODO dont hardcode
