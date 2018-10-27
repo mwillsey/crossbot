@@ -64,9 +64,6 @@ def add(request):
         }
 
         request.attach(attachment)
-        # request.add_field("Date", time.date)
-        # request.add_field("Time", 'Fail' if time.is_fail() else args.time)
-        # request.add_field("Verdict", ":%s:" % emj)
 
     else:
         request.message_and_react(request.text, emj, as_user=request.user)
