@@ -85,15 +85,25 @@ class SlackTestCase(MockedRequestTestCase):
         self.router[SLACK_URL + 'users.list'] = self.slack_users_list
         self.router[SLACK_URL + 'users.info'] = self.slack_users_info
 
-        
-        self.users = {'UALICE': {'id': 'UALICE', 'name': 'alice',
-                                 'profile': {'real_name': 'Alice',
-                                             'image_48': 'http://example.com/alice.png'}},
-                      'UBOB': {'id': 'UBOB', 'name': 'bob',
-                               'profile': {'real_name': 'Bob',
-                                           'image_48': 'http://example.com/bob.png'}}}
+        self.users = {
+            'UALICE': {
+                'id': 'UALICE',
+                'name': 'alice',
+                'profile': {
+                    'real_name': 'Alice',
+                    'image_48': 'http://example.com/alice.png'
+                }
+            },
+            'UBOB': {
+                'id': 'UBOB',
+                'name': 'bob',
+                'profile': {
+                    'real_name': 'Bob',
+                    'image_48': 'http://example.com/bob.png'
+                }
+            }
+        }
 
-        
         self.slack_timestamp = 0
         self.messages = []
 
@@ -129,7 +139,10 @@ class SlackTestCase(MockedRequestTestCase):
     def slack_users_info(self, method, url, headers, params):
         self.assertEquals(method, 'GET')
         if params['user'] in self.users:
-            return MockResponse({'ok': True, 'user': self.users[params['user']]}, 200)
+            return MockResponse({
+                'ok': True,
+                'user': self.users[params['user']]
+            }, 200)
         return MockResponse({'ok': False, 'error': 'user_not_found'}, 400)
 
     def post_valid_request(self, post_data):

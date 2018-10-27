@@ -113,6 +113,7 @@ class SlashCommandRequest:
             'attachments': self.attachments,
         }
 
+
 _HANDLER = Handler()
 
 
@@ -129,4 +130,3 @@ def handle_slash_command(slash_command):
 
     _HANDLER.handle_request(request)
     return request.response_json()
-    

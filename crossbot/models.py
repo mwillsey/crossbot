@@ -66,10 +66,11 @@ class CBUser(models.Model):
                     # This should never happen, since we got the slackname from slack!
                     raise
                 return None
-            user = cls(slackid=slackid,
-                       slackname=slack_data['name'],
-                       slack_fullname=slack_data['profile']['real_name'],
-                       image_url=slack_data['profile']['image_48'])
+            user = cls(
+                slackid=slackid,
+                slackname=slack_data['name'],
+                slack_fullname=slack_data['profile']['real_name'],
+                image_url=slack_data['profile']['image_48'])
             user.save()
             return user
 
