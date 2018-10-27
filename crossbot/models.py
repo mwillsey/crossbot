@@ -274,6 +274,11 @@ class CommonTime(models.Model):
     def is_fail(self):
         return self.seconds < 0
 
+    def seconds_sort_key(self):
+        if self.is_fail():
+            return 9999999999999
+        return self.seconds
+
     def time_str(self):
         if self.is_fail():
             return 'fail'

@@ -72,7 +72,7 @@
             </div>
         </nav>
 
-        <main role="main" class="col-md-9 ml-sm-auto col-lg-10 pt-3 px-4">
+        <main role="main">
             {# Display messages to user #}
             {# TODO: not all messages should be danger messages #}
             {% for message in messages %}
@@ -86,6 +86,7 @@
         <footer>
             Page generated at {% now "Y-m-d h:i:s T" %}.
             Edit me on <a href="https://github.com/mwillsey/crossbot">GitHub</a>.
+            <a href="/admin">Admin site.</a>
         </footer>
     </body>
 

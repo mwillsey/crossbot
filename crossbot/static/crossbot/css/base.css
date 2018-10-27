@@ -15,6 +15,13 @@
     background-color: #eee;
 }
 
+/* center the content */
+
+main {
+    margin: 0 auto;
+    max-width: 700px;
+}
+
 /* make the foot low key */
 
 footer {
@@ -26,4 +33,10 @@ footer {
 
 footer a {
     color: gray;
+}
+
+/* custom css for times-tables, bootstrap goes full width with tables which looks bad */
+
+table.times-table td {
+    padding: 0 10px;
 }

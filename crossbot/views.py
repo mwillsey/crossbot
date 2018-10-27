@@ -3,6 +3,10 @@ import hmac
 import time
 import logging
 
+from crossbot.util import comma_and
+
+from django.shortcuts import render
+from django.utils import timezone
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.gzip import gzip_page
@@ -90,3 +94,29 @@ def times_rest_api(request, time_model='minicrossword'):
         'end':
         times[len(times) - 1].date,
     })
+
+
+def home(request):
+
+    model = MiniCrosswordTime
+    date = timezone.localtime().date()
+    ann = model.announcement_data(date)
+
+    times = sorted(
+        model.times_for_date(date), key=lambda t: t.seconds_sort_key())
+
+    # TODO I know some of this date/time logic is wrong because of when crosswords come out
+
+    winners_today = ann['winners_today']
+    today_verb = ' is ' if len(winners_today) == 1 else ' are '
+    today_msg = comma_and(winners_today) + today_verb + 'winning today.'
+
+    winners_yesterday = ann['winners_yesterday']
+    yesterday_msg = comma_and(winners_yesterday) + ' won yesterday.'
+
+    return render(
+        request, 'crossbot/index.html', {
+            'winners_today': today_msg,
+            'winners_yesterday': yesterday_msg,
+            'times': times,
+        })

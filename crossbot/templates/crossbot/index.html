@@ -2,6 +2,27 @@
 {% block content %}
     <h1> Crossbot home </h1>
 
-    It is {% now "DATETIME_FORMAT" %}
-    crossbot is up and running!
+    <div>
+        {{ winners_today }}
+    </div>
+
+    <div>
+        {{ winners_yesterday }}
+    </div>
+
+    <div class="mt-1">
+        Do today's:
+        <br> <a href= "https://www.nytimes.com/crosswords/game/mini"> Mini Crossword </a>
+        <br> <a href= "https://www.nytimes.com/crosswords/game/daily"> Regular Crossword </a>
+        <br> <a href="https://www.nytimes.com/crosswords/game/sudoku/easy"> Easy Sudoku </a>
+    </div>
+
+    <h3 class="mt-3">
+        Current times
+    </h3>
+
+    <div>
+        {% include "crossbot/times_for_date.html" with hide_date=True %}
+    </div>
+
 {% endblock %}

@@ -13,8 +13,5 @@ urlpatterns = [
         login_required(
             TemplateView.as_view(template_name='crossbot/plot.html')),
         name='plot'),
-    path(
-        '',
-        TemplateView.as_view(template_name='crossbot/index.html'),
-        name='home')
+    path('', views.home, name='home')
 ]

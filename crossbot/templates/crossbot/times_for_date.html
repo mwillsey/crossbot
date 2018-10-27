@@ -1,0 +1,11 @@
+<table class="times-table">
+{% for time in times %}
+    <tr>
+        <td> {{ time.user }} </td>
+        <td> {{ time.time_str }} </td>
+        {% if not hide_date %}
+            <td> {{ time.date }} </td>
+        {% endif %}
+    </tr>
+{% endfor %}
+</table>
