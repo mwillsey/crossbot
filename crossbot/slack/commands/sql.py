@@ -85,7 +85,7 @@ def _do_sql(cmd, *args):
             # Replace slackids with slacknames
             def username_from_slackid(m):
                 slackid = m.group(1)
-                user = models.CBUser.from_slackid(slackid, create=False)
+                user = models.CBUser.from_slackid(slackid)
                 if user:
                     return str(user)
                 else:

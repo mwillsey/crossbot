@@ -136,7 +136,7 @@ def date_dt(date):
 
 
 def username_from_slackid(slackid):
-    user = models.CBUser.from_slackid(slackid, create=False)
+    user = models.CBUser.from_slackid(slackid)
     if user:
         return str(user)
     else:

@@ -17,6 +17,7 @@ from django.db import models, transaction
 from django.utils import timezone
 
 from .settings import CROSSBUCKS_PER_SOLVE, ITEM_DROP_RATE
+from crossbot.slack.api import slack_users, slack_user
 
 logger = logging.getLogger(__name__)
 
@@ -46,17 +47,13 @@ class CBUser(models.Model):
         related_name='cb_user')
 
     @classmethod
-    def from_slackid(cls, slackid, slackname=None, create=True):
+    @transaction.atomic
+    def from_slackid(cls, slackid, slackname=None):
         """Gets or creates the user with slackid, updating slackname.
 
         Returns:
             The CBUser if it exists or create=True, None otherwise.
         """
-        if create and slackname:
-            return cls.objects.update_or_create(
-                slackid=slackid, defaults={'slackname': slackname})[0]
-        if create:
-            return cls.objects.get_or_create(slackid=slackid)[0]
         try:
             user = cls.objects.get(slackid=slackid)
             if slackname:
@@ -64,12 +61,23 @@ class CBUser(models.Model):
                 user.save()
             return user
         except cls.DoesNotExist:
-            return None
+            try:
+                slack_data = slack_user(slackid)
+            except ValueError:
+                if slackname:
+                    # This should never happen, since we got the slackname from slack!
+                    raise
+                return None
+            user = cls(
+                slackid=slackid,
+                slackname=slack_data['name'],
+                slack_fullname=slack_data['profile']['real_name'],
+                image_url=slack_data['profile']['image_48'])
+            user.save()
+            return user
 
     @classmethod
     def update_slacknames(cls):
-        from crossbot.slack.api import slack_users
-
         users = {u['id']: u for u in slack_users()}
 
         for user in cls.objects.all():
