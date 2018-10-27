@@ -82,7 +82,18 @@ class SlackTestCase(MockedRequestTestCase):
 
         self.router[SLACK_URL + 'chat.postMessage'] = self.slack_chat_post
         self.router[SLACK_URL + 'reactions.add'] = self.slack_reaction_add
+        self.router[SLACK_URL + 'users.list'] = self.slack_users_list
+        self.router[SLACK_URL + 'users.info'] = self.slack_users_info
 
+        
+        self.users = {'UALICE': {'id': 'UALICE', 'name': 'alice',
+                                 'profile': {'real_name': 'Alice',
+                                             'image_48': 'http://example.com/alice.png'}},
+                      'UBOB': {'id': 'UBOB', 'name': 'bob',
+                               'profile': {'real_name': 'Bob',
+                                           'image_48': 'http://example.com/bob.png'}}}
+
+        
         self.slack_timestamp = 0
         self.messages = []
 
@@ -110,6 +121,16 @@ class SlackTestCase(MockedRequestTestCase):
         ts = self.slack_timestamp
         self.slack_timestamp += 1
         return MockResponse({'ok': True, 'ts': ts}, 200)
+
+    def slack_users_list(self, method, url, headers, params):
+        self.assertEquals(method, 'GET')
+        return MockResponse({'ok': True, 'members': self.users.values()}, 200)
+
+    def slack_users_info(self, method, url, headers, params):
+        self.assertEquals(method, 'GET')
+        if params['user'] in self.users:
+            return MockResponse({'ok': True, 'user': self.users[params['user']]}, 200)
+        return MockResponse({'ok': False, 'error': 'user_not_found'}, 400)
 
     def post_valid_request(self, post_data):
         request = self.factory.post(reverse('slash_command'), post_data)
@@ -144,13 +165,23 @@ class SlackTestCase(MockedRequestTestCase):
         return body
 
 
-class ModelTests(TestCase):
-    def test_add_user(self):
+class ModelTests(SlackTestCase):
+    def test_from_slackid(self):
         alice = CBUser.from_slackid('UALICE', 'alice')
         self.assertIsInstance(alice, CBUser)
+        self.assertEqual(alice.slackname, 'alice')
+        self.assertEqual(alice.slack_fullname, 'Alice')
+        self.assertEqual(alice.image_url, 'http://example.com/alice.png')
         self.assertEqual(alice, CBUser.from_slackid('UALICE', 'bob'))
         alice = CBUser.from_slackid('UALICE')
         self.assertEqual(CBUser.from_slackid('UALICE').slackname, 'bob')
+
+        fake_user = CBUser.from_slackid('UFAKE')
+        self.assertIsNone(fake_user)
+        with self.assertRaises(ValueError) as exception_context:
+            fake_user = CBUser.from_slackid('UFAKE', 'fake_user')
+
+        self.assertIn('user_not_found', str(exception_context.exception))
 
     def test_add_time(self):
         alice = CBUser.from_slackid('UALICE', 'alice')
@@ -365,8 +396,8 @@ class SlackAppTests(SlackTestCase):
 
         lines = response['text'].split('\n')
 
-        # line 0 is date, line 1 should be alice
-        self.assertIn('alice', lines[1])
+        # line 0 is date, line 1 should be Alice
+        self.assertIn('Alice', lines[1])
         self.assertIn(':fire:', lines[1])
 
     def test_help(self):
