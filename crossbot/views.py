@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 
 import settings
 
-from .slack import handle_slash_command
+from .slack.handler import handle_slash_command
 from .models import MiniCrosswordTime, CrosswordTime, EasySudokuTime
 
 logger = logging.getLogger(__name__)
