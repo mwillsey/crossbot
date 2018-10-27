@@ -41,16 +41,36 @@ def add(request):
         request.reply(
             'I could not add this to the database, '
             'because you already have an entry '
-            '({}) for this date.'.format(time.time_str()),
-            direct=True)
+            '({}) for this date.'.format(time.time_str()), )
         return
 
     day_of_week = request.args.date.weekday()
     emj = emoji(args.time, args.table, day_of_week)
 
-    request.message_and_react(request.text, emj, as_user=request.user)
-    request.reply('Submitted {} for {}'.format(time.time_str(),
-                                               request.args.date))
+    # For now, only send new-style responses to staff
+    if request.user.is_staff:
+        request.in_channel = True
+        request.as_user_image = True
+
+        attachment = {
+            'fallback':
+            request.text,
+            'author_name':
+            str(request.user),
+            'author_icon':
+            request.user.image_url,
+            'text':
+            "*Mini Added:* %s - %s  :%s:" %
+            (time.date, 'Fail' if time.is_fail() else
+             ("%s s" % args.time), emj),
+        }
+
+        request.attach(attachment)
+
+    else:
+        request.message_and_react(request.text, emj, as_user=request.user)
+        request.reply('Submitted {} for {}'.format(time.time_str(),
+                                                   request.args.date))
 
     def get_streak_counts(streaks):
         for streak in streaks:
@@ -67,13 +87,21 @@ def add(request):
         streak_messages = STREAKS.get(streak_count)
         if streak_messages:
             msg = choice(streak_messages).format(name=request.user)
-            try:
-                # try here because we might fail if the reaction already exists.
-                emj = "achievement"
-                request.message_and_react(msg, emj)
-            except:
-                logger.warning("Achievement reaction failed!")
-            request.reply(msg)
+            # Again, only send new-style responses to staff
+            if request.user.is_staff:
+                request.attach({
+                    'fallback': msg,
+                    'color': "#39C53D",
+                    'text': "\n:achievement:  %s" % msg,
+                })
+            else:
+                try:
+                    # try here because we might fail if the reaction already exists.
+                    emj = "achievement"
+                    request.message_and_react(msg, emj)
+                except:
+                    logger.warning("Achievement reaction failed!")
+                request.reply(msg)
 
     logger.debug("{} has a streak of {} in {}".format(request.user, new_sc,
                                                       args.table))

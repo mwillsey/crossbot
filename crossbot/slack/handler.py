@@ -1,5 +1,8 @@
+import json
 import logging
 import traceback
+
+from django.contrib.staticfiles.templatetags.staticfiles import static
 
 from . import commands
 from .commands import COMMANDS
@@ -46,9 +49,10 @@ class Handler:
 
             return command(request)
         except ParserException as exn:
-            request.reply(str(exn), direct=True)
+            request.reply(str(exn))
 
 
+# XXX: why is this even here?
 class Request:
     userid = 'command-line-user'
 
@@ -66,8 +70,13 @@ class Request:
         logger.debug(path)
 
 
+# TODO: this class and related classes/api methods need refactoring
 class SlashCommandRequest:
-    def __init__(self, post_data, in_channel=False):
+    def __init__(self, request, in_channel=False):
+        self._django_request = request
+
+        post_data = request.POST
+
         self.text = post_data['text']
         self.response_url = post_data['response_url']
         self.trigger_id = post_data['trigger_id']
@@ -81,34 +90,61 @@ class SlashCommandRequest:
         self.replies = []
         self.attachments = []
 
-    def reply(self, msg, direct=False):
+        self.as_user_image = False
+
+    def build_absolute_uri(self, location):
+        return self._django_request.build_absolute_uri(location)
+
+    def reply(self, msg):
         self.replies.append(msg)
 
     # note, this one is not delayed
-    def message_and_react(self, msg, emoji, as_user=None):
+    def message_and_react(self, msg, emoji, as_user=None, send_hat=False):
+        kwargs = {}
+
         if as_user:
             name = as_user.slack_fullname or as_user.slackname or 'crossbot'
-            kwargs = {
-                'as_user': 'false',
-                'icon_url': as_user.image_url,
-                'username': name,
-            }
-        else:
-            kwargs = {}
+            kwargs['as_user'] = 'false'
+            kwargs['icon_url'] = as_user.image_url
+            kwargs['username'] = name
 
         timestamp = post_message(self.channel, text=msg, **kwargs)
         react(emoji, self.channel, timestamp)
 
-    def attach(self, name, path):
+    def attach(self, attachment):
+        self.attachments.append(attachment)
+
+    def attach_image(self, name, path):
         self.attachments.append({
             'fallback': 'its a picture',
             'pretext': name,
-            'image_url': path
+            'image_url': path,
+        })
+
+    def add_field(self, title, value, short=True):
+        """Adds a field to the first attachment of the reply."""
+        if not self.attachments:
+            self.attachments.append({})
+        attachment = self.attachments[0]
+        if not 'fields' in attachment:
+            attachment['fields'] = []
+        attachment['fields'].append({
+            'title': title,
+            'value': value,
+            'short': short,
         })
 
     def response_json(self):
-        return {
-            'response_type': 'in_channel' if self.in_channel else 'ephemeral',
-            'text': '\n'.join(self.replies),
-            'attachments': self.attachments,
-        }
+        response = {}
+        if self.replies:
+            response['text'] = '\n'.join(self.replies)
+        if self.attachments:
+            response['attachments'] = json.dumps(self.attachments)
+        if self.user.hat:
+            response['as_user'] = json.dumps(False)
+            response['username'] = 'crossbot'
+            response['icon_url'] = self.build_absolute_uri(
+                self.user.hat.image_url())
+        post_message(self.channel, **response)
+
+        return {'text': 'ok'}
