@@ -105,8 +105,9 @@ class CBUser(models.Model):
 
         try:
             return time_model.objects.get(
-                user=self, date=date, seconds__isnull=False
+                user=self, date=date, seconds__isnull=False, deleted=None
             )
+
         except time_model.DoesNotExist:
             return None
 
@@ -162,7 +163,10 @@ class CBUser(models.Model):
             return None
 
         time_str = str(time)
-        time.delete()
+
+        assert time.deleted is None
+        time.deleted = timezone.now()
+        time.save()
 
         # Take away crossbucks from the user
         self.refresh_from_db()  # refresh this object inside the transaction
@@ -175,7 +179,7 @@ class CBUser(models.Model):
         """Returns a QuerySet with times this user has completed."""
         assert issubclass(time_model, CommonTime)
 
-        return time_model.objects.filter(user=self)
+        return time_model.all_times().filter(user=self)
 
     def get_mini_crossword_time(self, *args, **kwargs):
         return self.get_time(MiniCrosswordTime, *args, **kwargs)
@@ -268,17 +272,18 @@ class CBUser(models.Model):
 
 class CommonTime(models.Model):
     class Meta:
-        unique_together = ("user", "date")
+        unique_together = ("user", "date", "deleted")
         abstract = True
 
     user = models.ForeignKey(CBUser, on_delete=models.CASCADE)
     seconds = models.IntegerField()
     date = models.DateField()
     timestamp = models.DateTimeField(null=True, auto_now_add=True)
+    deleted = models.DateTimeField(null=True, default=None)
 
     @classmethod
     def all_times(cls):
-        return cls.objects.all()
+        return cls.objects.filter(deleted=None)
 
     @classmethod
     def times_for_date(cls, date):
@@ -302,7 +307,13 @@ class CommonTime(models.Model):
         return '{}:{:02}'.format(minutes, seconds)
 
     def __str__(self):
-        return '{} - {} - {}'.format(self.user, self.time_str(), self.date)
+        if self.deleted:
+            maybe_deleted = 'DELETED '
+        else:
+            maybe_deleted = ''
+        return '{}{} - {} - {}'.format(
+            maybe_deleted, self.user, self.time_str(), self.date
+        )
 
     @staticmethod
     def streaks(entries):
@@ -330,9 +341,8 @@ class CommonTime(models.Model):
 
     @classmethod
     def winning_times(cls, qs=None):
-        # TODO is the isnull necessary?
         if qs is None:
-            qs = cls.objects.filter(seconds__isnull=False, seconds__gt=0)
+            qs = cls.all_times().filter(seconds__gt=0)
         values = qs.values_list('date').annotate(
             winning_time=models.Min('seconds')
         )
@@ -341,9 +351,7 @@ class CommonTime(models.Model):
 
     @classmethod
     def winners(cls, date):
-        entries = cls.objects.filter(
-            seconds__isnull=False, seconds__gt=0, date=date
-        )
+        entries = cls.times_for_date(date)
         try:
             best = min(e.seconds for e in entries)
             winners = [e for e in entries if e.seconds == best]
@@ -356,8 +364,8 @@ class CommonTime(models.Model):
     @classmethod
     def wins(cls, user, qs=None):
         if qs is None:
-            qs = cls.objects
-        qs = qs.filter(seconds__isnull=False, seconds__gt=0, user=user)
+            qs = cls.all_times()
+        qs = qs.filter(seconds__gt=0, user=user)
         wins = cls.winning_times()
         return [e for e in qs if e.seconds == wins[e.date]]
 
@@ -371,7 +379,7 @@ class CommonTime(models.Model):
     def current_win_streaks(cls, date):
         result = {}
         # get the win streaks up to this date
-        qs = cls.objects.filter(date__lte=date)
+        qs = cls.all_times().filter(date__lte=date)
         for w in cls.winners(date):
             streaks = cls.win_streaks(w.user, qs)
             latest_streak = streaks[-1]
@@ -463,7 +471,7 @@ class CommonTime(models.Model):
 
     @classmethod
     def participation_streaks(cls, user, filter_q=None):
-        times = cls.objects.filter(seconds__isnull=False, user_id=user)
+        times = cls.all_times().filter(user_id=user)
         if filter_q:
             times = times.filter(filter_q)
 
