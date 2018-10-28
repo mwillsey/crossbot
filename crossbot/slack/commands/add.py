@@ -6,12 +6,13 @@ from random import choice
 from django.utils import timezone
 
 from . import models, parse_date, parse_time
+from crossbot.slack.handler import SlashCommandResponse
 
 logger = logging.getLogger(__name__)
 
 
-def init(client):
-    parser = client.parser.subparsers.add_parser('add', help='Add a time.')
+def init(parser):
+    parser = parser.subparsers.add_parser('add', help='Add a time.')
     parser.set_defaults(command=add)
 
     parser.add_argument(
@@ -26,9 +27,8 @@ def init(client):
         type=parse_date,
         help='Date to add a score for.')
 
-    # TODO add a command-line only --user parameter
 
-
+# TODO: most of this logic should be moved into the model
 def add(request):
     '''Add entry for today (`add 1:07`) or given date (`add :32 2017-05-05`).
        A zero second time will be interpreted as a failed attempt.'''
@@ -37,40 +37,27 @@ def add(request):
 
     was_added, time = request.user.add_time(args.table, args.time, args.date)
 
+    response = SlashCommandResponse()
+
     if not was_added:
-        request.reply(
+        response.text = (
             'I could not add this to the database, '
             'because you already have an entry '
-            '({}) for this date.'.format(time.time_str()), )
-        return
+            '({}) for this date.'.format(time.time_str()) )
+        return response
 
     day_of_week = request.args.date.weekday()
     emj = emoji(args.time, args.table, day_of_week)
 
-    # For now, only send new-style responses to staff
-    if request.user.is_staff:
-        request.in_channel = True
-        request.as_user_image = True
+    response.in_channel = True
+    response.as_user_image = True
 
-        attachment = {
-            'fallback':
-            request.text,
-            'author_name':
-            str(request.user),
-            'author_icon':
-            request.user.image_url,
-            'text':
-            "*Mini Added:* %s - %s  :%s:" %
-            (time.date, 'Fail' if time.is_fail() else
-             ("%s s" % args.time), emj),
-        }
-
-        request.attach(attachment)
-
-    else:
-        request.message_and_react(request.text, emj, as_user=request.user)
-        request.reply('Submitted {} for {}'.format(time.time_str(),
-                                                   request.args.date))
+    response.attach(
+        author_name = str(request.user),
+        author_icon = request.user.image_url,
+        text = "*Mini Added:* {} - {}  :{}:".format(
+            time.date, time.time_string(), emj),
+    )
 
     def get_streak_counts(streaks):
         for streak in streaks:
@@ -88,23 +75,15 @@ def add(request):
         if streak_messages:
             msg = choice(streak_messages).format(name=request.user)
             # Again, only send new-style responses to staff
-            if request.user.is_staff:
-                request.attach({
-                    'fallback': msg,
-                    'color': "#39C53D",
-                    'text': "\n:achievement:  %s" % msg,
-                })
-            else:
-                try:
-                    # try here because we might fail if the reaction already exists.
-                    emj = "achievement"
-                    request.message_and_react(msg, emj)
-                except:
-                    logger.warning("Achievement reaction failed!")
-                request.reply(msg)
+            response.attach(
+                color = "#39C53D",
+                text = "\n:achievement:  " + msg,
+            )
 
     logger.debug("{} has a streak of {} in {}".format(request.user, new_sc,
                                                       args.table))
+
+    return response
 
     # if args.table == 'mini_crossword_time':
     #     requests.post('http://plseaudio.cs.washington.edu:8087/scroll_text',

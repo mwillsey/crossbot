@@ -37,16 +37,6 @@ def slack_users():
     return _slack_api_ok('users.list', 'GET', 'members')
 
 
-def react(emoji, channel, timestamp):
-    return _slack_api_ok(
-        'reactions.add',
-        'POST',
-        'ok',
-        name=emoji,
-        channel=channel,
-        timestamp=timestamp)
-
-
 def post_message(channel, **kwargs):
     return _slack_api_ok(
         'chat.postMessage', 'POST', 'ts', channel=channel, **kwargs)

@@ -1,10 +1,11 @@
 from django.utils import timezone
 
 from . import parse_date
+from crossbot.slack import SlashCommandResponse
 
 
-def init(client):
-    parser = client.parser.subparsers.add_parser(
+def init(parser):
+    parser = parser.subparsers.add_parser(
         'announce', help='Announce any streaks.')
     parser.set_defaults(command=announce)
 
@@ -21,4 +22,4 @@ def announce(request):
     Optionally takes a date.'''
 
     message = request.args.table.announcement_message(request.args.date)
-    request.reply(message)
+    return SlashCommandResponse(text=message)

@@ -1,17 +1,26 @@
-from .handler import Handler, SlashCommandRequest
 
-_HANDLER = Handler()
+from .parser import Parser, ParserException
+from . import commands
+from .handler import SlashCommandResponse, Attachment
+
+PARSER = Parser()
+
+for mod_name in commands.COMMANDS:
+    mod = getattr(commands, mod_name)
+    mod.init(PARSER)
 
 
-def handle_slash_command(request):
-    """Convenience methods used to handle slash commands.
+def handle_request(request):
+    """ Parses the request and calls the right command. """
 
-    Args:
-        slash_command: str
+    try:
+        command, args = PARSER.parser.parse(request.text)
+        request.args = args
 
-    Returns:
-        A Response object or None. (??)
-    """
-    slash_command_request = SlashCommandRequest(request)
-    _HANDLER.handle_request(slash_command_request)
-    return slash_command_request.response_json()
+        response = command(request)
+
+    except ParserException as exn:
+        response = SlashCommandResponse()
+        response.text = str(exn)
+
+    return response

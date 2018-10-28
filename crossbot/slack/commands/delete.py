@@ -1,9 +1,9 @@
 from . import parse_date
+from crossbot.slack import SlashCommandResponse
 
 
-def init(client):
-
-    parser = client.parser.subparsers.add_parser(
+def init(parser):
+    parser = parser.subparsers.add_parser(
         'delete', help='Delete a time.')
     parser.set_defaults(command=delete)
 
@@ -23,6 +23,8 @@ def delete(request):
     date = request.args.date
     deleted_time = request.user.remove_time(request.args.table, date)
     if deleted_time:
-        request.reply('Deleted this time: ' + str(deleted_time))
+        message = 'Deleted this time: ' + str(deleted_time)
     else:
-        request.reply('No entry for {}'.format(date))
+        message = 'No entry for {}'.format(date)
+
+    return SlashCommandResponse(text=message)
