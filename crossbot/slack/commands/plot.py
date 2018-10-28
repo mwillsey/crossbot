@@ -13,15 +13,15 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-from . import parse_date, date_fmt, models
+from . import parse_date, date_fmt, models, SlashCommandResponse
 
 from settings import MEDIA_URL, MEDIA_ROOT
 
 logger = logging.getLogger(__name__)
 
 
-def init(client):
-    parser = client.parser.subparsers.add_parser('plot', help='plot something')
+def init(parser):
+    parser = parser.subparsers.add_parser('plot', help='plot something')
     parser.set_defaults(
         command=plot,
         smooth=0.7,
@@ -177,16 +177,13 @@ def plot(request):
     end_date = end_dt.strftime(date_fmt)
 
     if not 0 <= args.smooth <= 0.95:
-        request.reply('smooth should be between 0 and 0.95', direct=True)
-        return
+        return SlashCommandResponse(text='smooth should be between 0 and 0.95')
 
     if not 0 <= args.alpha <= 1:
-        request.reply('alpha should be between 0 and 1', direct=True)
-        return
+        return SlashCommandResponse(text='alpha should be between 0 and 1')
 
     if start_dt > end_dt:
-        request.reply('start date should be before end_date', direct=True)
-        return
+        return SlashCommandResponse(text='start date should be before end_date')
 
     dt_range = [
         start_dt + datetime.timedelta(days=i) for i in range(args.num_days + 1)
@@ -302,7 +299,13 @@ def plot(request):
         fig.savefig(f, format='png', bbox_inches='tight')
     plt.close(fig)
 
-    request.attach_image('plot', request.build_absolute_uri(MEDIA_URL + fname))
+    response = SlashCommandResponse()
+    response.attach(
+        pretext='plot',
+        image_url=request.build_absolute_uri(MEDIA_URL + fname),
+    )
+
+    return response
 
 
 #########################

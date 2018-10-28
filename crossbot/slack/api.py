@@ -4,15 +4,23 @@ import requests
 import settings
 import logging
 
+
 logger = logging.getLogger(__name__)
 
 SLACK_URL = 'https://slack.com/api/'
 
 
-def _slack_api(endpoint, method, **kwargs):
+# TODO: clean up the kind-of funky args/kwargs flows
+
+def _slack_api(endpoint='', method='POST', base_url=None, headers=None,
+               **kwargs):
     assert method in ['GET', 'POST']
-    headers = {'Authorization': 'Bearer ' + settings.SLACK_OAUTH_ACCESS_TOKEN}
-    url = SLACK_URL + endpoint
+
+    headers = headers if headers is not None else {}
+    headers['Authorization'] = 'Bearer ' + settings.SLACK_OAUTH_ACCESS_TOKEN
+
+    url = base_url if base_url is not None else SLACK_URL
+    url += endpoint
 
     if method == 'GET':
         func = requests.get
@@ -21,11 +29,11 @@ def _slack_api(endpoint, method, **kwargs):
     else:
         raise ValueError('invalid method: ' + method)
 
-    return func(url, headers=headers, params=kwargs)
+    return func(url, headers=headers, **kwargs)
 
 
-def _slack_api_ok(endpoint, method, key, **kwargs):
-    resp = _slack_api(endpoint, method, **kwargs).json()
+def _slack_api_ok(key, *args, **kwargs):
+    resp = _slack_api(*args, **kwargs).json()
     if resp.get('ok'):
         return resp[key]
 
@@ -34,19 +42,11 @@ def _slack_api_ok(endpoint, method, key, **kwargs):
 
 
 def slack_users():
-    return _slack_api_ok('users.list', 'GET', 'members')
-
-
-def react(emoji, channel, timestamp):
-    return _slack_api_ok(
-        'reactions.add',
-        'POST',
-        'ok',
-        name=emoji,
-        channel=channel,
-        timestamp=timestamp)
-
+    return _slack_api_ok('members', endpoint='users.list', method='GET')
 
 def post_message(channel, **kwargs):
-    return _slack_api_ok(
-        'chat.postMessage', 'POST', 'ts', channel=channel, **kwargs)
+    kwargs['channel'] = channel
+    return _slack_api_ok('ts', endpoint='chat.postMessage', params=kwargs)
+
+def post_response(response_url, json):
+    return _slack_api_ok('ts', base_url=response_url, data=json)

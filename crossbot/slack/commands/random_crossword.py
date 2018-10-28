@@ -4,9 +4,9 @@ import random
 from . import parse_date, date_fmt
 
 
-def init(client):
+def init(parser):
 
-    parser = client.parser.subparsers.add_parser(
+    parser = parser.subparsers.add_parser(
         'random', help='Get a random mini crossword link.')
     parser.set_defaults(command=random_date_url)
 

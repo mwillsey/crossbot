@@ -66,22 +66,25 @@ class MockedRequestTestCase(TestCase):
     def check_headers(self, method, url, headers):
         pass
 
-    def mocked_request(self, method, url, *, headers, params):
+    def mocked_request(self, method, url, *, headers, params=None, data=None):
         self.check_headers(method, url, headers)
         func = self.router.get(url)
         if func:
-            return func(method, url, headers, params)
+            return func(method, url, headers, params, data)
         else:
             MockResponse(None, 404)
 
 
 class SlackTestCase(MockedRequestTestCase):
+    RESPONSE_URL = SLACK_URL + 'response_url/'
+
     def setUp(self):
         super().setUp()
         self.factory = RequestFactory()
 
-        self.router[SLACK_URL + 'chat.postMessage'] = self.slack_chat_post
-        self.router[SLACK_URL + 'reactions.add'] = self.slack_reaction_add
+        self.router[SLACK_URL + 'chat.postMessage'] = self._slack_chat_post
+        self.router[SLACK_URL + 'reactions.add'] = self._slack_reaction_add
+        self.router[self.RESPONSE_URL] = self._slack_response_post
 
         self.slack_timestamp = 0
         self.messages = []
@@ -99,14 +102,22 @@ class SlackTestCase(MockedRequestTestCase):
 
     def check_headers(self, method, url, headers):
         if url.startswith(SLACK_URL):
-            self.assertEquals(headers['Authorization'], 'Bearer oauth_token')
+            self.assertEqual(headers['Authorization'], 'Bearer oauth_token')
 
-    def slack_reaction_add(self, method, url, headers, params):
+    def _slack_reaction_add(self, method, url, headers, params, data):
         return MockResponse({'ok': True}, 200)
 
-    def slack_chat_post(self, method, url, headers, params):
-        self.assertEquals(method, 'POST')
+    def _slack_chat_post(self, method, url, headers, params, data):
+        self.assertEqual(method, 'POST')
         self.messages.append(params)
+        ts = self.slack_timestamp
+        self.slack_timestamp += 1
+        return MockResponse({'ok': True, 'ts': ts}, 200)
+
+    def _slack_response_post(self, method, url, headers, params, data):
+        # TODO: handle this better?
+        self.assertEqual(method, 'POST')
+        self.messages.append(data)
         ts = self.slack_timestamp
         self.slack_timestamp += 1
         return MockResponse({'ok': True, 'ts': ts}, 200)
@@ -129,7 +140,7 @@ class SlackTestCase(MockedRequestTestCase):
         response = self.post_valid_request({
             'type': 'event_callback',
             'text': text,
-            'response_url': 'foobar',
+            'response_url': self.RESPONSE_URL,
             'trigger_id': 'foobar',
             'channel_id': 'foobar',
             'user_id': 'U' + who.upper(),
@@ -449,19 +460,19 @@ class SlackAppTests(SlackTestCase):
         self.slack_post(text='add :10 2018-08-01')
         self.slack_post(text='add :10 2018-08-02')
         # make sure the message didn't come in early
-        self.assertNotIn('streak', self.messages[-1]['text'])
+        self.assertNotIn('streak', self.messages[-1])
 
         # get the streak of 3 and check for acknowledgment
         self.slack_post(text='add :10 2018-08-03')
         # the messages for streaks of 3 have the word row in them
-        self.assertIn('3', self.messages[-1]['text'])
-        self.assertIn('row', self.messages[-1]['text'])
+        self.assertIn('3', self.messages[-1])
+        self.assertIn('row', self.messages[-1])
 
         # go for the streak of 10
         for i in range(4, 11):
             self.slack_post(text='add :10 2018-08-{:02d}'.format(i))
-        self.assertIn('10', self.messages[-1]['text'])
-        self.assertIn('streak', self.messages[-1]['text'])
+        self.assertIn('10', self.messages[-1])
+        self.assertIn('streak', self.messages[-1])
 
     def test_plot(self):
         self.slack_post(text='add :10 2018-08-01')
@@ -498,8 +509,8 @@ class AnnouncementTests(SlackTestCase):
         with patch.object(
                 timezone, 'localtime', return_value=self.weekday_right_time):
             self.release_announcement.do()
-            self.assertEquals(len(self.messages), 1)
+            self.assertEqual(len(self.messages), 1)
 
     def test_morning_announcement_run(self):
         self.morning_announcement.do()
-        self.assertEquals(len(self.messages), 1)
+        self.assertEqual(len(self.messages), 1)

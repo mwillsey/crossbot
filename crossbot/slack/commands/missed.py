@@ -1,13 +1,13 @@
 from django.utils.timezone import timedelta
 
-from . import parse_date
+from . import parse_date, SlashCommandResponse
 
 MINI_URL = "https://www.nytimes.com/crosswords/game/mini/{:04}/{:02}/{:02}"
 
 
-def init(client):
+def init(parser):
 
-    parser = client.parser.subparsers.add_parser(
+    parser = parser.subparsers.add_parser(
         'missed',
         help='Get mini crossword link for the most recent day you missed.')
     parser.set_defaults(command=get_missed)
@@ -38,4 +38,5 @@ def get_missed(request):
     urls = [
         MINI_URL.format(date.year, date.month, date.day) for date in missed
     ]
-    request.reply('\n'.join(urls))
+
+    return SlashCommandResponse(text='\n'.join(urls))
