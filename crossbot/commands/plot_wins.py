@@ -34,7 +34,8 @@ def init(client):
         '--alpha',
         type=float,
         help='Transparency for plotted points.'
-        ' Default %(default)s.')
+        ' Default %(default)s.'
+    )
 
     dates = parser.add_argument_group('Date range')
 
@@ -45,12 +46,14 @@ def init(client):
         '--start-date',
         type=date_none,
         metavar='START',
-        help='Date to start plotting from.')
+        help='Date to start plotting from.'
+    )
     dates.add_argument(
         '--end-date',
         type=date_none,
         metavar='END',
-        help='Date to end plotting at. Defaults to today.')
+        help='Date to end plotting at. Defaults to today.'
+    )
     dates.add_argument(
         '-n',
         '--num-days',
@@ -58,7 +61,8 @@ def init(client):
         metavar='N',
         help='Number of days since today to plot.'
         ' Ignored if both start-date and end-date given.'
-        ' Default %(default)s.')
+        ' Default %(default)s.'
+    )
 
     parser.add_argument('users', nargs='+', help='Slack names of player')
 
@@ -115,7 +119,8 @@ def plot_wins(client, request):
         userids.append(uid)
 
     dt_range = [
-        start_dt + datetime.timedelta(days=i) for i in range(args.num_days + 1)
+        start_dt + datetime.timedelta(days=i)
+        for i in range(args.num_days + 1)
     ]
     date_range = [dt.strftime(date_fmt) for dt in dt_range]
 
@@ -142,8 +147,9 @@ def plot_wins(client, request):
     by_date = defaultdict(dict)
     for e in entries:
         if e.timestamp:
-            ts = datetime.datetime.strptime(e.timestamp,
-                                            '%Y-%m-%d %H:%M:%S.%f')
+            ts = datetime.datetime.strptime(
+                e.timestamp, '%Y-%m-%d %H:%M:%S.%f'
+            )
         else:
             ts = datetime.datetime.strptime(e.date, '%Y-%m-%d')
         this_date = by_date[e.date]
@@ -174,8 +180,11 @@ def plot_wins(client, request):
     fig = plt.figure(figsize=(width / dpi, height / dpi), dpi=dpi)
     ax = fig.add_subplot(1, 1, 1)
 
-    x, ys = zip(*((dt, wins) for dt, wins in points
-                  if start_dt <= dt.date() and dt.date() <= end_dt))
+    x, ys = zip(
+        *((dt, wins)
+          for dt, wins in points
+          if start_dt <= dt.date() and dt.date() <= end_dt)
+    )
 
     for u in userids:
         name = client.user(u)
@@ -183,7 +192,8 @@ def plot_wins(client, request):
             mdates.date2num(x), [y[u] for y in ys],
             linestyle='-',
             marker=None,
-            label=name)
+            label=name
+        )
 
     ax.legend(fontsize=6, loc='upper left')
 

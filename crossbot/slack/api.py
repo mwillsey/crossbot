@@ -48,9 +48,11 @@ def react(emoji, channel, timestamp):
         'ok',
         name=emoji,
         channel=channel,
-        timestamp=timestamp)
+        timestamp=timestamp
+    )
 
 
 def post_message(channel, **kwargs):
     return _slack_api_ok(
-        'chat.postMessage', 'POST', 'ts', channel=channel, **kwargs)
+        'chat.postMessage', 'POST', 'ts', channel=channel, **kwargs
+    )

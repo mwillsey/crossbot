@@ -16,14 +16,16 @@ class Migration(migrations.Migration):
                 auto_created=True,
                 primary_key=True,
                 serialize=False,
-                verbose_name='ID')) for model_name in [
-                    'CrosswordTime',
-                    'EasySudokuTime',
-                    'MiniCrosswordModel',
-                    'MiniCrosswordTime',
-                    'ModelDates',
-                    'ModelParams',
-                    'ModelUsers',
-                    'QueryShorthands',
-                ]
+                verbose_name='ID'
+            )
+        ) for model_name in [
+            'CrosswordTime',
+            'EasySudokuTime',
+            'MiniCrosswordModel',
+            'MiniCrosswordTime',
+            'ModelDates',
+            'ModelParams',
+            'ModelUsers',
+            'QueryShorthands',
+        ]
     ]

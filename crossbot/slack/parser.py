@@ -44,7 +44,8 @@ class Parser:
             `now` or omitted dates will automatically become tomorrow if the
             crossword has already been released (10pm weekdays, 6pm weekends).
             Here are my commands:\n\n
-            ''')
+            '''
+        )
 
         self.parser.set_defaults(table=MiniCrosswordTime, )
 
@@ -56,7 +57,8 @@ class Parser:
             action='store_const',
             dest='table',
             const=MiniCrosswordTime,
-            help='Use the scores from the mini crossword.')
+            help='Use the scores from the mini crossword.'
+        )
 
         table_choice.add_argument(
             '-r',
@@ -64,7 +66,8 @@ class Parser:
             action='store_const',
             dest='table',
             const=CrosswordTime,
-            help='Use the scores from the regular crossword.')
+            help='Use the scores from the regular crossword.'
+        )
 
         table_choice.add_argument(
             '-s',
@@ -72,7 +75,8 @@ class Parser:
             action='store_const',
             dest='table',
             const=EasySudokuTime,
-            help='Use the scores from the easy sudoku.')
+            help='Use the scores from the easy sudoku.'
+        )
 
         self.subparsers = self.parser.add_subparsers(help='subparsers help')
 
@@ -129,15 +133,17 @@ def time(time_str):
     h_match = h_time_rx.match(time_str)
     m_match = m_time_rx.match(time_str)
     if h_match:
-        hours, minutes, seconds = (int(x) if x else 0
-                                   for x in h_match.groups())
+        hours, minutes, seconds = (
+            int(x) if x else 0 for x in h_match.groups()
+        )
     elif m_match:
         minutes, seconds = (int(x) if x else 0 for x in m_match.groups())
         hours = 0
     else:
         raise argparse.ArgumentTypeError(
             'Cannot parse time "{}", should look like ":12", "1:44:32", or "fail"'
-            .format(time_str))
+            .format(time_str)
+        )
 
     total = hours * 60 * 60 + minutes * 60 + seconds
 
@@ -166,7 +172,8 @@ def date(date_str, default='now'):
 
         release_hour = 22 if dt.weekday() < 5 else 18
         release_dt = dt.replace(
-            hour=release_hour, minute=0, second=30, microsecond=0)
+            hour=release_hour, minute=0, second=30, microsecond=0
+        )
 
         # if it's already been released (with a small buffer), use tomorrow
         if dt > release_dt:
@@ -179,14 +186,16 @@ def date(date_str, default='now'):
         except ValueError:
             raise argparse.ArgumentTypeError(
                 'Cannot parse date "{}", should look like "YYYY-MM-DD" or "now".'
-                .format(date_str))
+                .format(date_str)
+            )
     else:
         try:
             dt = datetime.datetime.strptime(date_str, date_fmt)
         except ValueError:
             raise argparse.ArgumentTypeError(
                 'Cannot parse date "{}", should look like "YYYY-MM-DD" or "now".'
-                .format(date_str))
+                .format(date_str)
+            )
 
     if type(dt) == datetime.date:
         return dt

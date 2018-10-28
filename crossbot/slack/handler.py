@@ -26,8 +26,9 @@ class Handler:
                 else:
                     logger.warning('plugin "%s" has no init()', mod.__name__)
             except:
-                logger.error('Something went wrong when importing "%s"',
-                             mod_name)
+                logger.error(
+                    'Something went wrong when importing "%s"', mod_name
+                )
                 traceback.print_exc()
 
     def handle_request(self, request, parse=True):
@@ -75,7 +76,8 @@ class SlashCommandRequest:
 
         self.slackid = post_data['user_id']
         self.user = CBUser.from_slackid(
-            slackid=post_data['user_id'], slackname=post_data['user_name'])
+            slackid=post_data['user_id'], slackname=post_data['user_name']
+        )
 
         self.in_channel = in_channel
         self.replies = []

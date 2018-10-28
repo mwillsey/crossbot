@@ -45,9 +45,11 @@ class MockedRequestTestCase(TestCase):
         super().setUp()
         self.router = {}
         self._patcher_get = patch(
-            'requests.get', side_effect=self.mocked_requests_get)
+            'requests.get', side_effect=self.mocked_requests_get
+        )
         self._patcher_post = patch(
-            'requests.post', side_effect=self.mocked_requests_post)
+            'requests.post', side_effect=self.mocked_requests_post
+        )
         self._patcher_get.start()
         self._patcher_post.start()
 
@@ -152,14 +154,17 @@ class SlackTestCase(MockedRequestTestCase):
         request.META['HTTP_X_SLACK_SIGNATURE'] = 'v0=' + hmac.new(
             key=self.slack_sk,
             msg=b'v0:' + bytes(ts, 'utf8') + b':' + request.body,
-            digestmod=hashlib.sha256).hexdigest()
+            digestmod=hashlib.sha256
+        ).hexdigest()
         return slash_command(request)
 
-    def slack_post(self,
-                   text,
-                   who='alice',
-                   expected_status_code=200,
-                   expected_response_type='ephemeral'):
+    def slack_post(
+            self,
+            text,
+            who='alice',
+            expected_status_code=200,
+            expected_response_type='ephemeral'
+    ):
         response = self.post_valid_request({
             'type': 'event_callback',
             'text': text,
@@ -221,7 +226,8 @@ class ModelTests(SlackTestCase):
         self.assertEqual(t.seconds, 10)
         self.assertEqual(t.date, parse_date(None))
         self.assertNotEqual(
-            alice.get_mini_crossword_time(parse_date(None)), None)
+            alice.get_mini_crossword_time(parse_date(None)), None
+        )
 
     def test_add_fail(self):
         alice = CBUser.from_slackid('UALICE', 'alice')
@@ -254,8 +260,9 @@ class ModelTests(SlackTestCase):
         _, t5 = alice.add_mini_crossword_time(15, parse_date('2018-01-05'))
 
         streaks = MiniCrosswordTime.participation_streaks(alice)
-        self.assertListEqual(streaks,
-                             [[t1, t2, t3, t4, t5, t6, t7, t8, t9, t0]])
+        self.assertListEqual(
+            streaks, [[t1, t2, t3, t4, t5, t6, t7, t8, t9, t0]]
+        )
 
         # now break it again with a deleted time (t2)
         alice.remove_mini_crossword_time(parse_date('2018-01-02'))
@@ -345,7 +352,8 @@ class ModelTests(SlackTestCase):
         self.assertEqual(alice.quantity_owned(tophat), 2)
         self.assertEqual(alice.quantity_owned(Item.from_key('tophat')), 2)
         record = ItemOwnershipRecord.objects.get(
-            owner=alice, item_key=tophat.key)
+            owner=alice, item_key=tophat.key
+        )
         self.assertEqual(record.quantity, 2)
         self.assertEqual(record.item, tophat)
 
@@ -370,7 +378,8 @@ class SlackAuthTests(SlackTestCase):
         response = self.client.post(
             reverse('slash_command'),
             HTTP_X_SLACK_REQUEST_TIMESTAMP=str(time.time()),
-            HTTP_X_SLACK_SIGNATURE=b'')
+            HTTP_X_SLACK_SIGNATURE=b''
+        )
         self.assertEqual(response.status_code, 400)
 
 
@@ -458,7 +467,8 @@ class SlackAppTests(SlackTestCase):
         int(response['text'].split('\n')[-1])
 
         response = self.slack_post(
-            text='sql select * from mini_crossword_time')
+            text='sql select * from mini_crossword_time'
+        )
         self.assertNotIn('reported', response['text'])
 
     @unittest.skipUnless(os.path.isfile('crossbot.db'), 'No existing db found')
@@ -513,8 +523,9 @@ class SlackAppTests(SlackTestCase):
         self.slack_post(text='add :10 2018-08-03')
         self.slack_post(text='add :10 2018-08-04')
         response = self.slack_post(text='plot')
-        self.assertIn(settings.MEDIA_URL,
-                      response['attachments'][0]['image_url'])
+        self.assertIn(
+            settings.MEDIA_URL, response['attachments'][0]['image_url']
+        )
 
 
 class AnnouncementTests(SlackTestCase):
@@ -530,17 +541,21 @@ class AnnouncementTests(SlackTestCase):
 
     def test_release_announcement_should_run_now(self):
         self.assertFalse(
-            self.release_announcement.should_run_now(self.weekday_wrong_time))
+            self.release_announcement.should_run_now(self.weekday_wrong_time)
+        )
         self.assertTrue(
-            self.release_announcement.should_run_now(self.weekday_right_time))
+            self.release_announcement.should_run_now(self.weekday_right_time)
+        )
         self.assertFalse(
-            self.release_announcement.should_run_now(self.weekend_wrong_time))
+            self.release_announcement.should_run_now(self.weekend_wrong_time)
+        )
         self.assertTrue(
-            self.release_announcement.should_run_now(self.weekend_right_time))
+            self.release_announcement.should_run_now(self.weekend_right_time)
+        )
 
     def test_release_announcement_run(self):
-        with patch.object(
-                timezone, 'localtime', return_value=self.weekday_right_time):
+        with patch.object(timezone, 'localtime',
+                          return_value=self.weekday_right_time):
             self.release_announcement.do()
             self.assertEquals(len(self.messages), 1)
 
@@ -556,5 +571,6 @@ class MiscTests(TestCase):
         self.assertEquals('', comma_and([]))
         self.assertEquals('bob', comma_and(['bob']))
         self.assertEquals('alice and bob', comma_and(['alice', 'bob']))
-        self.assertEquals('alice, bob, and charlie',
-                          comma_and(['alice', 'bob', 'charlie']))
+        self.assertEquals(
+            'alice, bob, and charlie', comma_and(['alice', 'bob', 'charlie'])
+        )

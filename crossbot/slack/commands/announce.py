@@ -5,7 +5,8 @@ from . import parse_date
 
 def init(client):
     parser = client.parser.subparsers.add_parser(
-        'announce', help='Announce any streaks.')
+        'announce', help='Announce any streaks.'
+    )
     parser.set_defaults(command=announce)
 
     parser.add_argument(
@@ -13,7 +14,8 @@ def init(client):
         nargs='?',
         default='now',
         type=parse_date,
-        help='Date to announce for.')
+        help='Date to announce for.'
+    )
 
 
 def announce(request):

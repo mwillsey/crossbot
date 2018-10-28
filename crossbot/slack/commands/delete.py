@@ -4,7 +4,8 @@ from . import parse_date
 def init(client):
 
     parser = client.parser.subparsers.add_parser(
-        'delete', help='Delete a time.')
+        'delete', help='Delete a time.'
+    )
     parser.set_defaults(command=delete)
 
     parser.add_argument(
@@ -12,7 +13,8 @@ def init(client):
         nargs='?',
         default='now',
         type=parse_date,
-        help='Date to delete a score for.')
+        help='Date to delete a score for.'
+    )
 
     # TODO add a command-line only --user parameter
 

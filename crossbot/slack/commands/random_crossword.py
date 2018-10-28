@@ -7,20 +7,23 @@ from . import parse_date, date_fmt
 def init(client):
 
     parser = client.parser.subparsers.add_parser(
-        'random', help='Get a random mini crossword link.')
+        'random', help='Get a random mini crossword link.'
+    )
     parser.set_defaults(command=random_date_url)
 
     parser.add_argument(
         '--start-date',
         default=first_dt,
         type=parse_date,
-        help='Beginning of random range. Default {}'.format(first_date))
+        help='Beginning of random range. Default {}'.format(first_date)
+    )
 
     parser.add_argument(
         '--end-date',
         default='now',
         type=parse_date,
-        help='End of random range. Default today.')
+        help='End of random range. Default today.'
+    )
 
 
 mini_url = "https://www.nytimes.com/crosswords/game/mini/{:04}/{:02}/{:02}"
@@ -44,8 +47,10 @@ def random_date_url(request):
         return
 
     if start < first_dt:
-        request.reply('That start date is too early, must be {} or later'.
-                      format(first_date))
+        request.reply(
+            'That start date is too early, must be {} or later'
+            .format(first_date)
+        )
         return
 
     rand = start + random.random() * (end - start)

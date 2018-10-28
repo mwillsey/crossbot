@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 
 class ItemOwnershipRecordForm(forms.ModelForm):
     item_key = forms.ChoiceField(
-        choices=[(key, item.name) for key, item in models.Item.ITEMS.items()])
+        choices=[(key, item.name) for key, item in models.Item.ITEMS.items()]
+    )
 
 
 class ItemOwnershipRecordInline(admin.TabularInline):
@@ -27,8 +28,8 @@ class PaginatedInline(admin.TabularInline):
     per_page = 10
 
     def get_formset(self, request, obj=None, **kwargs):
-        formset_class = super(PaginatedInline, self).get_formset(
-            request, obj, **kwargs)
+        formset_class = super(PaginatedInline,
+                              self).get_formset(request, obj, **kwargs)
 
         class PaginationFormSet(formset_class):
             def __init__(self, *args, **kwargs):
@@ -105,8 +106,9 @@ class IsFailFilter(admin.SimpleListFilter):
             return queryset.filter(seconds__gte=0)
 
 
-@admin.register(models.MiniCrosswordTime, models.CrosswordTime,
-                models.EasySudokuTime)
+@admin.register(
+    models.MiniCrosswordTime, models.CrosswordTime, models.EasySudokuTime
+)
 class CommonTimeAdminTemplate(admin.ModelAdmin):
     # allow admins to see but not edit the timestamp
     readonly_fields = ['timestamp']

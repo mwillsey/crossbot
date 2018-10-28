@@ -9,7 +9,8 @@ def init(client):
 
     parser = client.parser.subparsers.add_parser(
         'missed',
-        help='Get mini crossword link for the most recent day you missed.')
+        help='Get mini crossword link for the most recent day you missed.'
+    )
     parser.set_defaults(command=get_missed)
 
     parser.add_argument(
@@ -17,13 +18,15 @@ def init(client):
         nargs='?',
         default='1',
         type=int,
-        help='Show the nth most recent ones you missed')
+        help='Show the nth most recent ones you missed'
+    )
 
 
 def get_missed(request):
 
     completed = set(
-        request.user.times(request.args.table).values_list('date', flat=True))
+        request.user.times(request.args.table).values_list('date', flat=True)
+    )
 
     # find missed day
     date = parse_date('now')

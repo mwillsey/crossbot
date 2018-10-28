@@ -32,14 +32,16 @@ def init(client):
     )
 
     ptype = (
-        parser.add_argument_group('Plot type').add_mutually_exclusive_group())
+        parser.add_argument_group('Plot type').add_mutually_exclusive_group()
+    )
 
     ptype.add_argument(
         '--times',
         action='store_const',
         dest='score_function',
         const=get_times,
-        help='Plot the raw times.')
+        help='Plot the raw times.'
+    )
 
     ptype.add_argument(
         '--normalized',
@@ -47,29 +49,34 @@ def init(client):
         dest='score_function',
         const=get_normalized_scores,
         help='Plot smoothed, normalized scores.'
-        ' Higher is better. (Default)')
+        ' Higher is better. (Default)'
+    )
 
     ptype.add_argument(
         '--streaks',
         action='store_const',
         dest='score_function',
         const=get_streaks,
-        help='Plot completion streaks')
+        help='Plot completion streaks'
+    )
 
     ptype.add_argument(
         '--win-streaks',
         action='store_const',
         dest='score_function',
         const=get_win_streaks,
-        help='Plot win streaks')
+        help='Plot win streaks'
+    )
 
     appearance = parser.add_argument_group('Plot appearance')
     scales = appearance.add_mutually_exclusive_group()
 
     scales.add_argument(
-        '--log', action='store_const', dest='scale', const='symlog')
+        '--log', action='store_const', dest='scale', const='symlog'
+    )
     scales.add_argument(
-        '--linear', action='store_const', dest='scale', const='linear')
+        '--linear', action='store_const', dest='scale', const='linear'
+    )
 
     appearance.add_argument(
         '-s',
@@ -78,13 +85,15 @@ def init(client):
         metavar='S',
         help='Smoothing factor between 0 and 0.95.'
         ' Default %(default)s.'
-        ' Only applies to plot type `normalized`.')
+        ' Only applies to plot type `normalized`.'
+    )
 
     appearance.add_argument(
         '--alpha',
         type=float,
         help='Transparency for plotted points.'
-        ' Default %(default)s.')
+        ' Default %(default)s.'
+    )
 
     dates = parser.add_argument_group('Date range')
 
@@ -95,12 +104,14 @@ def init(client):
         '--start-date',
         type=date_none,
         metavar='START',
-        help='Date to start plotting from.')
+        help='Date to start plotting from.'
+    )
     dates.add_argument(
         '--end-date',
         type=date_none,
         metavar='END',
-        help='Date to end plotting at. Defaults to today.')
+        help='Date to end plotting at. Defaults to today.'
+    )
     dates.add_argument(
         '-n',
         '--num-days',
@@ -108,7 +119,8 @@ def init(client):
         metavar='N',
         help='Number of days since today to plot.'
         ' Ignored if both start-date and end-date given.'
-        ' Default %(default)s.')
+        ' Default %(default)s.'
+    )
 
     parser.add_argument(
         '-f',
@@ -189,7 +201,8 @@ def plot(request):
         return
 
     dt_range = [
-        start_dt + datetime.timedelta(days=i) for i in range(args.num_days + 1)
+        start_dt + datetime.timedelta(days=i)
+        for i in range(args.num_days + 1)
     ]
     # artifact from old code that worked with strings
     date_range = dt_range
@@ -201,20 +214,27 @@ def plot(request):
         start_dt -= datetime.timedelta(days=int(1 / (1 - args.smooth)))
         start_date = start_dt.strftime(date_fmt)
 
-    entries = (args.table.all_times().filter(
-        date__gte=start_date, date__lte=end_date).order_by(
-            'date', 'user__slackid'))
+    entries = (
+        args.table.all_times().filter(
+            date__gte=start_date, date__lte=end_date
+        ).order_by('date', 'user__slackid')
+    )
 
     logger.debug('all entries %s', entries)
 
     scores_by_user, ticker, formatter = args.score_function(entries, args)
 
     # find contiguous sequences of dates
-    user_seqs = [(user, [
-        list(g) for k, g in groupby((
-            (date, date_scores.get(date))
-            for date in date_range), lambda ds: ds[1] is not None) if k
-    ]) for user, date_scores in scores_by_user.items()]
+    user_seqs = [(
+        user, [
+            list(g)
+            for k, g in groupby(((date, date_scores.get(date))
+                                 for date in date_range
+                                 ), lambda ds: ds[1] is not None)
+            if k
+        ]
+    )
+                 for user, date_scores in scores_by_user.items()]
 
     # sort by actual username
     user_seqs.sort(key=lambda tup: str(tup[0]))
@@ -278,7 +298,8 @@ def plot(request):
                     marker,
                     label=label,
                     color=color,
-                    alpha=alpha)
+                    alpha=alpha
+                )
 
                 # make sure that we don't but anyone in the legend twice
                 label = '_nolegend_'
@@ -354,7 +375,8 @@ def get_normalized_scores(entries, args):
         stdev = statistics.pstdev(times, mean)
         scores[date] = {
             userid: mk_score(mean, t, stdev)
-            for userid, t in user_times.items() if t is not None
+            for userid, t in user_times.items()
+            if t is not None
         }
 
     new_score_weight = 1 - args.smooth

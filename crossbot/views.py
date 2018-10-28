@@ -33,7 +33,8 @@ def validate_slack_request(request):
     my_signature = 'v0=' + hmac.new(
         key=settings.SLACK_SECRET_SIGNING_KEY,
         msg=b'v0:' + bytes(timestamp, 'utf8') + b':' + request.body,
-        digestmod=hashlib.sha256).hexdigest()
+        digestmod=hashlib.sha256
+    ).hexdigest()
 
     slack_signature = request.META['HTTP_X_SLACK_SIGNATURE']
 
@@ -78,8 +79,10 @@ def times_rest_api(request, time_model='minicrossword'):
     # if 'start' in request.GET:
     #     start_date = datetime.datetime.strptime(request.GET['start'], '%Y-%m-%d').date()
 
-    times = (TIME_MODELS[time_model].all_times().order_by('date').
-             select_related('user'))
+    times = (
+        TIME_MODELS[time_model].all_times().order_by('date')
+        .select_related('user')
+    )
 
     return JsonResponse({
         'times': [{
@@ -103,7 +106,8 @@ def home(request):
     ann = model.announcement_data(date)
 
     times = sorted(
-        model.times_for_date(date), key=lambda t: t.seconds_sort_key())
+        model.times_for_date(date), key=lambda t: t.seconds_sort_key()
+    )
 
     # TODO I know some of this date/time logic is wrong because of when crosswords come out
 
@@ -119,4 +123,5 @@ def home(request):
             'winners_today': today_msg,
             'winners_yesterday': yesterday_msg,
             'times': times,
-        })
+        }
+    )

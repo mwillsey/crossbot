@@ -26,19 +26,21 @@ class ReleaseAnnouncement(CronJobBase):
         msgs = ['Good evening crossworders!']
         msgs += [
             '{u} is on a {n}-day streak! {emoji}'.format(
-                u=u, n=len(streak), emoji=':fire:' * len(streak))
-            for u, streak in announce_data['streaks']
+                u=u, n=len(streak), emoji=':fire:' * len(streak)
+            ) for u, streak in announce_data['streaks']
         ]
 
         # now add the other winners
         also = ' also' if announce_data['streaks'] else ''
         if announce_data['winners_today']:
             msgs.append(
-                comma_and(announce_data['winners_today']) + also + ' won.')
+                comma_and(announce_data['winners_today']) + also + ' won.'
+            )
         if announce_data['winners_yesterday']:
             msgs.append(
                 comma_and(announce_data['winners_yesterday']) + also +
-                ' won yesterday.')
+                ' won yesterday.'
+            )
         msgs.append("Play tomorrow's:")
         for game in announce_data['links']:
             msgs.append("{} : {}".format(game, announce_data['links'][game]))
@@ -55,7 +57,8 @@ class ReleaseAnnouncement(CronJobBase):
             response = post_message(channel, text=message)
             return "Ran release announcement at {}\n{}".format(now, message)
         return "Did not run release announcement at {} (hour={})".format(
-            now, now.hour)
+            now, now.hour
+        )
 
 
 class MorningAnnouncement(CronJobBase):
@@ -67,8 +70,8 @@ class MorningAnnouncement(CronJobBase):
 
         msgs += [
             '{u} is currently on a {n}-day streak! {emoji}'.format(
-                u=u, n=len(streak), emoji=':fire:' * len(streak))
-            for u, streak in announce_data['streaks']
+                u=u, n=len(streak), emoji=':fire:' * len(streak)
+            ) for u, streak in announce_data['streaks']
         ]
 
         # now add the other winners
@@ -76,11 +79,13 @@ class MorningAnnouncement(CronJobBase):
         if announce_data['winners_today']:
             msgs.append(
                 comma_and(announce_data['winners_today']) + also +
-                ' is winning.')
+                ' is winning.'
+            )
         if announce_data['winners_yesterday']:
             msgs.append(
                 comma_and(announce_data['winners_yesterday']) + also +
-                ' won yesterday.')
+                ' won yesterday.'
+            )
         msgs.append("Think you can beat them? Play today's:")
         for game in announce_data['links']:
             msgs.append("{} : {}".format(game, announce_data['links'][game]))

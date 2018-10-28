@@ -14,7 +14,8 @@ def init(client):
         nargs='?',
         default='now',
         type=parse_date,
-        help='Date to get times for.')
+        help='Date to get times for.'
+    )
 
 
 def times(request):
@@ -35,7 +36,8 @@ def times(request):
             emj = emoji(item.seconds, args.table, day_of_week)
             minutes, seconds = divmod(item.seconds, 60)
             response += ':{}: - {}:{:02d} - {}\n'.format(
-                emj, minutes, seconds, name)
+                emj, minutes, seconds, name
+            )
 
     # append now so failures at the end
     response += failures

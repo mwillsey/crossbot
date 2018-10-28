@@ -12,13 +12,15 @@ logger = logging.getLogger(__name__)
 
 def init(client):
     parser = client.parser.subparsers.add_parser(
-        'sql', help='Run a sql command.')
+        'sql', help='Run a sql command.'
+    )
     parser.set_defaults(command=sql)
 
     parser.add_argument(
         'sql_command',
         nargs='*',
-        help='sql command to run again at table of (user, date, seconds)')
+        help='sql command to run again at table of (user, date, seconds)'
+    )
 
 
 SAFE_SQL_OPS = (
@@ -40,8 +42,10 @@ def _allow_only_select(operation, arg1, arg2, db_name, trigger):
         return sqlite3.SQLITE_OK
 
     table_name = arg1
-    logger.debug('should allow %s %s %s? %s', operation, arg1, arg2,
-                 table_name in ALLOWED_TABLES)
+    logger.debug(
+        'should allow %s %s %s? %s', operation, arg1, arg2,
+        table_name in ALLOWED_TABLES
+    )
 
     if table_name not in ALLOWED_TABLES:
         return sqlite3.SQLITE_DENY
@@ -99,16 +103,21 @@ def _do_sql(cmd, *args):
 
         except Exception as e:
             tb = traceback.format_exc()
-            logger.info('sql exception. command:\n%s\n exception: %s\n%s', cmd,
-                        e, tb)
+            logger.info(
+                'sql exception. command:\n%s\n exception: %s\n%s', cmd, e, tb
+            )
             return str(e) + ', this incident has been reported'
 
 
 def _format_sql_cmd(cmd):
     cmd = html.unescape(cmd)
     cmd = re.sub(r'<@(\w+)(\|[^>]*)?>', lambda m: m.group(1), cmd)
-    cmd = (cmd.replace(u"\u2018", "'").replace(u"\u2019", "'").replace(
-        u"\u201c", "'").replace(u"\u201d", "'"))
+    cmd = (
+        cmd.replace(u"\u2018",
+                    "'").replace(u"\u2019",
+                                 "'").replace(u"\u201c",
+                                              "'").replace(u"\u201d", "'")
+    )
 
     # Now, replace the table names to help mask Django craziness
     for db_table, names in ALLOWED_TABLES.items():

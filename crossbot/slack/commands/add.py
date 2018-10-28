@@ -17,14 +17,16 @@ def init(client):
     parser.add_argument(
         'time',
         type=parse_time,
-        help='Score to add. eg. ":32", "2:45", "fail"')
+        help='Score to add. eg. ":32", "2:45", "fail"'
+    )
 
     parser.add_argument(
         'date',
         nargs='?',
         default='now',
         type=parse_date,
-        help='Date to add a score for.')
+        help='Date to add a score for.'
+    )
 
     # TODO add a command-line only --user parameter
 
@@ -42,15 +44,17 @@ def add(request):
             'I could not add this to the database, '
             'because you already have an entry '
             '({}) for this date.'.format(time.time_str()),
-            direct=True)
+            direct=True
+        )
         return
 
     day_of_week = request.args.date.weekday()
     emj = emoji(args.time, args.table, day_of_week)
 
     request.message_and_react(request.text, emj, as_user=request.user)
-    request.reply('Submitted {} for {}'.format(time.time_str(),
-                                               request.args.date))
+    request.reply(
+        'Submitted {} for {}'.format(time.time_str(), request.args.date)
+    )
 
     def get_streak_counts(streaks):
         for streak in streaks:
@@ -75,8 +79,9 @@ def add(request):
                 logger.warning("Achievement reaction failed!")
             request.reply(msg)
 
-    logger.debug("{} has a streak of {} in {}".format(request.user, new_sc,
-                                                      args.table))
+    logger.debug(
+        "{} has a streak of {} in {}".format(request.user, new_sc, args.table)
+    )
 
     # if args.table == 'mini_crossword_time':
     #     requests.post('http://plseaudio.cs.washington.edu:8087/scroll_text',

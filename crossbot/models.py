@@ -44,7 +44,8 @@ class CBUser(models.Model):
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='cb_user')
+        related_name='cb_user'
+    )
 
     @classmethod
     @transaction.atomic
@@ -72,7 +73,8 @@ class CBUser(models.Model):
                 slackid=slackid,
                 slackname=slack_data['name'],
                 slack_fullname=slack_data['profile']['real_name'],
-                image_url=slack_data['profile']['image_48'])
+                image_url=slack_data['profile']['image_48']
+            )
             user.save()
             return user
 
@@ -103,7 +105,8 @@ class CBUser(models.Model):
 
         try:
             return time_model.objects.get(
-                user=self, date=date, seconds__isnull=False)
+                user=self, date=date, seconds__isnull=False
+            )
         except time_model.DoesNotExist:
             return None
 
@@ -211,7 +214,8 @@ class CBUser(models.Model):
         assert amount > 0
 
         record, _ = ItemOwnershipRecord.objects.get_or_create(
-            owner=self, item_key=item.key)
+            owner=self, item_key=item.key
+        )
         record.quantity += amount
         record.save()
 
@@ -228,7 +232,8 @@ class CBUser(models.Model):
 
         try:
             record = ItemOwnershipRecord.objects.get(
-                owner=self, item_key=item.key)
+                owner=self, item_key=item.key
+            )
         except ItemOwnershipRecord.DoesNotExist:
             return False
 
@@ -248,7 +253,8 @@ class CBUser(models.Model):
         assert isinstance(item, Item)
         try:
             return ItemOwnershipRecord.objects.get(
-                owner=self, item_key=item.key).quantity
+                owner=self, item_key=item.key
+            ).quantity
         except ItemOwnershipRecord.DoesNotExist:
             return 0
 
@@ -328,14 +334,16 @@ class CommonTime(models.Model):
         if qs is None:
             qs = cls.objects.filter(seconds__isnull=False, seconds__gt=0)
         values = qs.values_list('date').annotate(
-            winning_time=models.Min('seconds'))
+            winning_time=models.Min('seconds')
+        )
 
         return {date: winning_time for date, winning_time in values}
 
     @classmethod
     def winners(cls, date):
         entries = cls.objects.filter(
-            seconds__isnull=False, seconds__gt=0, date=date)
+            seconds__isnull=False, seconds__gt=0, date=date
+        )
         try:
             best = min(e.seconds for e in entries)
             winners = [e for e in entries if e.seconds == best]
@@ -374,7 +382,8 @@ class CommonTime(models.Model):
 
     @classmethod
     def announcement_data(cls, date):
-        streaks = [(u, s) for u, s in cls.current_win_streaks(date).items()
+        streaks = [(u, s)
+                   for u, s in cls.current_win_streaks(date).items()
                    if len(s) > 1]
         # sort by streak length, descending
         streaks.sort(key=lambda x: len(x[1]), reverse=True)
@@ -407,7 +416,8 @@ class CommonTime(models.Model):
     def announcement_message(cls, date):
 
         # get the long streaks
-        streaks = [(u, s) for u, s in cls.current_win_streaks(date).items()
+        streaks = [(u, s)
+                   for u, s in cls.current_win_streaks(date).items()
                    if len(s) > 1]
         # sort by streak length, descending
         streaks.sort(key=lambda x: len(x[1]), reverse=True)
@@ -425,8 +435,8 @@ class CommonTime(models.Model):
         # start with the streak messages
         msgs = [
             '{u} is on a {n}-day streak! {emoji}'.format(
-                u=u, n=len(streak), emoji=':fire:' * len(streak))
-            for u, streak in streaks
+                u=u, n=len(streak), emoji=':fire:' * len(streak)
+            ) for u, streak in streaks
         ]
 
         # now add the other winners
@@ -436,7 +446,8 @@ class CommonTime(models.Model):
         if winners2:
             msgs.append(
                 comma_and(str(u)
-                          for u in winners2) + also + ' won the day before.')
+                          for u in winners2) + also + ' won the day before.'
+            )
 
         games = {
             "mini crossword": "https://www.nytimes.com/crosswords/game/mini",
@@ -550,15 +561,17 @@ class QueryShorthand(models.Model):
     def __str__(self):
         nargs = self.num_args()
         if nargs:
-            arg_str = ' (takes {} arg{})'.format(nargs,
-                                                 '' if nargs == 1 else 's')
+            arg_str = ' (takes {} arg{})'.format(
+                nargs, '' if nargs == 1 else 's'
+            )
         else:
             arg_str = ''
 
         # return '{} - {}'.format(self.name, self.user)
 
-        return '*{}* by {}{}:\n {}'.format(self.name, self.user, arg_str,
-                                           self.command)
+        return '*{}* by {}{}:\n {}'.format(
+            self.name, self.user, arg_str, self.command
+        )
 
 
 # Items are stored in YAML (not the DB) but loaded here for convenience
@@ -606,8 +619,9 @@ class Item:
         if not droppables:
             return None
 
-        return random.choices(droppables,
-                              [item.rarity for item in droppables])[0]
+        return random.choices(
+            droppables, [item.rarity for item in droppables]
+        )[0]
 
     def image_url(self):
         if not self.image_name:
