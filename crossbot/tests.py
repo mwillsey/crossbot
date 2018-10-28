@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import json
 import time
+import logging
 import os.path
 from datetime import datetime
 
@@ -9,7 +10,7 @@ import unittest
 from unittest.mock import patch, MagicMock
 
 from django.conf import settings
-from django.test import TestCase
+from django.test import TestCase as DjangoTestCase
 from django.test.client import RequestFactory
 from django.urls import reverse
 from django.contrib.staticfiles import finders
@@ -29,6 +30,16 @@ from crossbot.models import (
 )
 from crossbot.cron import ReleaseAnnouncement, MorningAnnouncement
 from crossbot.settings import CROSSBUCKS_PER_SOLVE
+
+
+class TestCase(DjangoTestCase):
+    def setUp(self):
+        logging.disable(logging.CRITICAL)
+        super().setUp()
+
+    def tearDown(self):
+        logging.disable(logging.NOTSET)
+        super().tearDown()
 
 
 class MockResponse:
