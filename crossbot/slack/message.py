@@ -7,8 +7,6 @@ from ..models import CBUser
 
 logger = logging.getLogger(__name__)
 
-# TODO: move this/rename file; "handler.py" is weird
-
 
 class SlashCommandRequest:
     def __init__(self, django_request, args=None):
@@ -34,10 +32,17 @@ class SlashCommandRequest:
 class SlashCommandResponse:
     """Contains both an ephemeral and non-ephemeral message to send."""
 
-    def __init__(self, *args, **kwargs):
-        """Initializes both messages, but sends all args to ephemeral one."""
-        self.ephemeral_message = Message(ephemeral=True, *args, **kwargs)
-        self.direct_message = Message(ephemeral=False)
+    def __init__(self, *args, ephemeral=True, ephemeral_command=True, **kwargs):
+        """Initializes both messages, but sends all args to chosen one."""
+        if ephemeral:
+            self.ephemeral_message = Message(ephemeral=True, *args, **kwargs)
+            self.direct_message = Message(ephemeral=False)
+        else:
+            self.ephemeral_message = Message(ephemeral=True)
+            self.direct_message = Message(ephemeral=False, *args, **kwargs)
+
+        # Whether or not the original slash command should be ephemeral
+        self.ephemeral_command = ephemeral_command
 
     # TODO: maybe use magic methods instead of these for convenience methods
     def add_text(self, *args, ephemeral=True, **kwargs):

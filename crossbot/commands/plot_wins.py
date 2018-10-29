@@ -18,6 +18,7 @@ import crossbot
 
 from crossbot.parser import date_fmt
 
+# TODO: why the hell is this here again???
 
 def init(client):
 

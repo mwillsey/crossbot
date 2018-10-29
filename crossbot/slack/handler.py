@@ -33,21 +33,27 @@ def handle_slash_command(django_request):
                 request.response_url,
                 json.dumps(response.ephemeral_message.asdict())
             )
-            post_response(
-                request.response_url,
-                json.dumps(response.direct_message.asdict())
-            )
-            return None
 
-        if response.direct_message:
-            post_response(
-                request.response_url,
-                json.dumps(response.direct_message.asdict())
-            )
-            return None
+            if response.ephemeral_message:
+                post_response(
+                    request.response_url,
+                    json.dumps(response.direct_message.asdict())
+                )
+                return None
+            return response.direct_message.asdict()
 
         if response.ephemeral_message:
+            # If there's only an ephemeral message, command is always ephemeral
             return response.ephemeral_message.asdict()
+
+        if response.direct_message:
+            if response.ephemeral_command:
+                post_response(
+                    request.response_url,
+                    json.dumps(response.direct_message.asdict())
+                )
+                return None
+            return response.direct_message.asdict()
 
         return None
 
