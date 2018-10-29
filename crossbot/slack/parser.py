@@ -6,6 +6,7 @@ import pytz
 
 from crossbot.models import MiniCrosswordTime, CrosswordTime, EasySudokuTime
 
+
 # use this to prevent ArgumentParser from printing to the commandline
 # we can instead catch this and send to Slack
 class ParserException(Exception):

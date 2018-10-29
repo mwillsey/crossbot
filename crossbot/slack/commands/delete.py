@@ -2,8 +2,7 @@ from . import parse_date, SlashCommandResponse
 
 
 def init(parser):
-    parser = parser.subparsers.add_parser(
-        'delete', help='Delete a time.')
+    parser = parser.subparsers.add_parser('delete', help='Delete a time.')
     parser.set_defaults(command=delete)
 
     parser.add_argument(

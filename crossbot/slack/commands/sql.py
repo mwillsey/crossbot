@@ -11,8 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 def init(parser):
-    parser = parser.subparsers.add_parser(
-        'sql', help='Run a sql command.')
+    parser = parser.subparsers.add_parser('sql', help='Run a sql command.')
     parser.set_defaults(command=sql)
 
     parser.add_argument(

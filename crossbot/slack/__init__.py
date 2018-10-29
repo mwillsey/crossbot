@@ -5,7 +5,6 @@ from . import commands
 from .handler import SlashCommandRequest, Message
 from .api import post_response
 
-
 PARSER = Parser()
 
 for mod_name in commands.COMMANDS:
@@ -26,7 +25,7 @@ def handle_slash_command(django_request):
         request = SlashCommandRequest(django_request)
         command, args = PARSER.parse(django_request.POST['text'])
         request.args = args
-        response = command(request) # returns a SlackCommandResponse
+        response = command(request)  # returns a SlackCommandResponse
 
         # If we have a direct message, go ahead and send it
         # TODO: make sure it's okay to send this before the first reply

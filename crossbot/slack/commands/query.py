@@ -7,8 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 def init(parser):
-    parser = parser.subparsers.add_parser(
-        'query', help='Run a saved query')
+    parser = parser.subparsers.add_parser('query', help='Run a saved query')
     parser.set_defaults(command=query)
 
     parser.add_argument('name', nargs='?', help='Stored query name to run')

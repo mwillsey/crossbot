@@ -5,7 +5,6 @@ from django.contrib.staticfiles.templatetags.staticfiles import static
 
 from ..models import CBUser
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -22,8 +21,8 @@ class SlashCommandRequest:
         self.channel = post_data['channel_id']
 
         self.slackid = post_data['user_id']
-        self.user = CBUser.from_slackid(slackid=post_data['user_id'],
-                                        slackname=post_data['user_name'])
+        self.user = CBUser.from_slackid(
+            slackid=post_data['user_id'], slackname=post_data['user_name'])
 
     def build_absolute_uri(self, location):
         return self._django_request.build_absolute_uri(location)
@@ -87,8 +86,8 @@ class Message:
         return attachment
 
     def attach_image(self, name, path):
-        return self.attach(fallback="image: %s" % name,
-                           pretext=name, image_url=path)
+        return self.attach(
+            fallback="image: %s" % name, pretext=name, image_url=path)
 
     def __bool__(self):
         return bool(self.text or self.attachments)
@@ -98,10 +97,12 @@ class Message:
         if self.text:
             message_dict['text'] = self.text
         if self.attachments:
-            message_dict['attachments'] = [a.asdict() for a in self.attachments]
+            message_dict['attachments'] = [
+                a.asdict() for a in self.attachments
+            ]
         if self.ephemeral is not None:
-            message_dict['response_type'] = (
-                'ephemeral' if self.ephemeral else 'in_channel')
+            message_dict['response_type'] = ('ephemeral' if self.ephemeral else
+                                             'in_channel')
         return message_dict
 
 

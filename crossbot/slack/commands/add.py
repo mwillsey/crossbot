@@ -44,13 +44,14 @@ def add(request):
     emj = emoji(args.time, args.table, day_of_week)
 
     # Send a basic ephemeral confirmation and a rich-text non-ephemeral message
-    response.add_text("Submitted {} for {}".format(
-        time.time_str(), request.args.date))
-    response.attach(ephemeral=False,
-                    author_name=str(request.user),
-                    author_icon=request.user.image_url,
-                    text="*Mini Added:* {}  {}  :{}:".format(
-                        time.date, time.time_str(), emj))
+    response.add_text("Submitted {} for {}".format(time.time_str(),
+                                                   request.args.date))
+    response.attach(
+        ephemeral=False,
+        author_name=str(request.user),
+        author_icon=request.user.image_url,
+        text="*Mini Added:* {}  {}  :{}:".format(time.date, time.time_str(),
+                                                 emj))
 
     def get_streak_counts(streaks):
         for streak in streaks:
@@ -67,12 +68,11 @@ def add(request):
         streak_messages = STREAKS.get(streak_count)
         if streak_messages:
             msg = choice(streak_messages).format(name=request.user)
-            response.attach(ephemeral=False,
-                            color="#39C53D",
-                            text=msg + "  :achievement:")
+            response.attach(
+                ephemeral=False, color="#39C53D", text=msg + "  :achievement:")
 
-    logger.debug("%s has a streak of %s in %s",
-                 request.user, new_sc, args.table)
+    logger.debug("%s has a streak of %s in %s", request.user, new_sc,
+                 args.table)
 
     return response
 
