@@ -15,7 +15,7 @@ def _slack_api(
     assert method in ['GET', 'POST']
 
     headers = headers if headers is not None else {}
-    headers['Authorization'] = 'Bearer ' + settings.SLACK_OAUTH_ACCESS_TOKEN
+    headers['Authorization'] = 'Bearer ' + settings.SLACK_OAUTH_BOT_ACCESS_TOKEN
 
     url = base_url if base_url is not None else SLACK_URL
     url += endpoint
