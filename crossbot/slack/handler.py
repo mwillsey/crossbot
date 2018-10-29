@@ -50,6 +50,9 @@ def handle_slash_command(django_request):
             if response.ephemeral_message:
                 _send_message(request, response.direct_message)
                 return None
+            # TODO: what if we have to react to this message?
+            #       we shouldn't return None then, should at least return with
+            #       response_type: in_channel or something
             return _send_message(
                 request, response.direct_message, should_return=True
             )
