@@ -130,6 +130,7 @@ class SlackTestCase(MockedRequestTestCase):
 
         self.patch('settings.SLACK_SECRET_SIGNING_KEY', self.slack_sk)
         self.patch('settings.SLACK_OAUTH_ACCESS_TOKEN', 'oauth_token')
+        self.patch('settings.SLACK_OAUTH_BOT_ACCESS_TOKEN', 'bot_oauth_token')
 
     def patch(self, *args, **kwargs):
         patcher = patch(*args, **kwargs)
@@ -139,7 +140,9 @@ class SlackTestCase(MockedRequestTestCase):
 
     def check_headers(self, method, url, headers):
         if url.startswith(SLACK_URL):
-            self.assertEqual(headers['Authorization'], 'Bearer oauth_token')
+            self.assertEqual(
+                headers['Authorization'], 'Bearer bot_oauth_token'
+            )
 
     def _slack_reaction_add(self, method, url, headers, params, data):
         return MockResponse(json.dumps({'ok': True}), 200)
