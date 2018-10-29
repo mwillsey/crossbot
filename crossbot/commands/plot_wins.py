@@ -20,6 +20,7 @@ from crossbot.parser import date_fmt
 
 # TODO: why the hell is this here again???
 
+
 def init(client):
 
     parser = client.parser.subparsers.add_parser('plot-wins', help='plot wins')

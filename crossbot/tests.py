@@ -442,8 +442,9 @@ class SlackAppTests(SlackTestCase):
         self.slack_post('add :40 2018-08-01', who='bob')
 
         # check date parsing here too
-        response = self.slack_post('times 2018-8-1',
-                                   expected_response_type='in_channel')
+        response = self.slack_post(
+            'times 2018-8-1', expected_response_type='in_channel'
+        )
 
         lines = response['text'].split('\n')
 
@@ -476,8 +477,9 @@ class SlackAppTests(SlackTestCase):
         self.assertIn(':23', response['text'])
 
         # Ensure the time doesn't show up in the times list
-        response = self.slack_post(text='times 2018-08-01',
-                                   expected_response_type='in_channel')
+        response = self.slack_post(
+            text='times 2018-08-01', expected_response_type='in_channel'
+        )
         self.assertNotIn(':23', response['text'])
 
     @unittest.skipUnless(os.path.isfile('crossbot.db'), 'No existing db found')
@@ -552,8 +554,9 @@ class SlackAppTests(SlackTestCase):
         self.slack_post(text='add :10 2018-08-02')
         self.slack_post(text='add :10 2018-08-03')
         self.slack_post(text='add :10 2018-08-04')
-        response = self.slack_post(text='plot',
-                                   expected_response_type='in_channel')
+        response = self.slack_post(
+            text='plot', expected_response_type='in_channel'
+        )
         self.assertIn(
             settings.MEDIA_URL, response['attachments'][0]['image_url']
         )

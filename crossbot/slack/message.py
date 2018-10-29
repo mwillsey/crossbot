@@ -32,7 +32,9 @@ class SlashCommandRequest:
 class SlashCommandResponse:
     """Contains both an ephemeral and non-ephemeral message to send."""
 
-    def __init__(self, *args, ephemeral=True, ephemeral_command=True, **kwargs):
+    def __init__(
+            self, *args, ephemeral=True, ephemeral_command=True, **kwargs
+    ):
         """Initializes both messages, but sends all args to chosen one."""
         if ephemeral:
             self.ephemeral_message = Message(ephemeral=True, *args, **kwargs)
