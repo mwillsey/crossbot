@@ -6,8 +6,8 @@ from . import sql, models
 logger = logging.getLogger(__name__)
 
 
-def init(client):
-    parser = client.parser.subparsers.add_parser(
+def init(parser):
+    parser = parser.subparsers.add_parser(
         'query', help='Run a saved query')
     parser.set_defaults(command=query)
 

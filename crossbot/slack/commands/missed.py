@@ -1,7 +1,6 @@
 from django.utils.timezone import timedelta
 
-from . import parse_date
-from crossbot.slack import SlashCommandResponse
+from . import parse_date, SlashCommandResponse
 
 MINI_URL = "https://www.nytimes.com/crosswords/game/mini/{:04}/{:02}/{:02}"
 

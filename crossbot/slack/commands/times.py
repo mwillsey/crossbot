@@ -1,12 +1,11 @@
 from django.utils import timezone
 
-from . import parse_date
+from . import parse_date, SlashCommandResponse
 from .add import emoji
 
 
-def init(client):
-
-    parser = client.parser.subparsers.add_parser('times', help='show times')
+def init(parser):
+    parser = parser.subparsers.add_parser('times', help='show times')
     parser.set_defaults(command=times)
 
     parser.add_argument(
@@ -20,7 +19,7 @@ def init(client):
 def times(request):
     '''Get all the times for today or given date (`times 2017-05-05`).'''
 
-    response = ''
+    message = ''
     failures = ''
 
     args = request.args
@@ -34,20 +33,20 @@ def times(request):
         else:
             emj = emoji(item.seconds, args.table, day_of_week)
             minutes, seconds = divmod(item.seconds, 60)
-            response += ':{}: - {}:{:02d} - {}\n'.format(
+            message += ':{}: - {}:{:02d} - {}\n'.format(
                 emj, minutes, seconds, name)
 
     # append now so failures at the end
-    response += failures
+    message += failures
 
     date_str = args.date.strftime('%a, %b %d, %Y')
 
-    if len(response) == 0:
+    if not message:
         if args.date == parse_date('now'):
-            response = 'No times yet today. Be the first!'
+            message = 'No times yet today. Be the first!'
         else:
-            response = 'No times for ' + date_str
+            message = 'No times for ' + date_str
     else:
-        response = '*Times for {}*\n'.format(date_str) + response
+        message = '*Times for {}*\n'.format(date_str) + message
 
-    request.reply(response)
+    return SlashCommandResponse(text=message)

@@ -1,7 +1,6 @@
 from django.utils import timezone
 
-from . import parse_date
-from crossbot.slack import SlashCommandResponse
+from . import parse_date, SlashCommandResponse
 
 
 def init(parser):
@@ -20,6 +19,5 @@ def init(parser):
 def announce(request):
     '''Report who won the previous day and if they're on a streak.
     Optionally takes a date.'''
-
     message = request.args.table.announcement_message(request.args.date)
     return SlashCommandResponse(text=message)

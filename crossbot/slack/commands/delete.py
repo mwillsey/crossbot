@@ -1,5 +1,4 @@
-from . import parse_date
-from crossbot.slack import SlashCommandResponse
+from . import parse_date, SlashCommandResponse
 
 
 def init(parser):

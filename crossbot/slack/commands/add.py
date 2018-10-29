@@ -3,10 +3,7 @@ import logging
 
 from random import choice
 
-from django.utils import timezone
-
-from . import models, parse_date, parse_time
-from crossbot.slack.handler import SlashCommandResponse
+from . import models, parse_date, parse_time, SlashCommandResponse
 
 logger = logging.getLogger(__name__)
 
@@ -32,32 +29,28 @@ def init(parser):
 def add(request):
     '''Add entry for today (`add 1:07`) or given date (`add :32 2017-05-05`).
        A zero second time will be interpreted as a failed attempt.'''
-
-    args = request.args
-
-    was_added, time = request.user.add_time(args.table, args.time, args.date)
-
     response = SlashCommandResponse()
 
+    args = request.args
+    was_added, time = request.user.add_time(args.table, args.time, args.date)
+
     if not was_added:
-        response.text = (
-            'I could not add this to the database, '
-            'because you already have an entry '
-            '({}) for this date.'.format(time.time_str()) )
+        response.add_text("I could not add this to the database, because you "
+                          "already have an entry ({}) for this date.".format(
+                              time.time_str()))
         return response
 
     day_of_week = request.args.date.weekday()
     emj = emoji(args.time, args.table, day_of_week)
 
-    response.in_channel = True
-    response.as_user_image = True
-
-    response.attach(
-        author_name = str(request.user),
-        author_icon = request.user.image_url,
-        text = "*Mini Added:* {} - {}  :{}:".format(
-            time.date, time.time_string(), emj),
-    )
+    # Send a basic ephemeral confirmation and a rich-text non-ephemeral message
+    response.add_text("Submitted {} for {}".format(
+        time.time_str(), request.args.date))
+    response.attach(ephemeral=False,
+                    author_name=str(request.user),
+                    author_icon=request.user.image_url,
+                    text="*Mini Added:* {}  {}  :{}:".format(
+                        time.date, time.time_str(), emj))
 
     def get_streak_counts(streaks):
         for streak in streaks:
@@ -74,14 +67,12 @@ def add(request):
         streak_messages = STREAKS.get(streak_count)
         if streak_messages:
             msg = choice(streak_messages).format(name=request.user)
-            # Again, only send new-style responses to staff
-            response.attach(
-                color = "#39C53D",
-                text = "\n:achievement:  " + msg,
-            )
+            response.attach(ephemeral=False,
+                            color="#39C53D",
+                            text=msg + "  :achievement:")
 
-    logger.debug("{} has a streak of {} in {}".format(request.user, new_sc,
-                                                      args.table))
+    logger.debug("%s has a streak of %s in %s",
+                 request.user, new_sc, args.table)
 
     return response
 

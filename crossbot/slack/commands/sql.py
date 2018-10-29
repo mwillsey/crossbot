@@ -10,8 +10,8 @@ from . import models, DB_PATH
 logger = logging.getLogger(__name__)
 
 
-def init(client):
-    parser = client.parser.subparsers.add_parser(
+def init(parser):
+    parser = parser.subparsers.add_parser(
         'sql', help='Run a sql command.')
     parser.set_defaults(command=sql)
 

@@ -13,8 +13,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
-from . import parse_date, date_fmt, models
-from crossbot.slack import SlashCommandResponse
+from . import parse_date, date_fmt, models, SlashCommandResponse
 
 from settings import MEDIA_URL, MEDIA_ROOT
 
@@ -302,7 +301,7 @@ def plot(request):
 
     response = SlashCommandResponse()
     response.attach(
-        pretext = 'plot',
+        pretext='plot',
         image_url=request.build_absolute_uri(MEDIA_URL + fname),
     )
 
