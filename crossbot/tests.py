@@ -32,12 +32,12 @@ from crossbot.settings import CROSSBUCKS_PER_SOLVE
 
 
 class MockResponse:
-    def __init__(self, json_data, status_code):
-        self.json_data = json_data
+    def __init__(self, text, status_code):
+        self.text = text
         self.status_code = status_code
 
     def json(self):
-        return self.json_data
+        return json.loads(self.text)
 
 
 class MockedRequestTestCase(TestCase):
@@ -105,14 +105,14 @@ class SlackTestCase(MockedRequestTestCase):
             self.assertEqual(headers['Authorization'], 'Bearer oauth_token')
 
     def _slack_reaction_add(self, method, url, headers, params, data):
-        return MockResponse({'ok': True}, 200)
+        return MockResponse(json.dumps({'ok': True}), 200)
 
     def _slack_chat_post(self, method, url, headers, params, data):
         self.assertEqual(method, 'POST')
         self.messages.append(params)
         ts = self.slack_timestamp
         self.slack_timestamp += 1
-        return MockResponse({'ok': True, 'ts': ts}, 200)
+        return MockResponse(json.dumps({'ok': True, 'ts': ts}), 200)
 
     def _slack_response_post(self, method, url, headers, params, data):
         # TODO: handle this better?
@@ -120,7 +120,7 @@ class SlackTestCase(MockedRequestTestCase):
         self.messages.append(data)
         ts = self.slack_timestamp
         self.slack_timestamp += 1
-        return MockResponse({'ok': True, 'ts': ts}, 200)
+        return MockResponse('ok', 200)
 
     def post_valid_request(self, post_data):
         request = self.factory.post(reverse('slash_command'), post_data)
@@ -149,10 +149,13 @@ class SlackTestCase(MockedRequestTestCase):
 
         self.assertEqual(response.status_code, expected_status_code)
 
-        body = json.loads(response.content)
-        self.assertEqual(body['response_type'], expected_response_type)
+        if response.content:
+            body = json.loads(response.content)
+            self.assertEqual(body['response_type'], expected_response_type)
+            return body
 
-        return body
+        self.assertEqual(expected_response_type, 'ephemeral')
+        return None
 
 
 class ModelTests(TestCase):

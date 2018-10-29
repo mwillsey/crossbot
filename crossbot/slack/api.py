@@ -4,15 +4,17 @@ import requests
 import settings
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 SLACK_URL = 'https://slack.com/api/'
 
-
 # TODO: clean up the kind-of funky args/kwargs flows
 
-def _slack_api(endpoint='', method='POST', base_url=None, headers=None,
+
+def _slack_api(endpoint='',
+               method='POST',
+               base_url=None,
+               headers=None,
                **kwargs):
     assert method in ['GET', 'POST']
 
@@ -44,9 +46,13 @@ def _slack_api_ok(key, *args, **kwargs):
 def slack_users():
     return _slack_api_ok('members', endpoint='users.list', method='GET')
 
+
 def post_message(channel, **kwargs):
     kwargs['channel'] = channel
     return _slack_api_ok('ts', endpoint='chat.postMessage', params=kwargs)
 
+
 def post_response(response_url, json):
-    return _slack_api_ok('ts', base_url=response_url, data=json)
+    # For some bizarre reason, response_url doesn't work the same as postMessage
+    resp = _slack_api(base_url=response_url, data=json)
+    return resp.text == 'ok'

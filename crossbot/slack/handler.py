@@ -5,8 +5,9 @@ from django.contrib.staticfiles.templatetags.staticfiles import static
 
 from ..models import CBUser
 
-
 logger = logging.getLogger(__name__)
+
+# TODO: move this/rename file; "handler.py" is weird
 
 
 class SlashCommandRequest:
@@ -22,8 +23,8 @@ class SlashCommandRequest:
         self.channel = post_data['channel_id']
 
         self.slackid = post_data['user_id']
-        self.user = CBUser.from_slackid(slackid=post_data['user_id'],
-                                        slackname=post_data['user_name'])
+        self.user = CBUser.from_slackid(
+            slackid=post_data['user_id'], slackname=post_data['user_name'])
 
     def build_absolute_uri(self, location):
         return self._django_request.build_absolute_uri(location)
@@ -87,8 +88,8 @@ class Message:
         return attachment
 
     def attach_image(self, name, path):
-        return self.attach(fallback="image: %s" % name,
-                           pretext=name, image_url=path)
+        return self.attach(
+            fallback="image: %s" % name, pretext=name, image_url=path)
 
     def __bool__(self):
         return bool(self.text or self.attachments)
@@ -98,15 +99,17 @@ class Message:
         if self.text:
             message_dict['text'] = self.text
         if self.attachments:
-            message_dict['attachments'] = [a.asdict() for a in self.attachments]
+            message_dict['attachments'] = [
+                a.asdict() for a in self.attachments
+            ]
         if self.ephemeral is not None:
-            message_dict['response_type'] = (
-                'ephemeral' if self.ephemeral else 'in_channel')
+            message_dict['response_type'] = ('ephemeral' if self.ephemeral else
+                                             'in_channel')
         return message_dict
 
 
 class Attachment:
-    def __init__(self, **kwargs):
+    def __init__(self, as_user=None, **kwargs):
         self.fallback = kwargs.get('fallback')
         self.color = kwargs.get('color')
         self.pretext = kwargs.get('pretext')
@@ -123,6 +126,11 @@ class Attachment:
         self.ts = kwargs.get('ts')
 
         self.fields = kwargs.get('fields', [])
+
+        if as_user is not None:
+            self.author_name = str(as_user)
+            if as_user.image_url:
+                self.author_icon = as_user.image_url
 
     def add_text(self, text, add_newline=True):
         """Adds text to the main message."""

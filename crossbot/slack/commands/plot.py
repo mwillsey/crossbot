@@ -183,7 +183,8 @@ def plot(request):
         return SlashCommandResponse(text='alpha should be between 0 and 1')
 
     if start_dt > end_dt:
-        return SlashCommandResponse(text='start date should be before end_date')
+        return SlashCommandResponse(
+            text='start date should be before end_date')
 
     dt_range = [
         start_dt + datetime.timedelta(days=i) for i in range(args.num_days + 1)
