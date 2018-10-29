@@ -7,6 +7,8 @@ from ..models import CBUser
 
 logger = logging.getLogger(__name__)
 
+# TODO: move this/rename file; "handler.py" is weird
+
 
 class SlashCommandRequest:
     def __init__(self, django_request, args=None):
@@ -107,7 +109,7 @@ class Message:
 
 
 class Attachment:
-    def __init__(self, **kwargs):
+    def __init__(self, as_user=None, **kwargs):
         self.fallback = kwargs.get('fallback')
         self.color = kwargs.get('color')
         self.pretext = kwargs.get('pretext')
@@ -124,6 +126,11 @@ class Attachment:
         self.ts = kwargs.get('ts')
 
         self.fields = kwargs.get('fields', [])
+
+        if as_user is not None:
+            self.author_name = str(as_user)
+            if as_user.image_url:
+                self.author_icon = as_user.image_url
 
     def add_text(self, text, add_newline=True):
         """Adds text to the main message."""

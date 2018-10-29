@@ -48,8 +48,7 @@ def add(request):
                                                    request.args.date))
     response.attach(
         ephemeral=False,
-        author_name=str(request.user),
-        author_icon=request.user.image_url,
+        as_user=request.user,
         text="*Mini Added:* {}  {}  :{}:".format(time.date, time.time_str(),
                                                  emj))
 
