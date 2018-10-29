@@ -133,24 +133,24 @@ class SlackTestCase(MockedRequestTestCase):
 
     def check_headers(self, method, url, headers):
         if url.startswith(SLACK_URL):
-            self.assertEquals(headers['Authorization'], 'Bearer oauth_token')
+            self.assertEqual(headers['Authorization'], 'Bearer oauth_token')
 
     def slack_reaction_add(self, method, url, headers, params):
         return MockResponse({'ok': True}, 200)
 
     def slack_chat_post(self, method, url, headers, params):
-        self.assertEquals(method, 'POST')
+        self.assertEqual(method, 'POST')
         self.messages.append(params)
         ts = self.slack_timestamp
         self.slack_timestamp += 1
         return MockResponse({'ok': True, 'ts': ts}, 200)
 
     def slack_users_list(self, method, url, headers, params):
-        self.assertEquals(method, 'GET')
+        self.assertEqual(method, 'GET')
         return MockResponse({'ok': True, 'members': self.users.values()}, 200)
 
     def slack_users_info(self, method, url, headers, params):
-        self.assertEquals(method, 'GET')
+        self.assertEqual(method, 'GET')
         if params['user'] in self.users:
             return MockResponse({
                 'ok': True,
@@ -568,20 +568,20 @@ class AnnouncementTests(SlackTestCase):
         with patch.object(timezone, 'localtime',
                           return_value=self.weekday_right_time):
             self.release_announcement.do()
-            self.assertEquals(len(self.messages), 1)
+            self.assertEqual(len(self.messages), 1)
 
     def test_morning_announcement_run(self):
         self.morning_announcement.do()
-        self.assertEquals(len(self.messages), 1)
+        self.assertEqual(len(self.messages), 1)
 
 
 class MiscTests(TestCase):
     def test_comma_and(self):
         from crossbot.util import comma_and
 
-        self.assertEquals('', comma_and([]))
-        self.assertEquals('bob', comma_and(['bob']))
-        self.assertEquals('alice and bob', comma_and(['alice', 'bob']))
-        self.assertEquals(
+        self.assertEqual('', comma_and([]))
+        self.assertEqual('bob', comma_and(['bob']))
+        self.assertEqual('alice and bob', comma_and(['alice', 'bob']))
+        self.assertEqual(
             'alice, bob, and charlie', comma_and(['alice', 'bob', 'charlie'])
         )
