@@ -52,13 +52,14 @@ def add(request):
     response.add_text(
         "Submitted {} for {}".format(time.time_str(), request.args.date)
     )
-    response.attach(
-        ephemeral=False,
-        as_user=request.user,
-        text="*{} Added:* {}  {}  :{}:".format(
+    response.add_text(
+        "*{} Added:* {}  {}  :{}:".format(
             time.SHORT_NAME, time.date, time.time_str(), emj
-        )
+        ),
+        ephemeral=False
     )
+    # Impersonate the user for the non-ephemeral message
+    response.set_user(request.user, ephemeral=False)
 
     def get_streak_counts(streaks):
         for streak in streaks:

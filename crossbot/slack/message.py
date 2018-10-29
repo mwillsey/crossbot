@@ -47,6 +47,12 @@ class SlashCommandResponse:
         self.ephemeral_command = ephemeral_command
 
     # TODO: maybe use magic methods instead of these for convenience methods
+    def set_user(self, *args, ephemeral=True, **kwargs):
+        if ephemeral:
+            self.ephemeral_message.set_user(*args, **kwargs)
+        else:
+            self.direct_message.set_user(*args, **kwargs)
+
     def add_text(self, *args, ephemeral=True, **kwargs):
         if ephemeral:
             self.ephemeral_message.add_text(*args, **kwargs)
@@ -73,10 +79,20 @@ class SlashCommandResponse:
 
 
 class Message:
-    def __init__(self, text='', ephemeral=None):
+    def __init__(self, text='', user=None, ephemeral=None):
         self.text = text
         self.attachments = []
         self.ephemeral = ephemeral
+
+        self.username = None
+        self.icon_url = None
+
+        if user is not None:
+            self.set_user(user)
+
+    def set_user(self, user):
+        self.username = user.slack_fullname or user.slackname or None
+        self.icon_url = user.image_url or None
 
     def add_text(self, text, add_newline=True):
         """Adds text to the main message."""
@@ -115,6 +131,10 @@ class Message:
             message_dict['response_type'] = (
                 'ephemeral' if self.ephemeral else 'in_channel'
             )
+        if self.username is not None:
+            message_dict['username'] = self.username
+        if self.icon_url is not None:
+            message_dict['icon_url'] = self.icon_url
         return message_dict
 
 
