@@ -14,3 +14,4 @@ SOCIAL_AUTH_SLACK_KEY = 'slack-client-id'
 SOCIAL_AUTH_SLACK_SECRET = 'slack-client-secret'
 
 CROSSBOT_SOCIAL_AUTH_SLACK_ALLOWED_TEAMS = [] # Insert team IDs here
+CROSSBOT_MAIN_CHANNEL = '' # #minicrossword channel ID

@@ -77,6 +77,12 @@ class SlashCommandResponse:
         else:
             self.direct_message.attach_image(*args, **kwargs)
 
+    def add_reaction(self, *args, ephemeral=True, **kwargs):
+        if ephemeral:
+            self.ephemeral_message.add_reaction(*args, **kwargs)
+        else:
+            self.direct_message.add_reaction(*args, **kwargs)
+
 
 class Message:
     def __init__(self, text='', user=None, ephemeral=None):
@@ -89,6 +95,9 @@ class Message:
 
         if user is not None:
             self.set_user(user)
+
+        # These reactions only get sent if the channel is CROSSBOT_MAIN_CHANNEL
+        self.reactions = []
 
     def set_user(self, user):
         self.username = user.slack_fullname or user.slackname or None
@@ -115,6 +124,9 @@ class Message:
         return self.attach(
             fallback="image: %s" % name, pretext=name, image_url=path
         )
+
+    def add_reaction(self, emoji):
+        self.reactions.append(emoji.strip(':'))
 
     def __bool__(self):
         return bool(self.text or self.attachments)

@@ -49,12 +49,27 @@ def slack_users():
     return _slack_api_ok('members', endpoint='users.list', method='GET')
 
 
-def post_message(channel, **kwargs):
-    kwargs['channel'] = channel
-    return _slack_api_ok('ts', endpoint='chat.postMessage', params=kwargs)
+def post_message(channel, json):
+    return _slack_api_ok(
+        'ts',
+        endpoint='chat.postMessage',
+        data=json,
+        headers={'Content-Type': 'application/json'},
+        params={'channel': channel}
+    )
 
 
 def post_response(response_url, json):
     # For some bizarre reason, response_url doesn't work the same as postMessage
     resp = _slack_api(base_url=response_url, data=json)
     return resp.text == 'ok'
+
+
+def react(emoji, channel, timestamp):
+    return _slack_api_ok(
+        'ok',
+        endpoint='reactions.add',
+        name=emoji,
+        channel=channel,
+        timestamp=timestamp
+    )
