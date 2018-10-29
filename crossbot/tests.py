@@ -43,12 +43,15 @@ class TestCase(DjangoTestCase):
 
 
 class MockResponse:
-    def __init__(self, json_data, status_code):
-        self.json_data = json_data
+    def __init__(self, text, status_code):
+        self.text = text
         self.status_code = status_code
 
     def json(self):
-        return self.json_data
+        if type(self.text) is dict:
+            return self.text
+        else:
+            return json.loads(self.text)
 
 
 class MockedRequestTestCase(TestCase):
@@ -79,24 +82,27 @@ class MockedRequestTestCase(TestCase):
     def check_headers(self, method, url, headers):
         pass
 
-    def mocked_request(self, method, url, *, headers, params):
+    def mocked_request(self, method, url, *, headers, params=None, data=None):
         self.check_headers(method, url, headers)
         func = self.router.get(url)
         if func:
-            return func(method, url, headers, params)
+            return func(method, url, headers, params, data)
         else:
             MockResponse(None, 404)
 
 
 class SlackTestCase(MockedRequestTestCase):
+    RESPONSE_URL = SLACK_URL + 'response_url/'
+
     def setUp(self):
         super().setUp()
         self.factory = RequestFactory()
 
-        self.router[SLACK_URL + 'chat.postMessage'] = self.slack_chat_post
-        self.router[SLACK_URL + 'reactions.add'] = self.slack_reaction_add
-        self.router[SLACK_URL + 'users.list'] = self.slack_users_list
-        self.router[SLACK_URL + 'users.info'] = self.slack_users_info
+        self.router[SLACK_URL + 'chat.postMessage'] = self._slack_chat_post
+        self.router[SLACK_URL + 'reactions.add'] = self._slack_reaction_add
+        self.router[SLACK_URL + 'users.list'] = self._slack_users_list
+        self.router[SLACK_URL + 'users.info'] = self._slack_users_info
+        self.router[self.RESPONSE_URL] = self._slack_response_post
 
         self.users = {
             'UALICE': {
@@ -135,21 +141,29 @@ class SlackTestCase(MockedRequestTestCase):
         if url.startswith(SLACK_URL):
             self.assertEqual(headers['Authorization'], 'Bearer oauth_token')
 
-    def slack_reaction_add(self, method, url, headers, params):
-        return MockResponse({'ok': True}, 200)
+    def _slack_reaction_add(self, method, url, headers, params, data):
+        return MockResponse(json.dumps({'ok': True}), 200)
 
-    def slack_chat_post(self, method, url, headers, params):
+    def _slack_chat_post(self, method, url, headers, params, data):
         self.assertEqual(method, 'POST')
         self.messages.append(params)
         ts = self.slack_timestamp
         self.slack_timestamp += 1
-        return MockResponse({'ok': True, 'ts': ts}, 200)
+        return MockResponse(json.dumps({'ok': True, 'ts': ts}), 200)
 
-    def slack_users_list(self, method, url, headers, params):
+    def _slack_response_post(self, method, url, headers, params, data):
+        # TODO: handle this better?
+        self.assertEqual(method, 'POST')
+        self.messages.append(data)
+        ts = self.slack_timestamp
+        self.slack_timestamp += 1
+        return MockResponse('ok', 200)
+
+    def _slack_users_list(self, method, url, headers, params, data):
         self.assertEqual(method, 'GET')
         return MockResponse({'ok': True, 'members': self.users.values()}, 200)
 
-    def slack_users_info(self, method, url, headers, params):
+    def _slack_users_info(self, method, url, headers, params, data):
         self.assertEqual(method, 'GET')
         if params['user'] in self.users:
             return MockResponse({
@@ -179,7 +193,7 @@ class SlackTestCase(MockedRequestTestCase):
         response = self.post_valid_request({
             'type': 'event_callback',
             'text': text,
-            'response_url': 'foobar',
+            'response_url': self.RESPONSE_URL,
             'trigger_id': 'foobar',
             'channel_id': 'foobar',
             'user_id': 'U' + who.upper(),
@@ -188,10 +202,13 @@ class SlackTestCase(MockedRequestTestCase):
 
         self.assertEqual(response.status_code, expected_status_code)
 
-        body = json.loads(response.content)
-        self.assertEqual(body['response_type'], expected_response_type)
+        if response.content:
+            body = json.loads(response.content)
+            self.assertEqual(body['response_type'], expected_response_type)
+            return body
 
-        return body
+        self.assertEqual(expected_response_type, 'ephemeral')
+        return None
 
 
 class ModelTests(SlackTestCase):
@@ -514,19 +531,19 @@ class SlackAppTests(SlackTestCase):
         self.slack_post(text='add :10 2018-08-01')
         self.slack_post(text='add :10 2018-08-02')
         # make sure the message didn't come in early
-        self.assertNotIn('streak', self.messages[-1]['text'])
+        self.assertNotIn('streak', self.messages[-1])
 
         # get the streak of 3 and check for acknowledgment
         self.slack_post(text='add :10 2018-08-03')
         # the messages for streaks of 3 have the word row in them
-        self.assertIn('3', self.messages[-1]['text'])
-        self.assertIn('row', self.messages[-1]['text'])
+        self.assertIn('3', self.messages[-1])
+        self.assertIn('row', self.messages[-1])
 
         # go for the streak of 10
         for i in range(4, 11):
             self.slack_post(text='add :10 2018-08-{:02d}'.format(i))
-        self.assertIn('10', self.messages[-1]['text'])
-        self.assertIn('streak', self.messages[-1]['text'])
+        self.assertIn('10', self.messages[-1])
+        self.assertIn('streak', self.messages[-1])
 
     def test_plot(self):
         self.slack_post(text='add :10 2018-08-01')

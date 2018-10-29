@@ -31,7 +31,7 @@ class ArgumentParser(argparse.ArgumentParser):
 
 
 class Parser:
-    def __init__(self, limit_commands):
+    def __init__(self):
 
         self.parser = ArgumentParser(
             prog='crossbot',
@@ -83,10 +83,6 @@ class Parser:
         help_parser = self.subparsers.add_parser('help')
         help_parser.set_defaults(command='help')
         help_parser.add_argument('help_subcommands', nargs='*')
-
-        if not limit_commands:
-            # add hidden (command line only) commands
-            pass
 
     def print_help(self, args):
         # always raises ParserException so the client can print how it wants

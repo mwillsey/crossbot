@@ -9,10 +9,16 @@ logger = logging.getLogger(__name__)
 SLACK_URL = 'https://slack.com/api/'
 
 
-def _slack_api(endpoint, method, **kwargs):
+def _slack_api(
+        *, endpoint='', method='POST', base_url=None, headers=None, **kwargs
+):
     assert method in ['GET', 'POST']
-    headers = {'Authorization': 'Bearer ' + settings.SLACK_OAUTH_ACCESS_TOKEN}
-    url = SLACK_URL + endpoint
+
+    headers = headers if headers is not None else {}
+    headers['Authorization'] = 'Bearer ' + settings.SLACK_OAUTH_ACCESS_TOKEN
+
+    url = base_url if base_url is not None else SLACK_URL
+    url += endpoint
 
     if method == 'GET':
         func = requests.get
@@ -21,11 +27,11 @@ def _slack_api(endpoint, method, **kwargs):
     else:
         raise ValueError('invalid method: ' + method)
 
-    return func(url, headers=headers, params=kwargs)
+    return func(url, headers=headers, **kwargs)
 
 
-def _slack_api_ok(endpoint, method, key, **kwargs):
-    resp = _slack_api(endpoint, method, **kwargs).json()
+def _slack_api_ok(key, **kwargs):
+    resp = _slack_api(**kwargs).json()
     if resp.get('ok'):
         return resp[key]
 
@@ -34,25 +40,21 @@ def _slack_api_ok(endpoint, method, key, **kwargs):
 
 
 def slack_user(user_id):
-    return _slack_api_ok('users.info', 'GET', 'user', user=user_id)
+    return _slack_api_ok(
+        'user', endpoint='users.info', method='GET', params={'user': user_id}
+    )
 
 
 def slack_users():
-    return _slack_api_ok('users.list', 'GET', 'members')
-
-
-def react(emoji, channel, timestamp):
-    return _slack_api_ok(
-        'reactions.add',
-        'POST',
-        'ok',
-        name=emoji,
-        channel=channel,
-        timestamp=timestamp
-    )
+    return _slack_api_ok('members', endpoint='users.list', method='GET')
 
 
 def post_message(channel, **kwargs):
-    return _slack_api_ok(
-        'chat.postMessage', 'POST', 'ts', channel=channel, **kwargs
-    )
+    kwargs['channel'] = channel
+    return _slack_api_ok('ts', endpoint='chat.postMessage', params=kwargs)
+
+
+def post_response(response_url, json):
+    # For some bizarre reason, response_url doesn't work the same as postMessage
+    resp = _slack_api(base_url=response_url, data=json)
+    return resp.text == 'ok'

@@ -5,15 +5,13 @@ import re
 import sqlite3
 import traceback
 
-from . import models, DB_PATH
+from . import models, DB_PATH, SlashCommandResponse
 
 logger = logging.getLogger(__name__)
 
 
-def init(client):
-    parser = client.parser.subparsers.add_parser(
-        'sql', help='Run a sql command.'
-    )
+def init(parser):
+    parser = parser.subparsers.add_parser('sql', help='Run a sql command.')
     parser.set_defaults(command=sql)
 
     parser.add_argument(
@@ -149,6 +147,6 @@ def sql(request):
     '''Run a sql command.'''
     if request.args.sql_command:
         cmd = ' '.join(request.args.sql_command)
-        request.reply(run_sql_command(cmd, []))
+        return SlashCommandResponse(run_sql_command(cmd, []))
     else:
-        request.reply("Please type some sql.", direct=True)
+        return SlashCommandResponse("Please type some sql.")

@@ -1,10 +1,10 @@
 from django.utils import timezone
 
-from . import parse_date
+from . import parse_date, SlashCommandResponse
 
 
-def init(client):
-    parser = client.parser.subparsers.add_parser(
+def init(parser):
+    parser = parser.subparsers.add_parser(
         'announce', help='Announce any streaks.'
     )
     parser.set_defaults(command=announce)
@@ -21,6 +21,5 @@ def init(client):
 def announce(request):
     '''Report who won the previous day and if they're on a streak.
     Optionally takes a date.'''
-
     message = request.args.table.announcement_message(request.args.date)
-    request.reply(message)
+    return SlashCommandResponse(text=message)

@@ -2,6 +2,7 @@
 from ..parser import date as parse_date
 from ..parser import time as parse_time
 from ..parser import date_fmt
+from ..message import SlashCommandResponse
 
 from ... import models
 
