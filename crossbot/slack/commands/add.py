@@ -49,8 +49,8 @@ def add(request):
     response.attach(
         ephemeral=False,
         as_user=request.user,
-        text="*Mini Added:* {}  {}  :{}:".format(time.date, time.time_str(),
-                                                 emj))
+        text="*{} Added:* {}  {}  :{}:".format(time.SHORT_NAME, time.date,
+                                               time.time_str(), emj))
 
     def get_streak_counts(streaks):
         for streak in streaks:

@@ -456,14 +456,17 @@ class CommonTime(models.Model):
 
 
 class MiniCrosswordTime(CommonTime):
+    SHORT_NAME = 'Mini'
     pass
 
 
 class CrosswordTime(CommonTime):
+    SHORT_NAME = 'Crossword'
     pass
 
 
 class EasySudokuTime(CommonTime):
+    SHORT_NAME = 'Sudoku'
     pass
 
 

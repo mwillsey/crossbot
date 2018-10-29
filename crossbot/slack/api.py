@@ -53,4 +53,6 @@ def post_message(channel, **kwargs):
 
 
 def post_response(response_url, json):
-    return _slack_api_ok('ts', base_url=response_url, data=json)
+    # For some bizarre reason, response_url doesn't work the same as postMessage
+    resp = _slack_api(base_url=response_url, data=json)
+    return resp.text == 'ok'

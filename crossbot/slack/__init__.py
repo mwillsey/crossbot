@@ -27,13 +27,19 @@ def handle_slash_command(django_request):
         request.args = args
         response = command(request)  # returns a SlackCommandResponse
 
-        # If we have a direct message, go ahead and send it
-        # TODO: make sure it's okay to send this before the first reply
+        if response.ephemeral_message and response.direct_message:
+            # Send ephemeral instead of returning it so it appears first
+            post_response(request.response_url,
+                          json.dumps(response.ephemeral_message.asdict()))
+            post_response(request.response_url,
+                          json.dumps(response.direct_message.asdict()))
+            return None
+
         if response.direct_message:
             post_response(request.response_url,
                           json.dumps(response.direct_message.asdict()))
+            return None
 
-        # Send the ephemeral reply if it exists
         if response.ephemeral_message:
             return response.ephemeral_message.asdict()
 
