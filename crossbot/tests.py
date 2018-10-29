@@ -149,10 +149,13 @@ class SlackTestCase(MockedRequestTestCase):
 
         self.assertEqual(response.status_code, expected_status_code)
 
-        body = json.loads(response.content)
-        self.assertEqual(body['response_type'], expected_response_type)
+        if response.content:
+            body = json.loads(response.content)
+            self.assertEqual(body['response_type'], expected_response_type)
+            return body
 
-        return body
+        self.assertEqual(expected_response_type, 'ephemeral')
+        return None
 
 
 class ModelTests(TestCase):

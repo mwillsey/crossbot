@@ -1,7 +1,7 @@
 import logging
 import re
 
-from . import sql, models
+from . import sql, models, SlashCommandResponse
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +35,8 @@ def query(request):
 
     if args.save:
         if not args.name:
-            request.reply("Cannot save a command without a name.")
-            return
+            return SlashCommandResponse(
+                "Cannot save a command without a name.")
 
         models.QueryShorthand.objects.update_or_create(
             name=args.name,
@@ -45,22 +45,21 @@ def query(request):
                 'command': ' '.join(args.params),
             })
 
-        request.reply("Saved new query `{}` from {}".format(
+        return SlashCommandResponse("Saved new query `{}` from {}".format(
             request.args.name, request.user))
-        return
 
     if args.name:
         q = models.QueryShorthand.from_name(args.name)
         if not q:
-            request.reply("Could not find saved query `{}`".format(args.name))
-            return
-        request.reply(sql.run_sql_command(q.command, args.params))
-        return
+            return SlashCommandResponse(
+                "Could not find saved query `{}`".format(args.name))
+        return SlashCommandResponse(
+            sql.run_sql_command(q.command, args.params))
 
     # Finally, just echo the list of all queries
     msgs = '\n\n'.join(str(q) for q in models.QueryShorthand.objects.all())
     if msgs:
-        request.reply(msgs)
+        return SlashCommandResponse(msgs)
     else:
-        request.reply("There are no saved messages yet... "
-                      "make one with `query --save ...`!")
+        return SlashCommandResponse("There are no saved messages yet... "
+                                    "make one with `query --save ...`!")

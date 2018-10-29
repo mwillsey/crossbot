@@ -25,4 +25,4 @@ def delete(request):
     else:
         message = 'No entry for {}'.format(date)
 
-    return SlashCommandResponse(text=message)
+    return SlashCommandResponse(message)
