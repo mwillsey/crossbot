@@ -77,9 +77,8 @@ def add(request):
         streak_messages = STREAKS.get(streak_count)
         if streak_messages:
             msg = choice(streak_messages).format(name=request.user)
-            response.attach(
-                ephemeral=False, color="#39C53D", text=msg + "  :achievement:"
-            )
+            response.attach(ephemeral=False, color="#39C53D", text=msg)
+            response.add_reaction('achievement', ephemeral=False)
 
     logger.debug(
         "%s has a streak of %s in %s", request.user, new_sc, args.table

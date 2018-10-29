@@ -126,7 +126,9 @@ class Message:
         )
 
     def add_reaction(self, emoji):
-        self.reactions.append(emoji.strip(':'))
+        emoji = emoji.strip(':')
+        if emoji not in self.reactions:
+            self.reactions.append(emoji)
 
     def __bool__(self):
         return bool(self.text or self.attachments)
