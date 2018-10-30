@@ -50,7 +50,9 @@ def add(request):
 
     # Send a basic ephemeral confirmation and a rich-text non-ephemeral message
     response.add_text(
-        "Submitted {} for {}".format(time.time_str(), request.args.date)
+        "Submitted {} for {}".format(
+            time.time_str(), request.args.date.strftime("%A, %B %-d, %Y")
+        )
     )
     response.add_text(
         "*{} Added:* {}  {}".format(
