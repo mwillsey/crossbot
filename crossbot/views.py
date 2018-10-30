@@ -5,6 +5,7 @@ import logging
 
 from crossbot.util import comma_and
 
+from django.conf import settings
 from django.shortcuts import render
 from django.utils import timezone
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
@@ -12,8 +13,6 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.gzip import gzip_page
 from django.views.decorators.cache import cache_control
 from django.contrib.auth.decorators import login_required
-
-import settings
 
 from .slack.handler import handle_slash_command
 from .models import MiniCrosswordTime, CrosswordTime, EasySudokuTime

@@ -15,6 +15,7 @@
 			"path": ".",
 			"folder_exclude_patterns": [
 				"__pycache__",
+				"venv",
 			],
 			"file_exclude_patterns": [
 				"*.sublime-project",

@@ -41,6 +41,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 ensure_dir(MEDIA_ROOT)
 
+# TODO: mov to prod settings
 ALLOWED_HOSTS = [
     'localhost',
     'mwillsey.com',

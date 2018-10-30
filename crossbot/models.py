@@ -291,7 +291,7 @@ class CommonTime(models.Model):
     seconds = models.IntegerField()
     date = models.DateField()
     timestamp = models.DateTimeField(null=True, auto_now_add=True)
-    deleted = models.DateTimeField(null=True, default=None)
+    deleted = models.DateTimeField(null=True, blank=True, default=None)
 
     @classmethod
     def all_times(cls):

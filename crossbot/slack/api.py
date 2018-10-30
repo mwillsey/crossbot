@@ -1,8 +1,10 @@
 """Methods for sending requests directly to Slack."""
 
-import requests
-import settings
+import json
 import logging
+import requests
+
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -15,8 +17,9 @@ def _slack_api(
     assert method in ['GET', 'POST']
 
     headers = headers if headers is not None else {}
-    headers['Authorization'
-            ] = 'Bearer ' + settings.SLACK_OAUTH_BOT_ACCESS_TOKEN
+    headers['Authorization'] = (
+        'Bearer ' + settings.SLACK_OAUTH_BOT_ACCESS_TOKEN
+    )
 
     url = base_url if base_url is not None else SLACK_URL
     url += endpoint
@@ -50,19 +53,23 @@ def slack_users():
     return _slack_api_ok('members', endpoint='users.list', method='GET')
 
 
-def post_message(channel, json):
+def post_message(channel, message_dict):
+    message_dict['channel'] = channel
     return _slack_api_ok(
         'ts',
         endpoint='chat.postMessage',
-        data=json,
+        data=json.dumps(message_dict),
         headers={'Content-Type': 'application/json'},
-        params={'channel': channel}
     )
 
 
-def post_response(response_url, json):
+def post_response(response_url, message_dict):
     # For some bizarre reason, response_url doesn't work the same as postMessage
-    resp = _slack_api(base_url=response_url, data=json)
+    resp = _slack_api(
+        base_url=response_url,
+        data=json.dumps(message_dict),
+        headers={'Content-Type': 'application/json'}
+    )
     return resp.text == 'ok'
 
 
@@ -70,7 +77,9 @@ def react(emoji, channel, timestamp):
     return _slack_api_ok(
         'ok',
         endpoint='reactions.add',
-        name=emoji,
-        channel=channel,
-        timestamp=timestamp
+        params={
+            'name': emoji,
+            'channel': channel,
+            'timestamp': timestamp,
+        }
     )

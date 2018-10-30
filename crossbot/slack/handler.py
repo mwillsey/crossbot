@@ -22,62 +22,57 @@ def handle_slash_command(django_request):
 
     Returns:
         A dict describing the message to return, or None if the view should
-        simply return an HTTP 200 response."""
+        simply return an HTTP 200 response.
+    """
     try:
         request = SlashCommandRequest(django_request)
         command, args = PARSER.parse(django_request.POST['text'])
         request.args = args
         response = command(request)  # returns a SlackCommandResponse
 
-        if response.ephemeral_message and response.direct_message:
-            # Send ephemeral instead of returning it so it appears first
-            _send_message(request, response.ephemeral_message)
+        dmsg, emsg = response.direct_message, response.ephemeral_message
 
-            if response.ephemeral_message:
-                _send_message(request, response.direct_message)
-                return None
-            return _send_message(
-                request, response.direct_message, should_return=True
+        default_ret_val = None
+        if not response.ephemeral_command:
+            default_ret_val = Message(ephemeral=False).asdict()
+
+        def send_message(msg, should_return=False):
+            # If the message impersonates a user or has reactions, post it
+            if msg.has_user() or msg.reactions:
+                # You can't impersonate or react w/ ephemeral
+                assert not msg.ephemeral
+
+                # For now, simply let permissions errors bubble up. Each command
+                # should properly check the request channel so that the bot has
+                # correct permissions
+                timestamp = post_message(
+                    request.channel, msg.asdict(include_response_type=False)
+                )
+                for reaction in msg.reactions:
+                    react(reaction, request.channel, timestamp)
+            else:
+                if should_return:
+                    return msg.asdict()
+                post_response(request.response_url, msg.asdict())
+            return default_ret_val
+
+        if emsg and dmsg:
+            send_message(emsg)
+            return send_message(
+                dmsg, should_return=not response.ephemeral_command
             )
 
-        if response.ephemeral_message:
-            # If there's only an ephemeral message, command is always ephemeral
-            return _send_message(
-                request, response.ephemeral_message, should_return=True
+        if emsg:
+            return send_message(emsg, should_return=response.ephemeral_command)
+
+        if dmsg:
+            return send_message(
+                dmsg, should_return=not response.ephemeral_command
             )
 
-        if response.direct_message:
-            if response.ephemeral_message:
-                _send_message(request, response.direct_message)
-                return None
-            # TODO: what if we have to react to this message?
-            #       we shouldn't return None then, should at least return with
-            #       response_type: in_channel or something
-            #       (same for above)
-            return _send_message(
-                request, response.direct_message, should_return=True
-            )
-
-        return None
+        return default_ret_val
 
     except ParserException as exn:
         message = Message(ephemeral=True)
         message.text = str(exn)
         return message.asdict()
-
-
-def _send_message(request, message, should_return=False):
-    if not message.reactions or not _in_main_channel(request):
-        if should_return:
-            return message.asdict()
-        post_response(request.response_url, json.dumps(message.asdict()))
-        return None
-
-    timestamp = post_message(request.channel, json.dumps(message.asdict()))
-    for reaction in message.reactions:
-        react(reaction, request.channel, timestamp)
-    return None
-
-
-def _in_main_channel(request):
-    return request.channel == getattr(settings, 'CROSSBOT_MAIN_CHANNEL', None)

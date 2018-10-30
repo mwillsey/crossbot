@@ -54,15 +54,18 @@ def add(request):
             time.time_str(), request.args.date.strftime("%A, %B %-d, %Y")
         )
     )
-    response.add_text(
-        "*{} Added:* {}  {}".format(
-            time.SHORT_NAME, time.date, time.time_str()
-        ),
-        ephemeral=False
-    )
-    # Impersonate the user for the non-ephemeral message
-    response.set_user(request.user, ephemeral=False)
-    response.add_reaction(emj, ephemeral=False)
+    if request.in_main_channel():
+        response.add_text(
+            # TODO: only add date if it isn't for the current crossword
+            "*{} Added:* {}  {}".format(
+                time.SHORT_NAME, time.date, time.time_str()
+            ),
+            ephemeral=False
+        )
+        response.set_user(request.user)
+        response.add_reaction(emj)
+    else:
+        response.add_text("  :%s:" % emj, add_newline=False)
 
     def get_streak_counts(streaks):
         for streak in streaks:
@@ -79,8 +82,14 @@ def add(request):
         streak_messages = STREAKS.get(streak_count)
         if streak_messages:
             msg = choice(streak_messages).format(name=request.user)
-            response.attach(ephemeral=False, color="#39C53D", text=msg)
-            response.add_reaction('achievement', ephemeral=False)
+            response.attach(
+                ephemeral=not request.in_main_channel(),
+                color="#39C53D",
+                text=msg
+            )
+
+            if request.in_main_channel():
+                response.add_reaction('achievement')
 
     logger.debug(
         "%s has a streak of %s in %s", request.user, new_sc, args.table

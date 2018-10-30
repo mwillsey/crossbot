@@ -128,9 +128,19 @@ class SlackTestCase(MockedRequestTestCase):
 
         self.slack_sk = b'8f742231b10e8888abcd99yyyzzz85a5'
 
-        self.patch('settings.SLACK_SECRET_SIGNING_KEY', self.slack_sk)
-        self.patch('settings.SLACK_OAUTH_ACCESS_TOKEN', 'oauth_token')
-        self.patch('settings.SLACK_OAUTH_BOT_ACCESS_TOKEN', 'bot_oauth_token')
+        self.patch(
+            'django.conf.settings.SLACK_SECRET_SIGNING_KEY', self.slack_sk
+        )
+        self.patch(
+            'django.conf.settings.SLACK_OAUTH_ACCESS_TOKEN', 'oauth_token'
+        )
+        self.patch(
+            'django.conf.settings.SLACK_OAUTH_BOT_ACCESS_TOKEN',
+            'bot_oauth_token'
+        )
+        self.patch(
+            'django.conf.settings.CROSSBOT_MAIN_CHANNEL', 'main_channel'
+        )
 
     def patch(self, *args, **kwargs):
         patcher = patch(*args, **kwargs)
@@ -149,7 +159,7 @@ class SlackTestCase(MockedRequestTestCase):
 
     def _slack_chat_post(self, method, url, headers, params, data):
         self.assertEqual(method, 'POST')
-        self.messages.append(params)
+        self.messages.append(data)
         ts = self.slack_timestamp
         self.slack_timestamp += 1
         return MockResponse(json.dumps({'ok': True, 'ts': ts}), 200)
@@ -198,7 +208,7 @@ class SlackTestCase(MockedRequestTestCase):
             'text': text,
             'response_url': self.RESPONSE_URL,
             'trigger_id': 'foobar',
-            'channel_id': 'foobar',
+            'channel_id': 'main_channel',
             'user_id': 'U' + who.upper(),
             'user_name': '@' + who,
         })
