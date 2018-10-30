@@ -322,9 +322,10 @@ def plot(request):
         fig.savefig(f, format='png', bbox_inches='tight')
     plt.close(fig)
 
-    response = SlashCommandResponse()
+    response = SlashCommandResponse(ephemeral_command=False)
     response.attach(
-        pretext='plot',
+        ephemeral=False,
+        pretext='Plot',
         image_url=request.build_absolute_uri(MEDIA_URL + fname),
     )
 

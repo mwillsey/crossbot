@@ -7,8 +7,6 @@ from ..models import CBUser
 
 logger = logging.getLogger(__name__)
 
-# TODO: move this/rename file; "handler.py" is weird
-
 
 class SlashCommandRequest:
     def __init__(self, django_request, args=None):
@@ -34,12 +32,27 @@ class SlashCommandRequest:
 class SlashCommandResponse:
     """Contains both an ephemeral and non-ephemeral message to send."""
 
-    def __init__(self, *args, **kwargs):
-        """Initializes both messages, but sends all args to ephemeral one."""
-        self.ephemeral_message = Message(ephemeral=True, *args, **kwargs)
-        self.direct_message = Message(ephemeral=False)
+    def __init__(
+            self, *args, ephemeral=True, ephemeral_command=True, **kwargs
+    ):
+        """Initializes both messages, but sends all args to chosen one."""
+        if ephemeral:
+            self.ephemeral_message = Message(ephemeral=True, *args, **kwargs)
+            self.direct_message = Message(ephemeral=False)
+        else:
+            self.ephemeral_message = Message(ephemeral=True)
+            self.direct_message = Message(ephemeral=False, *args, **kwargs)
+
+        # Whether or not the original slash command should be ephemeral
+        self.ephemeral_command = ephemeral_command
 
     # TODO: maybe use magic methods instead of these for convenience methods
+    def set_user(self, *args, ephemeral=True, **kwargs):
+        if ephemeral:
+            self.ephemeral_message.set_user(*args, **kwargs)
+        else:
+            self.direct_message.set_user(*args, **kwargs)
+
     def add_text(self, *args, ephemeral=True, **kwargs):
         if ephemeral:
             self.ephemeral_message.add_text(*args, **kwargs)
@@ -64,12 +77,31 @@ class SlashCommandResponse:
         else:
             self.direct_message.attach_image(*args, **kwargs)
 
+    def add_reaction(self, *args, ephemeral=True, **kwargs):
+        if ephemeral:
+            self.ephemeral_message.add_reaction(*args, **kwargs)
+        else:
+            self.direct_message.add_reaction(*args, **kwargs)
+
 
 class Message:
-    def __init__(self, text='', ephemeral=None):
+    def __init__(self, text='', user=None, ephemeral=None):
         self.text = text
         self.attachments = []
         self.ephemeral = ephemeral
+
+        self.username = None
+        self.icon_url = None
+
+        if user is not None:
+            self.set_user(user)
+
+        # These reactions only get sent if the channel is CROSSBOT_MAIN_CHANNEL
+        self.reactions = []
+
+    def set_user(self, user):
+        self.username = user.slack_fullname or user.slackname or None
+        self.icon_url = user.image_url or None
 
     def add_text(self, text, add_newline=True):
         """Adds text to the main message."""
@@ -93,6 +125,11 @@ class Message:
             fallback="image: %s" % name, pretext=name, image_url=path
         )
 
+    def add_reaction(self, emoji):
+        emoji = emoji.strip(':')
+        if emoji not in self.reactions:
+            self.reactions.append(emoji)
+
     def __bool__(self):
         return bool(self.text or self.attachments)
 
@@ -108,6 +145,10 @@ class Message:
             message_dict['response_type'] = (
                 'ephemeral' if self.ephemeral else 'in_channel'
             )
+        if self.username is not None:
+            message_dict['username'] = self.username
+        if self.icon_url is not None:
+            message_dict['icon_url'] = self.icon_url
         return message_dict
 
 

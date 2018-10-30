@@ -52,13 +52,15 @@ def add(request):
     response.add_text(
         "Submitted {} for {}".format(time.time_str(), request.args.date)
     )
-    response.attach(
-        ephemeral=False,
-        as_user=request.user,
-        text="*{} Added:* {}  {}  :{}:".format(
-            time.SHORT_NAME, time.date, time.time_str(), emj
-        )
+    response.add_text(
+        "*{} Added:* {}  {}".format(
+            time.SHORT_NAME, time.date, time.time_str()
+        ),
+        ephemeral=False
     )
+    # Impersonate the user for the non-ephemeral message
+    response.set_user(request.user, ephemeral=False)
+    response.add_reaction(emj, ephemeral=False)
 
     def get_streak_counts(streaks):
         for streak in streaks:
@@ -75,9 +77,8 @@ def add(request):
         streak_messages = STREAKS.get(streak_count)
         if streak_messages:
             msg = choice(streak_messages).format(name=request.user)
-            response.attach(
-                ephemeral=False, color="#39C53D", text=msg + "  :achievement:"
-            )
+            response.attach(ephemeral=False, color="#39C53D", text=msg)
+            response.add_reaction('achievement', ephemeral=False)
 
     logger.debug(
         "%s has a streak of %s in %s", request.user, new_sc, args.table

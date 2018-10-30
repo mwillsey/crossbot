@@ -22,4 +22,6 @@ def announce(request):
     '''Report who won the previous day and if they're on a streak.
     Optionally takes a date.'''
     message = request.args.table.announcement_message(request.args.date)
-    return SlashCommandResponse(text=message)
+    return SlashCommandResponse(
+        message, ephemeral=False, ephemeral_command=False
+    )

@@ -130,6 +130,7 @@ class SlackTestCase(MockedRequestTestCase):
 
         self.patch('settings.SLACK_SECRET_SIGNING_KEY', self.slack_sk)
         self.patch('settings.SLACK_OAUTH_ACCESS_TOKEN', 'oauth_token')
+        self.patch('settings.SLACK_OAUTH_BOT_ACCESS_TOKEN', 'bot_oauth_token')
 
     def patch(self, *args, **kwargs):
         patcher = patch(*args, **kwargs)
@@ -139,7 +140,9 @@ class SlackTestCase(MockedRequestTestCase):
 
     def check_headers(self, method, url, headers):
         if url.startswith(SLACK_URL):
-            self.assertEqual(headers['Authorization'], 'Bearer oauth_token')
+            self.assertEqual(
+                headers['Authorization'], 'Bearer bot_oauth_token'
+            )
 
     def _slack_reaction_add(self, method, url, headers, params, data):
         return MockResponse(json.dumps({'ok': True}), 200)
@@ -442,7 +445,9 @@ class SlackAppTests(SlackTestCase):
         self.slack_post('add :40 2018-08-01', who='bob')
 
         # check date parsing here too
-        response = self.slack_post('times 2018-8-1')
+        response = self.slack_post(
+            'times 2018-8-1', expected_response_type='in_channel'
+        )
 
         lines = response['text'].split('\n')
 
@@ -475,7 +480,9 @@ class SlackAppTests(SlackTestCase):
         self.assertIn(':23', response['text'])
 
         # Ensure the time doesn't show up in the times list
-        response = self.slack_post(text='times 2018-08-01')
+        response = self.slack_post(
+            text='times 2018-08-01', expected_response_type='in_channel'
+        )
         self.assertNotIn(':23', response['text'])
 
     @unittest.skipUnless(os.path.isfile('crossbot.db'), 'No existing db found')
@@ -550,7 +557,9 @@ class SlackAppTests(SlackTestCase):
         self.slack_post(text='add :10 2018-08-02')
         self.slack_post(text='add :10 2018-08-03')
         self.slack_post(text='add :10 2018-08-04')
-        response = self.slack_post(text='plot')
+        response = self.slack_post(
+            text='plot', expected_response_type='in_channel'
+        )
         self.assertIn(
             settings.MEDIA_URL, response['attachments'][0]['image_url']
         )

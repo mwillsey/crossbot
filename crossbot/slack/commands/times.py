@@ -51,4 +51,6 @@ def times(request):
     else:
         message = '*Times for {}*\n'.format(date_str) + message
 
-    return SlashCommandResponse(text=message)
+    return SlashCommandResponse(
+        message, ephemeral=False, ephemeral_command=False
+    )
