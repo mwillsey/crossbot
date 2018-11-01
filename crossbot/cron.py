@@ -42,6 +42,14 @@ class ReleaseAnnouncement(CronJobBase):
                 comma_and(announce_data['winners_yesterday']) + also +
                 ' won yesterday.'
             )
+        if announce_data['overperformers']:
+            users = [
+                u + (
+                    " " + ":chart_with_upwards_trend:" * int(-i)
+                    if i <= -1 else ""
+                ) for u, i in announce_data['overperformers']
+            ]
+            msgs.append(comma_and(users) + ' did really well today!')
         msgs.append("Play tomorrow's:")
         for game in announce_data['links']:
             msgs.append("{} : {}".format(game, announce_data['links'][game]))

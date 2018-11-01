@@ -27,6 +27,7 @@ from crossbot.models import (
     QueryShorthand,
     Item,
     ItemOwnershipRecord,
+    Prediction,
 )
 from crossbot.cron import ReleaseAnnouncement, MorningAnnouncement
 from crossbot.settings import CROSSBUCKS_PER_SOLVE
@@ -655,3 +656,16 @@ class PredictorTests(TestCase):
     def test_cron(self):
         from crossbot.cron import Predictor
         Predictor().do()
+
+    def test_announcement(self):
+        import crossbot.predictor as p
+        data = p.data()
+        fit = p.fit(data)
+        model = p.extract_model(data, fit)
+        p.save(model)
+        announce_data = MiniCrosswordTime.announcement_data(
+            parse_date("2018-01-03")
+        )
+        self.assertIn('overperformers', announce_data)
+        self.assertEqual([u for u, r in announce_data['overperformers']],
+                         ['U2'])

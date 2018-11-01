@@ -75,11 +75,10 @@ def fit(data):
         '~/.cache/crossbot/predictor.' + hash + '.model'
     )
     if os.path.exists(cache_path):
-        print("Using cache")
         with open(cache_path, "rb") as f:
             sm = pickle.load(f)
     else:
-        print("Compiling model")
+        print("Compiling model, please wait")
         sm = pystan.StanModel(model_code=code)
         with open(cache_path, "wb") as f:
             pickle.dump(sm, f)

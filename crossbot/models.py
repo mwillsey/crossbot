@@ -418,6 +418,12 @@ class CommonTime(models.Model):
             str(w.user) for w in cls.winners(yest) if w.user not in streakers
         ]
 
+        overperformers = [
+            (str(m.user()), m.residual)
+            for m in Prediction.objects.filter(date=date, residual__lte=0
+                                               ).order_by('residual')[:3]
+        ]
+
         games = {
             "mini crossword": "https://www.nytimes.com/crosswords/game/mini",
             "easy sudoku":
@@ -428,7 +434,8 @@ class CommonTime(models.Model):
             'streaks': streaks,
             'winners_today': winners1,
             'winners_yesterday': winners2,
-            'links': games
+            'overperformers': overperformers,
+            'links': games,
         }
 
     @classmethod
@@ -515,6 +522,9 @@ class Prediction(models.Model):
     date = models.DateField()
     prediction = models.FloatField()
     residual = models.FloatField()
+
+    def user(self):
+        return CBUser.objects.filter(slackid=self.userid)[:1].get()
 
 
 class PredictionUser(models.Model):
