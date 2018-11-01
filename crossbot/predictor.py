@@ -70,7 +70,9 @@ def fit(data):
         os.makedirs(os.path.expanduser("~/.cache/crossbot/"))
     except FileExistsError:
         pass
-    cache_path = os.path.join(os.path.expanduser('~/.cache/crossbot/predictor.' + hash + '.model'))
+    cache_path = os.path.join(
+        os.path.expanduser('~/.cache/crossbot/predictor.' + hash + '.model')
+    )
     if os.path.exists(cache_path):
         print("Using cache")
         with open(cache_path, "rb") as f:
@@ -89,7 +91,8 @@ def fit(data):
             'date_effect', 'skill_effect', 'predictions', 'residuals',
             'beginner_gain', 'beginner_decay', 'sat_effect', 'mu', 'skill_dev',
             'date_dev', 'sigma'
-        ])
+        ]
+    )
     return fm
 
 
@@ -170,9 +173,10 @@ def extract_model(data, fm):
 
 def sqlsave(cursor, table, models, fields):
     cursor.executemany(
-        "insert into {} values({})".format(table,
-                                           ",".join("?" for f in fields)),
-        [[model[f] for f in fields] for model in models])
+        "insert into {} values({})".format(
+            table, ",".join("?" for f in fields)
+        ), [[model[f] for f in fields] for model in models]
+    )
 
 
 def sqldefs(*fields):
@@ -193,19 +197,24 @@ def save(model):
         cursor.execute("drop table if exists model_users")
         cursor.execute(
             "CREATE TABLE model_users (uid text not null primary key, nth integer not null, {});"
-            .format(sqldefs(*user_fields)))
-        sqlsave(cursor, "model_users", model["users"],
-                ["uid", "nth"] + user_fields)
+            .format(sqldefs(*user_fields))
+        )
+        sqlsave(
+            cursor, "model_users", model["users"], ["uid", "nth"] + user_fields
+        )
 
         date_fields = ["difficulty", "difficulty_25", "difficulty_75"]
         cursor.execute("drop table if exists model_dates")
         cursor.execute(
             "CREATE TABLE model_dates (date text not null primary key, {});"
-            .format(sqldefs(*date_fields)))
+            .format(sqldefs(*date_fields))
+        )
         cursor.executemany(
-            "insert into model_dates values(?,?,?,?)",
-            [(date["date"].strftime("%Y-%m-%d"), date["difficulty"], date["difficulty_25"], date["difficulty_75"])
-             for date in model["dates"]])
+            "insert into model_dates values(?,?,?,?)", [(
+                date["date"].strftime("%Y-%m-%d"), date["difficulty"],
+                date["difficulty_25"], date["difficulty_75"]
+            ) for date in model["dates"]]
+        )
 
         param_fields = [
             "time", "time_25", "time_75", "satmult", "satmult_25",
@@ -214,8 +223,9 @@ def save(model):
             "when_"
         ]
         cursor.execute("drop table if exists model_params")
-        cursor.execute("CREATE TABLE model_params ({});".format(
-            sqldefs(*param_fields)))
+        cursor.execute(
+            "CREATE TABLE model_params ({});".format(sqldefs(*param_fields))
+        )
         sqlsave(cursor, "model_params", [model], param_fields)
 
 
@@ -227,20 +237,29 @@ def sqlload(cursor, table, *fields):
 
 def load():
     with sqlite3.connect("crossbot.db") as cursor:
-        model, = sqlload(cursor, "model_params;", "time", "time_25", "time_75",
-                         "satmult", "satmult_25", "satmult_75", "bgain",
-                         "bgain_25", "bgain_75", "bdecay", "bdecay_25",
-                         "bdecay_75", "skill_dev", "date_dev", "sigma", "lp", "when_")
+        model, = sqlload(
+            cursor, "model_params;", "time", "time_25", "time_75", "satmult",
+            "satmult_25", "satmult_75", "bgain", "bgain_25", "bgain_75",
+            "bdecay", "bdecay_25", "bdecay_75", "skill_dev", "date_dev",
+            "sigma", "lp", "when_"
+        )
 
-        model["dates"] = sqlload(cursor, "model_dates", "date", "difficulty",
-                                 "difficulty_25", "difficulty_75")
+        model["dates"] = sqlload(
+            cursor, "model_dates", "date", "difficulty", "difficulty_25",
+            "difficulty_75"
+        )
         for d in model["dates"]:
             d["date"] = datetime.strptime(d["date"], "%Y-%m-%d").date()
-        model["users"] = sqlload(cursor, "model_users", "uid", "nth", "skill",
-                                 "skill_25", "skill_75")
-        model["historic"] = [
-            { 'uid': m.userid, 'date': m.date, 'prediction': m.prediction, 'residual': m.residual }
-            for m in models.MiniCrosswordModel.objects.all()]
+        model["users"] = sqlload(
+            cursor, "model_users", "uid", "nth", "skill", "skill_25",
+            "skill_75"
+        )
+        model["historic"] = [{
+            'uid': m.userid,
+            'date': m.date,
+            'prediction': m.prediction,
+            'residual': m.residual
+        } for m in models.MiniCrosswordModel.objects.all()]
         return model
 
 
@@ -255,7 +274,8 @@ def plot_dates(model):
         dates_,
         field('difficulty'),
         yerr=(field('difficulty_25'), field('difficulty_75')),
-        fmt='o')
+        fmt='o'
+    )
     #yhat = savgol_filter(field('difficulty'), 51, 3)
     #ax.plot(dates_, yhat, 'red')
     return fig
@@ -271,7 +291,8 @@ def plot_users(model, nameuser=lambda x: x):
         field('skill'),
         range(len(users)),
         xerr=(field('skill_25'), field('skill_75')),
-        fmt='o')
+        fmt='o'
+    )
     ax.set_yticks(range(len(users)))
     ax.set_yticklabels(map(nameuser, field('uid')))
     return fig
@@ -279,7 +300,8 @@ def plot_users(model, nameuser=lambda x: x):
 
 def plot_rdates(model):
     fig = matplotlib.figure.Figure(figsize=(11, 8.5))
-    pts = sorted([(rec['date'], rec['residual']) for rec in model['historic']
+    pts = sorted([(rec['date'], rec['residual'])
+                  for rec in model['historic']
                   if rec['date'] >= '2017'])
 
     fig = matplotlib.figure.Figure(figsize=(11, 8.5))
@@ -298,7 +320,8 @@ def plot_rdates(model):
 
     ax2 = fig.add_subplot(gs[1], sharey=ax)
     ax2.tick_params(
-        'both', left=False, labelleft=False, bottom=False, labelbottom=False)
+        'both', left=False, labelleft=False, bottom=False, labelbottom=False
+    )
     ax2.hist([r for d, r in pts], orientation="horizontal")
 
     return fig
@@ -325,7 +348,8 @@ def plot_rnth(data, model, user=None):
 
     ax2 = fig.add_subplot(gs[1], sharey=ax)
     ax2.tick_params(
-        'both', left=False, labelleft=False, bottom=False, labelbottom=False)
+        'both', left=False, labelleft=False, bottom=False, labelbottom=False
+    )
     ax2.hist([r for d, r in pts], orientation="horizontal")
 
     return fig
@@ -333,8 +357,8 @@ def plot_rnth(data, model, user=None):
 
 def plots(data, model, nameuser=lambda x: x):
     agg.FigureCanvasAgg(plot_dates(model)).print_figure("dates.pdf")
-    agg.FigureCanvasAgg(plot_users(
-        model, nameuser=nameuser)).print_figure("users.pdf")
+    agg.FigureCanvasAgg(plot_users(model, nameuser=nameuser)
+                        ).print_figure("users.pdf")
     agg.FigureCanvasAgg(plot_rdates(model)).print_figure("res-dates.pdf")
     agg.FigureCanvasAgg(plot_rnth(data, model)).print_figure("res-nth.pdf")
 
@@ -368,7 +392,8 @@ def selsub(data, model, user):
     diff_means = sum(dont) / len(dont) - sum(play) / len(play)
     stdev = model['date_dev']
     z_diff = diff_means / (
-        math.sqrt(stdev**2 / len(play) + stdev**2 / len(dont)))
+        math.sqrt(stdev**2 / len(play) + stdev**2 / len(dont))
+    )
     return (math.erf(z_diff / math.sqrt(2)) + 1) / 2
 
 

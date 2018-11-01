@@ -622,6 +622,7 @@ class MiscTests(TestCase):
             'alice, bob, and charlie', comma_and(['alice', 'bob', 'charlie'])
         )
 
+
 class PredictorTests(TestCase):
     data = {
         'U1': [None, 62, 38, 28, 42, 17],
@@ -635,7 +636,9 @@ class PredictorTests(TestCase):
             user.save()
             for i, t in enumerate(ts):
                 if t is not None:
-                    user.add_mini_crossword_time(t, parse_date("2018-01-0" + str(i + 1)))
+                    user.add_mini_crossword_time(
+                        t, parse_date("2018-01-0" + str(i + 1))
+                    )
 
     def test_predictor(self):
         import crossbot.predictor as p
