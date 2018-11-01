@@ -511,9 +511,9 @@ class MiniCrosswordModel(models.Model):
         db_table = 'mini_crossword_model'
         unique_together = (('userid', 'date'), )
 
-    userid = models.TextField()
-    date = models.IntegerField()
-    prediction = models.IntegerField()
+    userid = models.CharField(max_length=10)
+    date = models.DateField()
+    prediction = models.FloatField()
     residual = models.FloatField()
 
 

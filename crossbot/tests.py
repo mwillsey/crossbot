@@ -621,3 +621,27 @@ class MiscTests(TestCase):
         self.assertEqual(
             'alice, bob, and charlie', comma_and(['alice', 'bob', 'charlie'])
         )
+
+class PredictorTests(TestCase):
+    data = {
+        'U1': [None, 62, 38, 28, 42, 17],
+        'U2': [73, 72, 36, 37, 51, None],
+    }
+
+    def setUp(self):
+        self.maxDiff = None
+        for u, ts in self.data.items():
+            user = CBUser(slackid=u)
+            user.save()
+            for i, t in enumerate(ts):
+                if t is not None:
+                    user.add_mini_crossword_time(t, parse_date("2018-01-0" + str(i + 1)))
+
+    def test_predictor(self):
+        import crossbot.predictor as p
+        data = p.data()
+        fit = p.fit(data)
+        model = p.extract_model(data, fit)
+        p.save(model)
+        model2 = p.load()
+        self.assertDictEqual(model, model2)
