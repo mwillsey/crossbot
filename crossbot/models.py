@@ -39,6 +39,7 @@ class CBUser(models.Model):
 
     crossbucks = models.IntegerField(default=0)
     hat_key = models.CharField(max_length=20, null=True, blank=True)
+    title_key = models.CharField(max_length=20, null=True)
 
     auth_user = models.OneToOneField(
         User,
@@ -221,8 +222,11 @@ class CBUser(models.Model):
         record, _ = ItemOwnershipRecord.objects.get_or_create(
             owner=self, item_key=item.key
         )
+        if item.unique and record.quantity > 0:
+            return False
         record.quantity += amount
         record.save()
+        return True
 
     def remove_item(self, item, amount=1):
         """Remove an item from this user's inventory.
@@ -287,6 +291,9 @@ class CommonTime(models.Model):
         unique_together = ("user", "date", "deleted")
         abstract = True
 
+    completed_milestones = [3, 10, 50, 100, 250, 500, 1000]
+    completed_congrats = "Congrats on completing {n} {games}! You've earned a new title: \"{title}\""
+
     user = models.ForeignKey(CBUser, on_delete=models.CASCADE)
     seconds = models.IntegerField()
     date = models.DateField()
@@ -350,6 +357,26 @@ class CommonTime(models.Model):
             streaks.append(current_streak)
 
         return streaks
+
+    @classmethod
+    def do_completed(cls, user):
+        num_completed = len(cls.all_times().filter(user=user))
+        most_recent_milestone = max(
+            (n for n in cls.completed_milestones if n <= num_completed),
+            default=0
+        )
+        if not most_recent_milestone:
+            return
+        title_key = '{}_completed{}_title'.format(
+            cls.SLUG, most_recent_milestone
+        )
+        title = Item.from_key(title_key)
+
+        if user.add_item(title):
+            return cls.completed_congrats.format(
+                n=most_recent_milestone, games=cls.PLURAL, title=title.name
+            )
+        return
 
     @classmethod
     def winning_times(cls, qs=None):
@@ -492,16 +519,22 @@ class CommonTime(models.Model):
 
 class MiniCrosswordTime(CommonTime):
     SHORT_NAME = 'Mini'
+    SLUG = 'mini'
+    PLURAL = 'mini crosswords'
     pass
 
 
 class CrosswordTime(CommonTime):
     SHORT_NAME = 'Crossword'
+    SLUG = 'crossword'
+    PLURAL = 'regular crosswords'
     pass
 
 
 class EasySudokuTime(CommonTime):
     SHORT_NAME = 'Sudoku'
+    SLUG = 'sudoku'
+    PLURAL = 'sudokus'
     pass
 
 
@@ -609,15 +642,36 @@ class Item:
         self.name = options['name']
         # use setattr and defaults in getter methods?
         self.droppable = options.get('droppable', True)
-        self.image_name = options.get('image_name', None)
+        self.tradeable = options.get('tradeable', True)
+        self.unique = options.get('unique', False)
         self.rarity = options.get('rarity', 1.0)
+        self.image_name = options.get('image_name', None)
         self.type = options.get('type', None)
+        self.game_specific = options.get('game_specific', False)
 
     @classmethod
     def load_items(cls):
         with open(path.join(path.dirname(__file__), 'items.yaml')) as f:
             for key, options in yaml.load(f).items():
-                cls.ITEMS[key] = Item(key, options)
+                if key.startswith('__'):
+                    continue
+                if options.get('game_specific', False):
+                    for game_cls in CommonTime.__subclasses__():
+                        game_key = '{}_{}'.format(game_cls.SLUG, key)
+                        formatter_options = {
+                            'slug': game_cls.SLUG,
+                            'short': game_cls.SHORT_NAME
+                        }
+                        game_options = {
+                            k: (
+                                v.format(**formatter_options)
+                                if isinstance(v, str) else v
+                            )
+                            for (k, v) in options.items()
+                        }
+                        cls.ITEMS[game_key] = Item(game_key, game_options)
+                else:
+                    cls.ITEMS[key] = Item(key, options)
 
     @classmethod
     def from_key(cls, key):

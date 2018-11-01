@@ -413,6 +413,12 @@ class ModelTests(SlackTestCase):
         path = finders.find(url)
         self.assertTrue(os.path.isfile(path))
 
+    def test_game_specific_items(self):
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        title = Item.from_key('mini_completed3_title')
+        self.assertEqual(title.key, 'mini_completed3_title')
+        self.assertEqual(title.name, 'Mini Dabbler')
+
 
 class SlackAuthTests(SlackTestCase):
     def test_bad_signature(self):

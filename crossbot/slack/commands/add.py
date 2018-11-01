@@ -95,6 +95,14 @@ def add(request):
         "%s has a streak of %s in %s", request.user, new_sc, args.table
     )
 
+    completed_message = args.table.do_completed(request.user)
+    if completed_message:
+        response.attach(
+            ephemeral=not request.in_main_channel(),
+            color="#39C53D",
+            text=completed_message
+        )
+
     return response
 
     # if args.table == 'mini_crossword_time':
