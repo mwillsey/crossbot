@@ -112,4 +112,5 @@ class Predictor(CronJobBase):
         fit = predictor.fit(data)
         model = predictor.extract_model(data, fit)
         predictor.save(model)
-        return "Ran the predictor at {}".format(model["when_"])
+        historic, dates, users, params = model
+        return "Ran the predictor at {}".format(params.when_run)

@@ -647,7 +647,7 @@ class PredictorTests(TestCase):
         model = p.extract_model(data, fit)
         p.save(model)
         model2 = p.load()
-        self.assertDictEqual(model, model2)
+        self.assertEqual(model, model2)
 
     def test_cron(self):
         from crossbot.cron import Predictor

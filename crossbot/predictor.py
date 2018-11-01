@@ -70,8 +70,9 @@ def fit(data):
         os.makedirs(os.path.expanduser("~/.cache/crossbot/"))
     except FileExistsError:
         pass
-    cache_path = os.path.join(
-        os.path.expanduser('~/.cache/crossbot/predictor.' + hash + '.model')
+
+    cache_path = os.path.expanduser(
+        '~/.cache/crossbot/predictor.' + hash + '.model'
     )
     if os.path.exists(cache_path):
         print("Using cache")
@@ -109,12 +110,14 @@ def extract_model(data, fm):
     for i, multiplier in enumerate(params["date_effect"].transpose()):
         date = unindex(data['dates'], i + 1)
         mult_mean, mult_25, mult_75 = drange(multiplier)
-        dates.append({
-            'date': date,
-            'difficulty': mult_mean,
-            'difficulty_25': mult_25,
-            'difficulty_75': mult_75
-        })
+        dates.append(
+            models.PredictionDate(
+                date=date,
+                difficulty=mult_mean,
+                difficulty_25=mult_25,
+                difficulty_75=mult_75
+            )
+        )
 
     users = []
     for i, multiplier in enumerate(params["skill_effect"].transpose()):
@@ -124,143 +127,80 @@ def extract_model(data, fm):
             if uid == uid_
         ])
         mult_mean, mult_25, mult_75 = drange(multiplier)
-        users.append({
-            'uid': uid,
-            'nth': nth,
-            'skill': mult_mean,
-            'skill_25': mult_25,
-            'skill_75': mult_75,
-        })
+        users.append(
+            models.PredictionUser(
+                uid=uid,
+                nth=nth,
+                skill=mult_mean,
+                skill_25=mult_25,
+                skill_75=mult_75,
+            )
+        )
 
     recs = []
     for date, uid, prediction, residual in zip(
             data["dates"], data["uids"], params["predictions"].transpose(),
             params["residuals"].transpose()):
-        recs.append({
-            'date': date,
-            'uid': uid,
-            'prediction': prediction.mean(),
-            'residual': residual.mean()
-        })
+        recs.append(
+            models.Prediction(
+                date=date,
+                userid=uid,
+                prediction=prediction.mean(),
+                residual=residual.mean()
+            )
+        )
 
     bgain_mean, bgain_25, bgain_75 = drange(params['beginner_gain'])
     bdecay_mean, bdecay_25, bdecay_75 = drange(params['beginner_decay'])
     time_mean, time_25, time_75 = drange(params['mu'])
     satmult_mean, satmult_25, satmult_75 = drange(params['sat_effect'])
-    return {
-        'dates': dates,
-        'users': users,
-        'historic': recs,
-        'time': time_mean,
-        'time_25': time_25,
-        'time_75': time_75,
-        'satmult': satmult_mean,
-        'satmult_25': satmult_25,
-        'satmult_75': satmult_75,
-        'bgain': bgain_mean,
-        'bgain_25': bgain_25,
-        'bgain_75': bgain_75,
-        'bdecay': bdecay_mean,
-        'bdecay_25': bdecay_25,
-        'bdecay_75': bdecay_75,
-        'skill_dev': params['skill_dev'].mean(),
-        'date_dev': params['date_dev'].mean(),
-        'sigma': params['sigma'].mean(),
-        "lp": params["lp__"].mean(),
-        'when_': time.time()
-    }
-
-
-def sqlsave(cursor, table, models, fields):
-    cursor.executemany(
-        "insert into {} values({})".format(
-            table, ",".join("?" for f in fields)
-        ), [[model[f] for f in fields] for model in models]
+    params = models.PredictionParameter(
+        time=time_mean,
+        time_25=time_25,
+        time_75=time_75,
+        satmult=satmult_mean,
+        satmult_25=satmult_25,
+        satmult_75=satmult_75,
+        bgain=bgain_mean,
+        bgain_25=bgain_25,
+        bgain_75=bgain_75,
+        bdecay=bdecay_mean,
+        bdecay_25=bdecay_25,
+        bdecay_75=bdecay_75,
+        skill_dev=params['skill_dev'].mean(),
+        date_dev=params['date_dev'].mean(),
+        sigma=params['sigma'].mean(),
+        lp=params["lp__"].mean(),
+        when_run=time.time(),
     )
-
-
-def sqldefs(*fields):
-    return ", ".join(f + " real not null" for f in fields)
+    return recs, dates, users, params
 
 
 def save(model):
-    with sqlite3.connect("crossbot.db") as cursor:
-        for rec in model["historic"]:
-            models.MiniCrosswordModel(
-                userid=rec["uid"],
-                date=rec["date"],
-                prediction=rec["prediction"],
-                residual=rec["residual"]
-            ).save()
+    recs, dates, users, params = model
+    models.Prediction.objects.all().delete()
+    models.PredictionUser.objects.all().delete()
+    models.PredictionDate.objects.all().delete()
+    models.PredictionParameter.objects.all().delete()
 
-        user_fields = ["skill", "skill_25", "skill_75"]
-        cursor.execute("drop table if exists model_users")
-        cursor.execute(
-            "CREATE TABLE model_users (uid text not null primary key, nth integer not null, {});"
-            .format(sqldefs(*user_fields))
-        )
-        sqlsave(
-            cursor, "model_users", model["users"], ["uid", "nth"] + user_fields
-        )
-
-        date_fields = ["difficulty", "difficulty_25", "difficulty_75"]
-        cursor.execute("drop table if exists model_dates")
-        cursor.execute(
-            "CREATE TABLE model_dates (date text not null primary key, {});"
-            .format(sqldefs(*date_fields))
-        )
-        cursor.executemany(
-            "insert into model_dates values(?,?,?,?)", [(
-                date["date"].strftime("%Y-%m-%d"), date["difficulty"],
-                date["difficulty_25"], date["difficulty_75"]
-            ) for date in model["dates"]]
-        )
-
-        param_fields = [
-            "time", "time_25", "time_75", "satmult", "satmult_25",
-            "satmult_75", "bgain", "bgain_25", "bgain_75", "bdecay",
-            "bdecay_25", "bdecay_75", "skill_dev", "date_dev", "sigma", "lp",
-            "when_"
-        ]
-        cursor.execute("drop table if exists model_params")
-        cursor.execute(
-            "CREATE TABLE model_params ({});".format(sqldefs(*param_fields))
-        )
-        sqlsave(cursor, "model_params", [model], param_fields)
-
-
-def sqlload(cursor, table, *fields):
-    return [{f: v
-             for f, v in zip(fields, rec)}
-            for rec in cursor.execute("select * from " + table)]
+    for rec in recs:
+        rec.save()
+    for date in dates:
+        date.save()
+    for user in users:
+        user.save()
+    params.save()
 
 
 def load():
-    with sqlite3.connect("crossbot.db") as cursor:
-        model, = sqlload(
-            cursor, "model_params;", "time", "time_25", "time_75", "satmult",
-            "satmult_25", "satmult_75", "bgain", "bgain_25", "bgain_75",
-            "bdecay", "bdecay_25", "bdecay_75", "skill_dev", "date_dev",
-            "sigma", "lp", "when_"
-        )
+    recs = list(models.Prediction.objects.all())
+    dates = list(models.PredictionDate.objects.all())
+    user = list(models.PredictionUser.objects.all())
+    params = models.PredictionParameter.objects.all()[:1].get()
+    return recs, dates, user, params
 
-        model["dates"] = sqlload(
-            cursor, "model_dates", "date", "difficulty", "difficulty_25",
-            "difficulty_75"
-        )
-        for d in model["dates"]:
-            d["date"] = datetime.strptime(d["date"], "%Y-%m-%d").date()
-        model["users"] = sqlload(
-            cursor, "model_users", "uid", "nth", "skill", "skill_25",
-            "skill_75"
-        )
-        model["historic"] = [{
-            'uid': m.userid,
-            'date': m.date,
-            'prediction': m.prediction,
-            'residual': m.residual
-        } for m in models.MiniCrosswordModel.objects.all()]
-        return model
+
+### TODO: The below do not use the new model format
 
 
 def plot_dates(model):

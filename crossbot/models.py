@@ -505,7 +505,7 @@ class EasySudokuTime(CommonTime):
     pass
 
 
-class MiniCrosswordModel(models.Model):
+class Prediction(models.Model):
     class Meta:
         managed = False
         db_table = 'mini_crossword_model'
@@ -517,30 +517,30 @@ class MiniCrosswordModel(models.Model):
     residual = models.FloatField()
 
 
-class ModelUser(models.Model):
+class PredictionUser(models.Model):
     class Meta:
         managed = False
         db_table = 'model_users'
 
-    uid = models.TextField(unique=True)
+    uid = models.CharField(max_length=10, unique=True)
     nth = models.IntegerField()
     skill = models.FloatField()
     skill_25 = models.FloatField()
     skill_75 = models.FloatField()
 
 
-class ModelDate(models.Model):
+class PredictionDate(models.Model):
     class Meta:
         managed = False
         db_table = 'model_dates'
 
-    date = models.IntegerField()
+    date = models.DateField()
     difficulty = models.FloatField()
     difficulty_25 = models.FloatField()
     difficulty_75 = models.FloatField()
 
 
-class ModelParams(models.Model):
+class PredictionParameter(models.Model):
     class Meta:
         managed = False
         db_table = 'model_params'
