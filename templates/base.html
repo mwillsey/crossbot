@@ -18,6 +18,8 @@
         <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
 
         <link rel="stylesheet" href="{% static "crossbot/css/base.css" %}">
+
+        {% block styles %}{% endblock %}
     </head>
     <body>
         <nav class="navbar navbar-expand-md navbar-light bg-light">
@@ -45,17 +47,12 @@
                     <li class="nav-item {% if request.path == url %}active{% endif %}">
                         <a class="nav-link" href="{{ url }}">Plots</a>
                     </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            Example Dropdown
-                        </a>
-                        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-                            <a class="dropdown-item" href="#">Action</a>
-                            <a class="dropdown-item" href="#">Another action</a>
-                            <div class="dropdown-divider"></div>
-                            <a class="dropdown-item" href="#">Something else here</a>
-                        </div>
+                    {% if user.is_authenticated %}
+                    {% url 'inventory' as url %}
+                    <li class="nav-item {% if request.path == url %}active{% endif %}">
+                        <a class="nav-link" href="{{ url }}">Inventory</a>
                     </li>
+                    {% endif %}
                 </ul>
 
                 <ul class="navbar-nav">
@@ -74,9 +71,8 @@
 
         <main role="main">
             {# Display messages to user #}
-            {# TODO: not all messages should be danger messages #}
             {% for message in messages %}
-                <div class="alert alert-danger">{{ message }}</div>
+                <div class="alert alert-{{ message.level_tag }}">{{ message }}</div>
             {% endfor %}
 
             {% block content %}{% endblock %}

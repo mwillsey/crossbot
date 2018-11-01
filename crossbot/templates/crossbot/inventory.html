@@ -1,35 +1,65 @@
 {% extends "base.html" %}
 {% load staticfiles %}
 
+{% block styles %}
+<style>
+.profile {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+.profile img {
+    max-width: 70px;
+    max-height: 70px;
+}
+.item img {
+    max-width: 90px;
+    max-height: 90px;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 {% with request.user.cb_user as user %}
-<div>
-    <p>{{ user }}</p>
-    <img style="max-width: 70px; max-height: 70px" src="{% if user.hat %}{{ user.hat.image_url }}{% elif user.image_url %}{{ user.image_url }}{% else %}{% static 'crossbot/img/no-user.jpg' %}{% endif %}">
+<div class="profile row">
+    <div class="col-12 col-md-2">
+        <img src="{% if user.image_url %}{{ user.image_url }}{% else %}{% static 'crossbot/img/no-user.jpg' %}{% endif %}">
+    </div>
+    <div class="info col-12 col-md-10">
+        <h4>{{ user }}</h4>
+        {% if user.hat %}
+            <div>
+                Hat: {{ user.hat }}
+                <form class="d-inline-block" action="{% url 'unequip_item' item_type='hat' %}" method="POST">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-secondary btn-sm">Un-equip</button>
+                </form>
+            </div>
+        {% endif %}
+    </div>
 </div>
 
-<form action="/inventory/" method="post">
-    {% csrf_token %}
-        <select name="hat-key">
-            <option value="none">-----</option>
-    {% for hat in hats %}
-              <option value="{{ hat.key }}" {% if hat.key == user.hat_key %}selected{% endif %}>{{ hat.name }}</option>
-    {% endfor %}
-</select>
-
-    <input type="submit" value="Submit">
-</form>
-
-<div>
+<div class="row">
     {% for item_record in user.itemownershiprecord_set.all %}
     {% with item_record.item as item %}
-        <div>
-            <p>{{ item.name }}</p>
-            <p>Quantity Owned: {{ item_record.quantity }}</p>
+    <div class="col-sm-3">
+        <div class="item card text-center">
             {% if item.image_url %}
-                <img src="{{ item.image_url }}" style="max-width: 70px; max-height: 70px">
+                <img class="card-img-top mx-auto" src="{{ item.image_url }}">
             {% endif %}
+            <div class="card-body">
+            <h5 class="card-title">{{ item.name }}</h5>
+            <div class="card-text">
+                <p>Type: {{ item.type }}</p>
+                <p>Quantity Owned: {{ item_record.quantity }}</p>
+            </div>
+            <form action="{% url 'equip_item' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="itemkey" value="{{ item.key }}">
+                <button class="btn btn-primary" type="submit">Equip</button>
+            </form>
+            </div>
         </div>
+    </div>
     {% endwith %}
     {% endfor %}
 </div>

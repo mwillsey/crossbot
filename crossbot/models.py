@@ -268,6 +268,40 @@ class CBUser(models.Model):
         """Return the hat Item for a person, or None if they have no hat. :-("""
         return Item.from_key(self.hat_key)
 
+    @transaction.atomic
+    def equip(self, item):
+        """Equip the item to the correct slot if the user owns at least one.
+        Args:
+            item: An Item.
+        Returns:
+            Whether or not the hat was sucessfully put on.
+        """
+        assert isinstance(item, Item)
+        assert item.is_hat() # or item.is_title()
+
+        if self.quantity_owned(item) < 0:
+            return False
+
+        if item.is_hat():
+            self.hat_key = item.key
+            self.save()
+            return True
+
+    def is_equipped(self, item):
+        assert isinstance(item, Item)
+        return item.key == self.hat_key
+
+    def unequip(self, item):
+        assert isinstance(item, Item)
+        if item.key == self.hat_key:
+            self.hat_key = None
+            self.save()
+            return
+
+    def unequip_hat(self):
+        self.hat_key = None
+        self.save()
+
     @property
     def is_staff(self):
         if not self.auth_user:
@@ -599,7 +633,7 @@ class QueryShorthand(models.Model):
 
 # Items are stored in YAML (not the DB) but loaded here for convenience
 
-
+# TODO: unsure this class is immutable? Or reload from YAML details every time?
 class Item:
     ITEMS = {}
 
