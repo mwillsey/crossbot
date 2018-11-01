@@ -6,6 +6,7 @@ from datetime import timedelta
 from crossbot.util import comma_and
 from crossbot.models import MiniCrosswordTime
 from crossbot.slack.api import post_message
+import crossbot.predictor as predictor
 
 import logging
 
@@ -100,3 +101,14 @@ class MorningAnnouncement(CronJobBase):
         channel = 'C58PXJTNU'
         response = post_message(channel, {'text': message})
         return "Ran morning announcement at {}\n{}".format(now, message)
+
+class Predictor(CronJobBase):
+    schedule = Schedule(run_every_mins=60)
+    code = 'crossbot.predictor.infer'
+
+    def do(self):
+        data = predictor.data()
+        fit = predictor.fit(data)
+        model = predictor.extract_model(data, fit)
+        predictor.save(model)
+        return "Ran the predictor at {}".format(model["when_"])

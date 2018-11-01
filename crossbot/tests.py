@@ -648,3 +648,8 @@ class PredictorTests(TestCase):
         p.save(model)
         model2 = p.load()
         self.assertDictEqual(model, model2)
+
+    def test_cron(self):
+        from crossbot.cron import Predictor
+        Predictor().do()
+
