@@ -291,6 +291,10 @@ class CommonTime(models.Model):
         unique_together = ("user", "date", "deleted")
         abstract = True
 
+    SLUG = 'common'
+    SHORT = 'Common'
+    PLURAL = 'commons'
+
     completed_milestones = [3, 10, 50, 100, 250, 500, 1000]
     completed_congrats = "Congrats on completing {n} {games}! You've earned a new title: \"{title}\""
 
