@@ -143,4 +143,10 @@ def inventory(request):
     items = [ir.item for ir in item_records]
     hats = [item for item in items if item.type == 'hat']
 
-    return render(request, 'crossbot/inventory.html', {'user': user, 'items': items, 'hats': hats})
+    return render(
+        request, 'crossbot/inventory.html', {
+            'user': user,
+            'items': items,
+            'hats': hats
+        }
+    )
