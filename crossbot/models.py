@@ -277,7 +277,7 @@ class CBUser(models.Model):
             Whether or not the hat was sucessfully put on.
         """
         assert isinstance(item, Item)
-        assert item.is_hat() # or item.is_title()
+        assert item.is_hat()  # or item.is_title()
 
         if self.quantity_owned(item) < 0:
             return False
@@ -632,6 +632,7 @@ class QueryShorthand(models.Model):
 
 
 # Items are stored in YAML (not the DB) but loaded here for convenience
+
 
 # TODO: unsure this class is immutable? Or reload from YAML details every time?
 class Item:
