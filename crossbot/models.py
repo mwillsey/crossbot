@@ -634,7 +634,7 @@ class QueryShorthand(models.Model):
 # Items are stored in YAML (not the DB) but loaded here for convenience
 
 
-# TODO: unsure this class is immutable? Or reload from YAML details every time?
+# TODO: ensure this class is immutable? Or reload from YAML details every time?
 class Item:
     ITEMS = {}
 
