@@ -102,6 +102,7 @@ class MorningAnnouncement(CronJobBase):
         response = post_message(channel, {'text': message})
         return "Ran morning announcement at {}\n{}".format(now, message)
 
+
 class Predictor(CronJobBase):
     schedule = Schedule(run_every_mins=60)
     code = 'crossbot.predictor.infer'

@@ -652,4 +652,3 @@ class PredictorTests(TestCase):
     def test_cron(self):
         from crossbot.cron import Predictor
         Predictor().do()
-
