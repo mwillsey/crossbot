@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block content %}
+{% with request.user.cb_user as user %}
+<div>
+    <p>{{ user }}</p>
+    <img style="max-width: 70px; max-height: 70px" src="{% if user.hat %}{{ user.hat.image_url }}{% elif user.image_url %}{{ user.image_url }}{% else %}{% static 'crossbot/img/no-user.jpg' %}{% endif %}">
+</div>
+
+<form action="/inventory/" method="post">
+    {% csrf_token %}
+        <select name="hat-key">
+            <option value="none">-----</option>
+    {% for hat in hats %}
+              <option value="{{ hat.key }}" {% if hat.key == user.hat_key %}selected{% endif %}>{{ hat.name }}</option>
+    {% endfor %}
+</select>
+
+    <input type="submit" value="Submit">
+</form>
+
+<div>
+    {% for item_record in user.itemownershiprecord_set.all %}
+    {% with item_record.item as item %}
+        <div>
+            <p>{{ item.name }}</p>
+            <p>Quantity Owned: {{ item_record.quantity }}</p>
+            {% if item.image_url %}
+                <img src="{{ item.image_url }}" style="max-width: 70px; max-height: 70px">
+            {% endif %}
+        </div>
+    {% endwith %}
+    {% endfor %}
+</div>
+{% endwith %}
+{% endblock %}

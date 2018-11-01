@@ -15,5 +15,6 @@ urlpatterns = [
         ),
         name='plot'
     ),
+    path('inventory/', views.inventory, name='inventory'),
     path('', views.home, name='home')
 ]

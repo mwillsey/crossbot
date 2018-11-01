@@ -5,6 +5,7 @@ import logging
 
 from crossbot.util import comma_and
 
+from django import forms
 from django.conf import settings
 from django.shortcuts import render
 from django.utils import timezone
@@ -126,3 +127,20 @@ def home(request):
             'times': times,
         }
     )
+
+
+# TODO: actually use forms instead of rolling my own
+@login_required
+def inventory(request):
+    user = request.user.cb_user
+
+    if request.method == 'POST':
+        hat_key = request.POST['hat-key']
+        user.hat_key = None if hat_key == 'none' else hat_key
+        user.save()
+
+    item_records = user.itemownershiprecord_set.all()
+    items = [ir.item for ir in item_records]
+    hats = [item for item in items if item.type == 'hat']
+
+    return render(request, 'crossbot/inventory.html', {'user': user, 'items': items, 'hats': hats})
