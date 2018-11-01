@@ -17,3 +17,8 @@ jesterhat:
   name: Jester Hat
   image_name: jesterhat.png
   type: hat
+
+propellerhat:
+  name: Propeller Beanie
+  image_name: propellerhat.png
+  type: hat
