@@ -21,8 +21,10 @@ def init(parser):
 
 def model(request):
     if request.args.cmd == 'details':
-        latest_run_time = models.ModelParams.objects.latest('when_run')
-        model_params = models.ModelParams.objects.get(when_run=latest_run_time)
+        latest_run_time = models.PredictionParameter.objects.latest('when_run')
+        model_params = models.PredictionParameter.objects.get(
+            when_run=latest_run_time
+        )
         request.reply(
             "*Last model run*: {:%Y-%m-%d %H:%M}\n*log(P)* = {}".format(
                 datetime.fromtimestamp(model_params.when_run), model_params.lp
@@ -34,10 +36,10 @@ def model(request):
         #       properly
         lsecs = []
         predictions = []
-        for model in models.MiniCrosswordModel.all():
+        for prediction in models.Prediction.all():
             try:
                 time = models.MiniCrosswordTime.all_times().get(
-                    user__slackid=model.uid, date=model.date
+                    user__slackid=prediction.uid, date=prediction.date
                 )
             except models.MiniCrosswordTime.DoesNotExist:
                 logger.warning(
@@ -48,7 +50,7 @@ def model(request):
             lsecs.append(
                 math.log(time.seconds if 0 < time.seconds < 300 else 300)
             )
-            predictions.append(model.prediction)
+            predictions.append(prediction.prediction)
 
         avg = sum(lsecs) / len(lsecs)
         baseline = sum((s - avg)**2 for s in lsecs) / len(lsecs)
