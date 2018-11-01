@@ -16,9 +16,17 @@ urlpatterns = [
         name='plot'
     ),
     path('inventory/equip-item/', views.equip_item, name='equip_item'),
-    path('inventory/unequip-<item_type>/', views.unequip_item, name='unequip_item'),
-    path('inventory/', login_required(
-        TemplateView.as_view(template_name='crossbot/inventory.html')),
-         name='inventory'),
+    path(
+        'inventory/unequip-<item_type>/',
+        views.unequip_item,
+        name='unequip_item'
+    ),
+    path(
+        'inventory/',
+        login_required(
+            TemplateView.as_view(template_name='crossbot/inventory.html')
+        ),
+        name='inventory'
+    ),
     path('', views.home, name='home')
 ]
