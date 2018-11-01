@@ -649,6 +649,9 @@ class PredictorTests(TestCase):
         model2 = p.load()
         self.assertEqual(model, model2)
 
+        users = {m.uid: m for m in model[2]}
+        self.assertLess(users["U1"].skill, users["U2"].skill)
+
     def test_cron(self):
         from crossbot.cron import Predictor
         Predictor().do()
