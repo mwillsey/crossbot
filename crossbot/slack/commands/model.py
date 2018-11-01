@@ -43,7 +43,8 @@ def model(request):
                 )
             except models.MiniCrosswordTime.DoesNotExist:
                 logger.warning(
-                    "Couldn't find time for %s on %s", model.uid, model.date
+                    "Couldn't find time for %s on %s", prediction.uid,
+                    prediction.date
                 )
                 continue
 
