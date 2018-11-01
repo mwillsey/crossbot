@@ -12,8 +12,7 @@
     max-height: 70px;
 }
 .item img {
-    max-width: 90px;
-    max-height: 90px;
+    height: 90px;
 }
 </style>
 {% endblock %}
@@ -42,17 +41,17 @@
     {% for item_record in user.itemownershiprecord_set.all %}
     {% with item_record.item as item %}
     <div class="col-sm-3">
-        <div class="item card text-center">
+        <div class="item card text-center h-100">
             {% if item.image_url %}
-                <img class="card-img-top mx-auto" src="{{ item.image_url }}">
+                <img class="mx-auto" src="{{ item.image_url }}">
             {% endif %}
-            <div class="card-body">
+            <div class="card-body d-flex flex-column">
             <h5 class="card-title">{{ item.name }}</h5>
             <div class="card-text">
                 <p>Type: {{ item.type }}</p>
                 <p>Quantity Owned: {{ item_record.quantity }}</p>
             </div>
-            <form action="{% url 'equip_item' %}" method="POST">
+            <form class="mt-auto" action="{% url 'equip_item' %}" method="POST">
                 {% csrf_token %}
                 <input type="hidden" name="itemkey" value="{{ item.key }}">
                 <button class="btn btn-primary" type="submit">Equip</button>

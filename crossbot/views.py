@@ -156,6 +156,6 @@ def unequip_item(request, item_type):
     if request.method == 'POST':
         if item_type == 'hat':
             user.unequip_hat()
-            messages.success(request, "Hat unequipped.")
+            messages.info(request, "Hat unequipped.")
 
     return redirect('inventory')
