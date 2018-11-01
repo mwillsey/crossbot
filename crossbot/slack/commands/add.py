@@ -72,7 +72,8 @@ def add(request):
             for i, entry in enumerate(streak):
                 if entry.date == args.date:
                     # i is the old streak count, len is the new one
-                    return i, len(streak)
+                    old = max(i, len(streak) - 1 - i)
+                    return old, len(streak)
         raise ValueError("date wasn't in streaks!")
 
     streaks = args.table.participation_streaks(request.user)
