@@ -77,9 +77,10 @@ class MorningAnnouncement(CronJobBase):
         # now add the other winners
         also = ' also' if announce_data['streaks'] else ''
         if announce_data['winners_today']:
+            is_are = 'are' if len(announce_data['winners_today']) > 1 else 'is'
             msgs.append(
-                comma_and(announce_data['winners_today']) + also +
-                ' is winning.'
+                comma_and(announce_data['winners_today']) + is_are + also +
+                ' winning.'
             )
         if announce_data['winners_yesterday']:
             msgs.append(
