@@ -243,7 +243,7 @@ class CBUser(models.Model):
             return False
 
         # Check to see if there are enough to safely delete
-        if amount > record.quantity:
+        if amount + (1 if self.is_equipped(item) else 0) > record.quantity:
             return False
 
         record.quantity -= amount
@@ -279,7 +279,7 @@ class CBUser(models.Model):
         assert isinstance(item, Item)
         assert item.is_hat()  # or item.is_title()
 
-        if self.quantity_owned(item) < 0:
+        if self.quantity_owned(item) <= 0:
             return False
 
         if item.is_hat():
