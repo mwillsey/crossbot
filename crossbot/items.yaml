@@ -3,6 +3,7 @@
 #   name: str
 #   droppable: bool (default True)
 #   rarity: float in (0, FLOAT_MAX], larger is less rare (default 1.0)
+#   price: positive int
 #   image_name: str (default None/no image)
 #   type: str (default None)
 
@@ -10,4 +11,14 @@
 tophat:
   name: Tophat
   image_name: tophat.png
+  type: hat
+
+jesterhat:
+  name: Jester Hat
+  image_name: jesterhat.png
+  type: hat
+
+propellerhat:
+  name: Propeller Beanie
+  image_name: propellerhat.png
   type: hat

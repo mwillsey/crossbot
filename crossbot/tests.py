@@ -13,6 +13,7 @@ from django.conf import settings
 from django.test import TestCase as DjangoTestCase
 from django.test.client import RequestFactory
 from django.urls import reverse
+from django.contrib.auth.models import User
 from django.contrib.staticfiles import finders
 from django.utils import timezone
 
@@ -224,6 +225,8 @@ class SlackTestCase(MockedRequestTestCase):
         return None
 
 
+# TODO: this shouldn't be a subclass of SlackTestCase?
+# TODO: make sure these tests check that save() is properly called
 class ModelTests(SlackTestCase):
     def test_from_slackid(self):
         alice = CBUser.from_slackid('UALICE', 'alice')
@@ -413,6 +416,48 @@ class ModelTests(SlackTestCase):
         path = finders.find(url)
         self.assertTrue(os.path.isfile(path))
 
+    def test_equip_item(self):
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        tophat = Item.from_key('tophat')
+
+        # try to equip hat without owning one, should fail
+        self.assertFalse(alice.equip(tophat))
+        self.assertFalse(alice.is_equipped(tophat))
+        self.assertIsNone(alice.hat)
+
+        # give one and equip it
+        alice.add_item(tophat)
+        self.assertTrue(alice.equip(tophat))
+        self.assertTrue(alice.is_equipped(tophat))
+        self.assertEqual(alice.hat, tophat)
+
+        # make sure the changes persisted
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        self.assertTrue(alice.is_equipped(tophat))
+        self.assertEqual(alice.hat, tophat)
+
+        # shouldn't be able to remove it
+        self.assertFalse(alice.remove_item(tophat))
+        self.assertEqual(alice.quantity_owned(tophat), 1)
+
+        # unequip it both ways
+        alice.unequip(tophat)
+        self.assertFalse(alice.is_equipped(tophat))
+        self.assertIsNone(alice.hat)
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        self.assertFalse(alice.is_equipped(tophat))
+        self.assertIsNone(alice.hat)
+
+        self.assertTrue(alice.equip(tophat))
+        self.assertTrue(alice.is_equipped(tophat))
+        self.assertEqual(alice.hat, tophat)
+        alice.unequip_hat()
+        self.assertFalse(alice.is_equipped(tophat))
+        self.assertIsNone(alice.hat)
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        self.assertFalse(alice.is_equipped(tophat))
+        self.assertIsNone(alice.hat)
+
 
 class SlackAuthTests(SlackTestCase):
     def test_bad_signature(self):
@@ -573,6 +618,46 @@ class SlackAppTests(SlackTestCase):
         self.assertIn(
             settings.MEDIA_URL, response['attachments'][0]['image_url']
         )
+
+
+# Again, shouldn't be a subclass of "SlackTestsCase"
+class WebViewTests(SlackTestCase):
+    def test_equip_item(self):
+        tophat = Item.from_key('tophat')
+
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        # need to make alice staff, as it's feature gated for now
+        auth_alice = User.objects.get_or_create(
+            username='UALICE', is_staff=True
+        )[0]
+        alice.auth_user = auth_alice
+        alice.save()
+        self.client.force_login(auth_alice)
+
+        response = self.client.get(reverse('inventory'))
+        self.assertNotContains(response, tophat.name)
+
+        alice.add_item(tophat)
+
+        response = self.client.get(reverse('inventory'))
+        self.assertContains(response, tophat.name)
+        self.assertNotContains(response, 'Un-equip')
+
+        # Try to equip an item through the POST method
+        response = self.client.post(
+            reverse('equip_item'), data={'itemkey': tophat.key}
+        )
+        self.assertRedirects(response, reverse('inventory'))
+        self.assertEquals(CBUser.from_slackid('UALICE', 'alice').hat, tophat)
+
+        response = self.client.get(reverse('inventory'))
+        self.assertContains(response, 'Un-equip')
+
+        response = self.client.post(
+            reverse('unequip_item', kwargs={'item_type': 'hat'})
+        )
+        self.assertIsNone(CBUser.from_slackid('UALICE', 'alice').hat)
+        self.assertRedirects(response, reverse('inventory'))
 
 
 class AnnouncementTests(SlackTestCase):

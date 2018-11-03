@@ -5,17 +5,19 @@ import logging
 
 from crossbot.util import comma_and
 
+from django import forms
 from django.conf import settings
-from django.shortcuts import render
-from django.utils import timezone
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
+from django.shortcuts import render, redirect
+from django.utils import timezone
+from django.views.decorators.cache import cache_control
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.gzip import gzip_page
-from django.views.decorators.cache import cache_control
-from django.contrib.auth.decorators import login_required
 
 from .slack.handler import handle_slash_command
-from .models import MiniCrosswordTime, CrosswordTime, EasySudokuTime
+from .models import MiniCrosswordTime, CrosswordTime, EasySudokuTime, Item
 
 logger = logging.getLogger(__name__)
 
@@ -126,3 +128,34 @@ def home(request):
             'times': times,
         }
     )
+
+
+# TODO: require login with an account linked to Crossbot?
+# TODO: actually use forms instead of rolling my own?
+@user_passes_test(lambda u: u.is_staff)
+def equip_item(request):
+    if request.method == 'POST':
+        user = request.user.cb_user
+        if 'itemkey' not in request.POST:
+            return redirect('inventory')
+        item = Item.from_key(request.POST['itemkey'])
+        if item is None:
+            return redirect('inventory')
+        success = user.equip(item)
+        if success:
+            messages.success(request, "%s equipped." % item)
+        else:
+            messages.error(request, "Could not equip %s." % item)
+
+    return redirect('inventory')
+
+
+@user_passes_test(lambda u: u.is_staff)
+def unequip_item(request, item_type):
+    user = request.user.cb_user
+    if request.method == 'POST':
+        if item_type == 'hat':
+            user.unequip_hat()
+            messages.info(request, "Hat unequipped.")
+
+    return redirect('inventory')
