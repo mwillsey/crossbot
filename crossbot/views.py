@@ -8,7 +8,7 @@ from crossbot.util import comma_and
 from django import forms
 from django.conf import settings
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponse, HttpResponseBadRequest, JsonResponse
 from django.shortcuts import render, redirect
 from django.utils import timezone
@@ -132,7 +132,7 @@ def home(request):
 
 # TODO: require login with an account linked to Crossbot?
 # TODO: actually use forms instead of rolling my own?
-@login_required
+@user_passes_test(lambda u: u.is_staff)
 def equip_item(request):
     if request.method == 'POST':
         user = request.user.cb_user
@@ -150,7 +150,7 @@ def equip_item(request):
     return redirect('inventory')
 
 
-@login_required
+@user_passes_test(lambda u: u.is_staff)
 def unequip_item(request, item_type):
     user = request.user.cb_user
     if request.method == 'POST':

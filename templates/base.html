@@ -47,7 +47,7 @@
                     <li class="nav-item {% if request.path == url %}active{% endif %}">
                         <a class="nav-link" href="{{ url }}">Plots</a>
                     </li>
-                    {% if user.is_authenticated %}
+                    {% if user.is_staff %}
                     {% url 'inventory' as url %}
                     <li class="nav-item {% if request.path == url %}active{% endif %}">
                         <a class="nav-link" href="{{ url }}">Inventory</a>
