@@ -514,8 +514,6 @@ class EasySudokuTime(CommonTime):
 
 class Prediction(models.Model):
     class Meta:
-        managed = False
-        db_table = 'mini_crossword_model'
         unique_together = (('userid', 'date'), )
 
     userid = models.CharField(max_length=10)
@@ -528,10 +526,6 @@ class Prediction(models.Model):
 
 
 class PredictionUser(models.Model):
-    class Meta:
-        managed = False
-        db_table = 'model_users'
-
     uid = models.CharField(max_length=10, unique=True)
     nth = models.IntegerField()
     skill = models.FloatField()
@@ -540,10 +534,6 @@ class PredictionUser(models.Model):
 
 
 class PredictionDate(models.Model):
-    class Meta:
-        managed = False
-        db_table = 'model_dates'
-
     date = models.DateField()
     difficulty = models.FloatField()
     difficulty_25 = models.FloatField()
@@ -551,11 +541,6 @@ class PredictionDate(models.Model):
 
 
 class PredictionParameter(models.Model):
-    class Meta:
-        managed = False
-        db_table = 'model_params'
-        verbose_name_plural = "ModelParams"
-
     time = models.FloatField()
     time_25 = models.FloatField()
     time_75 = models.FloatField()
