@@ -227,6 +227,7 @@ from datetime import datetime
 import matplotlib, matplotlib.dates, matplotlib.figure, matplotlib.ticker
 import matplotlib.backends.backend_agg as agg
 
+
 def plot_dates(model):
     field = lambda f: [x[f] for x in model['dates'] if x['date'] >= '2017']
     fig = matplotlib.figure.Figure(figsize=(11, 8.5))
