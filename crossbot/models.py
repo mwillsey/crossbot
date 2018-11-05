@@ -452,6 +452,12 @@ class CommonTime(models.Model):
             str(w.user) for w in cls.winners(yest) if w.user not in streakers
         ]
 
+        overperformers = [
+            (str(m.user), m.residual)
+            for m in Prediction.objects.filter(date=date, residual__lte=0
+                                               ).order_by('residual')[:3]
+        ]
+
         games = {
             "mini crossword": "https://www.nytimes.com/crosswords/game/mini",
             "easy sudoku":
@@ -462,7 +468,8 @@ class CommonTime(models.Model):
             'streaks': streaks,
             'winners_today': winners1,
             'winners_yesterday': winners2,
-            'links': games
+            'overperformers': overperformers,
+            'links': games,
         }
 
     @classmethod
@@ -539,47 +546,31 @@ class EasySudokuTime(CommonTime):
     pass
 
 
-class MiniCrosswordModel(models.Model):
+class Prediction(models.Model):
     class Meta:
-        managed = False
-        db_table = 'mini_crossword_model'
-        unique_together = (('userid', 'date'), )
+        unique_together = (('user', 'date'), )
 
-    userid = models.TextField()
-    date = models.IntegerField()
-    prediction = models.IntegerField()
+    user = models.ForeignKey(CBUser, on_delete=models.CASCADE)
+    date = models.DateField()
+    prediction = models.FloatField()
     residual = models.FloatField()
 
 
-class ModelUser(models.Model):
-    class Meta:
-        managed = False
-        db_table = 'model_users'
-
-    uid = models.TextField(unique=True)
-    nth = models.IntegerField()
+class PredictionUser(models.Model):
+    user = models.ForeignKey(CBUser, on_delete=models.CASCADE)
     skill = models.FloatField()
     skill_25 = models.FloatField()
     skill_75 = models.FloatField()
 
 
-class ModelDate(models.Model):
-    class Meta:
-        managed = False
-        db_table = 'model_dates'
-
-    date = models.IntegerField()
+class PredictionDate(models.Model):
+    date = models.DateField()
     difficulty = models.FloatField()
     difficulty_25 = models.FloatField()
     difficulty_75 = models.FloatField()
 
 
-class ModelParams(models.Model):
-    class Meta:
-        managed = False
-        db_table = 'model_params'
-        verbose_name_plural = "ModelParams"
-
+class PredictionParameter(models.Model):
     time = models.FloatField()
     time_25 = models.FloatField()
     time_75 = models.FloatField()
@@ -596,7 +587,7 @@ class ModelParams(models.Model):
     date_dev = models.FloatField()
     sigma = models.FloatField()
     lp = models.FloatField()
-    when_run = models.FloatField()
+    when_run = models.DateTimeField()
 
 
 class QueryShorthand(models.Model):

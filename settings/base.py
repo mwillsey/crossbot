@@ -197,6 +197,7 @@ warnings.filterwarnings(
 CRON_CLASSES = [
     "crossbot.cron.ReleaseAnnouncement",
     "crossbot.cron.MorningAnnouncement",
+    "crossbot.cron.Predictor",
 ]
 
 # OAuth setup
