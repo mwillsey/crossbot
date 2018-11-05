@@ -10,6 +10,26 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.AlterModelOptions(
+            name='MiniCrosswordModel',
+            options={'managed': True},
+        ),
+        migrations.AlterModelOptions(
+            name='ModelUser',
+            options={'managed': True},
+        ),
+        migrations.AlterModelOptions(
+            name='ModelDate',
+            options={'managed': True},
+        ),
+        migrations.AlterModelOptions(
+            name='ModelParams',
+            options={'managed': True},
+        ),
+        migrations.DeleteModel('MiniCrosswordModel'),
+        migrations.DeleteModel('ModelUser'),
+        migrations.DeleteModel('ModelDate'),
+        migrations.DeleteModel('ModelParams'),
         migrations.CreateModel(
             name='Prediction',
             fields=[
