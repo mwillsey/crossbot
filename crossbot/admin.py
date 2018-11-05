@@ -121,3 +121,8 @@ class CommonTimeAdminTemplate(admin.ModelAdmin):
 
 
 admin.site.register(models.QueryShorthand)
+
+admin.site.register(models.Prediction)
+admin.site.register(models.PredictionDate)
+admin.site.register(models.PredictionParameter)
+admin.site.register(models.PredictionUser)
