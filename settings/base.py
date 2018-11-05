@@ -200,6 +200,8 @@ CRON_CLASSES = [
     "crossbot.cron.Predictor",
 ]
 
+DJANGO_CRON_LOCK_BACKEND = "django_cron.backends.lock.file.FileLock"
+
 # OAuth setup
 # Be sure to add this site's hostnames to Oauth Redirect URLs in Slack
 SOCIAL_AUTH_IGNORE_DEFAULT_SCOPE = True
