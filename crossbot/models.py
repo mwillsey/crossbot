@@ -522,7 +522,7 @@ class Prediction(models.Model):
     residual = models.FloatField()
 
     def user(self):
-        return CBUser.objects.filter(slackid=self.userid)[:1].get()
+        return CBUser.from_slackid(self.userid)
 
 
 class PredictionUser(models.Model):
@@ -557,7 +557,7 @@ class PredictionParameter(models.Model):
     date_dev = models.FloatField()
     sigma = models.FloatField()
     lp = models.FloatField()
-    when_run = models.FloatField()
+    when_run = models.DateTimeField()
 
 
 class QueryShorthand(models.Model):

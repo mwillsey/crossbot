@@ -94,7 +94,7 @@ class Migration(migrations.Migration):
                 ('date_dev', models.FloatField()),
                 ('sigma', models.FloatField()),
                 ('lp', models.FloatField()),
-                ('when_run', models.FloatField()),
+                ('when_run', models.DateTimeField()),
             ],
         ),
         migrations.CreateModel(

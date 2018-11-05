@@ -1,15 +1,9 @@
-#!/usr/bin/env python3
-from __future__ import print_function
+"""Stan-based statistical model for user skill"""
 
 import pickle
 import pystan
-import sqlite3
-from datetime import datetime, timedelta
-import time
-import matplotlib, matplotlib.dates, matplotlib.figure, matplotlib.ticker
-import matplotlib.backends.backend_agg as agg
+from django.utils import timezone
 import bisect
-import math
 import os
 from hashlib import md5
 
@@ -202,7 +196,7 @@ def extract_model(data, fm):
         date_dev=params['date_dev'].mean(),
         sigma=params['sigma'].mean(),
         lp=params["lp__"].mean(),
-        when_run=time.time(),
+        when_run=timezone.now(),
     )
     return recs, dates, users, params
 
@@ -233,6 +227,10 @@ def load():
 
 ### TODO: The below do not use the new model format
 
+import math
+from datetime import datetime
+import matplotlib, matplotlib.dates, matplotlib.figure, matplotlib.ticker
+import matplotlib.backends.backend_agg as agg
 
 def plot_dates(model):
     field = lambda f: [x[f] for x in model['dates'] if x['date'] >= '2017']
