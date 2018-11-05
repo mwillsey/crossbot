@@ -11,18 +11,18 @@ from . import models
 
 
 def index(l):
-    x = list(sorted(set(l)))
+    x = list(sorted(set(l), key=id))
     return [x.index(i) + 1 for i in l]
 
 
 def unindex(l, i):
-    return list(sorted(set(l)))[i - 1]
+    return list(sorted(set(l), key=id))[i - 1]
 
 
 def data():
     all_times = models.MiniCrosswordTime.all_times()
     return {
-        'uids': [t.user.slackid for t in all_times],
+        'uids': [t.user for t in all_times],
         'dates': [t.date for t in all_times],
         'dows': [(t.date.weekday() + 1) % 7 for t in all_times],
         'secs': [t.seconds for t in all_times],
@@ -147,15 +147,10 @@ def extract_model(data, fm):
     users = []
     for i, multiplier in enumerate(params["skill_effect"].transpose()):
         uid = unindex(data['uids'], i + 1)
-        nth = len([
-            date for date, uid_ in zip(data['dates'], data['uids'])
-            if uid == uid_
-        ])
         mult_mean, mult_25, mult_75 = drange(multiplier)
         users.append(
             models.PredictionUser(
-                uid=uid,
-                nth=nth,
+                user=uid,
                 skill=mult_mean,
                 skill_25=mult_25,
                 skill_75=mult_75,
@@ -169,7 +164,7 @@ def extract_model(data, fm):
         recs.append(
             models.Prediction(
                 date=date,
-                userid=uid,
+                user=uid,
                 prediction=prediction.mean(),
                 residual=residual.mean()
             )

@@ -42,7 +42,7 @@ class Migration(migrations.Migration):
                         verbose_name='ID'
                     )
                 ),
-                ('userid', models.CharField(max_length=10)),
+                ('user', models.ForeignKey(on_delete=models.deletion.CASCADE, to='crossbot.CBUser')),
                 ('date', models.DateField()),
                 ('prediction', models.FloatField()),
                 ('residual', models.FloatField()),
@@ -109,8 +109,7 @@ class Migration(migrations.Migration):
                         verbose_name='ID'
                     )
                 ),
-                ('uid', models.CharField(max_length=10, unique=True)),
-                ('nth', models.IntegerField()),
+                ('user', models.ForeignKey(on_delete=models.deletion.CASCADE, to='crossbot.CBUser')),
                 ('skill', models.FloatField()),
                 ('skill_25', models.FloatField()),
                 ('skill_75', models.FloatField()),
@@ -118,6 +117,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AlterUniqueTogether(
             name='prediction',
-            unique_together={('userid', 'date')},
+            unique_together={('user', 'date')},
         ),
     ]

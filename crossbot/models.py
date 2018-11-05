@@ -419,7 +419,7 @@ class CommonTime(models.Model):
         ]
 
         overperformers = [
-            (str(m.user()), m.residual)
+            (str(m.user), m.residual)
             for m in Prediction.objects.filter(date=date, residual__lte=0
                                                ).order_by('residual')[:3]
         ]
@@ -514,20 +514,16 @@ class EasySudokuTime(CommonTime):
 
 class Prediction(models.Model):
     class Meta:
-        unique_together = (('userid', 'date'), )
+        unique_together = (('user', 'date'), )
 
-    userid = models.CharField(max_length=10)
+    user = models.ForeignKey(CBUser, on_delete=models.CASCADE)
     date = models.DateField()
     prediction = models.FloatField()
     residual = models.FloatField()
 
-    def user(self):
-        return CBUser.from_slackid(self.userid)
-
 
 class PredictionUser(models.Model):
-    uid = models.CharField(max_length=10, unique=True)
-    nth = models.IntegerField()
+    user = models.ForeignKey(CBUser, on_delete=models.CASCADE)
     skill = models.FloatField()
     skill_25 = models.FloatField()
     skill_75 = models.FloatField()
