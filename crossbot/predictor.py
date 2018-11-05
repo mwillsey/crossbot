@@ -113,6 +113,7 @@ def fit(data):
             data=munge_data(**data),
             iter=1000,
             chains=4,
+            n_jobs=2,
             pars=[
                 'date_effect', 'skill_effect', 'predictions', 'residuals',
                 'beginner_gain', 'beginner_decay', 'sat_effect', 'mu',
