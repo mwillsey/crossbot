@@ -3,13 +3,15 @@ import math
 
 from datetime import datetime
 
-from . import models
+from . import models, SlashCommandResponse
 
 logger = logging.getLogger(__name__)
 
 
 def init(parser):
-    parser = parser.subparsers.add_parser('model', help='Run a saved query')
+    parser = parser.subparsers.add_parser(
+        'predictor', help='Get information on the Crossbot predictor'
+    )
     parser.set_defaults(command=model)
     parser.add_argument(
         'cmd',
@@ -21,14 +23,11 @@ def init(parser):
 
 def model(request):
     if request.args.cmd == 'details':
-        latest_run_time = models.PredictionParameter.objects.latest('when_run')
-        model_params = models.PredictionParameter.objects.get(
-            when_run=latest_run_time
-        )
-        request.reply(
-            "*Last model run*: {:%Y-%m-%d %H:%M}\n*log(P)* = {}".format(
-                datetime.fromtimestamp(model_params.when_run), model_params.lp
-            )
+        params = models.PredictionParameter.objects.order_by('when_run'
+                                                             )[:1].get()
+        return SlashCommandResponse(
+            text="*Last model run*: {:%Y-%m-%d %H:%M}\n*log(P)* = {}"
+            .format(params.when_run, params.lp)
         )
 
     elif request.args.cmd == 'validate':
@@ -36,10 +35,10 @@ def model(request):
         #       properly
         lsecs = []
         predictions = []
-        for prediction in models.Prediction.all():
+        for prediction in models.Prediction.objects.all():
             try:
                 time = models.MiniCrosswordTime.all_times().get(
-                    user__slackid=prediction.uid, date=prediction.date
+                    user=prediction.user, date=prediction.date
                 )
             except models.MiniCrosswordTime.DoesNotExist:
                 logger.warning(
@@ -57,13 +56,12 @@ def model(request):
         baseline = sum((s - avg)**2 for s in lsecs) / len(lsecs)
         model = sum((s - p)**2
                     for s, p in zip(lsecs, predictions)) / len(lsecs)
-        request.reply(
-            "*Mean squared error*: {:.3f} vs {:.3f} baseline".format(
-                model, baseline
-            )
+        return SlashCommandResponse(
+            text="*Mean squared error*: {:.3f} vs {:.3f} baseline"
+            .format(model, baseline)
         )
 
     else:
-        request.reply(
-            "Error: no known model command `{}`".format(request.args.cmd)
+        return SlashCommandResponse(
+            text="Error: no known model command `{}`".format(request.args.cmd)
         )

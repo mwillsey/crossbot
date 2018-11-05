@@ -709,13 +709,14 @@ class MiscTests(TestCase):
         )
 
 
-class PredictorTests(TestCase):
+class PredictorTests(SlackTestCase):
     data = {
         'U1': [None, 62, 38, 28, 42, 17],
         'U2': [73, 72, 36, 37, 51, None],
     }
 
     def setUp(self):
+        super().setUp()
         self.maxDiff = None
         for u, ts in self.data.items():
             user = CBUser(slackid=u)
@@ -726,12 +727,17 @@ class PredictorTests(TestCase):
                         t, parse_date("2018-01-0" + str(i + 1))
                     )
 
-    def test_predictor(self):
+    def run_predictor(self):
         import crossbot.predictor as p
         data = p.data()
         fit = p.fit(data)
         model = p.extract_model(data, fit)
         p.save(model)
+        return model
+
+    def test_predictor(self):
+        import crossbot.predictor as p
+        model = self.run_predictor()
         model2 = p.load()
         self.assertEqual(model, model2)
 
@@ -744,14 +750,22 @@ class PredictorTests(TestCase):
         Predictor().do()
 
     def test_announcement(self):
-        import crossbot.predictor as p
-        data = p.data()
-        fit = p.fit(data)
-        model = p.extract_model(data, fit)
-        p.save(model)
+        self.run_predictor()
         announce_data = MiniCrosswordTime.announcement_data(
             parse_date("2018-01-03")
         )
         self.assertIn('overperformers', announce_data)
         self.assertEqual([u for u, r in announce_data['overperformers']],
                          ['U2'])
+
+    def test_slack_command(self):
+        self.run_predictor()
+        response = self.slack_post(text='predictor')
+        self.assertIn("*log(P)* = ", response["text"])
+        response2 = self.slack_post(text='predictor details')
+        self.assertEqual(response["text"], response2["text"])
+        response3 = self.slack_post(text='predictor validate')
+        parts = response3["text"].split()
+        self.assertEqual(len(parts), 7)
+        mse, baseline = float(parts[3]), float(parts[5])
+        self.assertLess(mse, baseline)
