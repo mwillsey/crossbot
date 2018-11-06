@@ -66,27 +66,31 @@ class suppress_stdout_stderr(object):
 
     '''
 
-    def __init__(self):
-        # Open a pair of null files
-        self.null_fds = [os.open(os.devnull, os.O_RDWR) for x in range(2)]
-        # Save the actual stdout (1) and stderr (2) file descriptors.
-        self.save_fds = [os.dup(1), os.dup(2)]
+    def __init__(self, quiet=True):
+        self.quiet = quiet
+        if quiet:
+            # Open a pair of null files
+            self.null_fds = [os.open(os.devnull, os.O_RDWR) for x in range(2)]
+            # Save the actual stdout (1) and stderr (2) file descriptors.
+            self.save_fds = [os.dup(1), os.dup(2)]
 
     def __enter__(self):
-        # Assign the null pointers to stdout and stderr.
-        os.dup2(self.null_fds[0], 1)
-        os.dup2(self.null_fds[1], 2)
+        if self.quiet:
+            # Assign the null pointers to stdout and stderr.
+            os.dup2(self.null_fds[0], 1)
+            os.dup2(self.null_fds[1], 2)
 
     def __exit__(self, *_):
-        # Re-assign the real stdout/stderr back to (1) and (2)
-        os.dup2(self.save_fds[0], 1)
-        os.dup2(self.save_fds[1], 2)
-        # Close the null files
-        for fd in self.null_fds + self.save_fds:
-            os.close(fd)
+        if self.quiet:
+            # Re-assign the real stdout/stderr back to (1) and (2)
+            os.dup2(self.save_fds[0], 1)
+            os.dup2(self.save_fds[1], 2)
+            # Close the null files
+            for fd in self.null_fds + self.save_fds:
+                os.close(fd)
 
 
-def fit(data):
+def fit(data, quiet=False):
     path = os.path.join(os.path.dirname(__file__), 'predictor.stan')
     with open(path, "r") as f:
         code = f.read()
@@ -108,7 +112,7 @@ def fit(data):
         with open(cache_path, "wb") as f:
             pickle.dump(sm, f)
 
-    with suppress_stdout_stderr():
+    with suppress_stdout_stderr(quiet=quiet):
         fm = sm.sampling(
             data=munge_data(**data),
             iter=1000,

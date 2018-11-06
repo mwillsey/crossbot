@@ -730,7 +730,7 @@ class PredictorTests(SlackTestCase):
     def run_predictor(self):
         import crossbot.predictor as p
         data = p.data()
-        fit = p.fit(data)
+        fit = p.fit(data, quiet=True)
         model = p.extract_model(data, fit)
         p.save(model)
         return model

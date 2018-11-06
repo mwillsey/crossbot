@@ -119,7 +119,7 @@ class Predictor(CronJobBase):
 
     def do(self):
         data = predictor.data()
-        fit = predictor.fit(data)
+        fit = predictor.fit(data, quiet=True)
         model = predictor.extract_model(data, fit)
         predictor.save(model)
         historic, dates, users, params = model
