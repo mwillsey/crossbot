@@ -91,7 +91,8 @@ def times_rest_api(request, time_model='minicrossword'):
         'times': [{
             'user': str(t.user),
             'date': t.date,
-            'seconds': t.seconds
+            'seconds': t.seconds,
+            'timestamp': t.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
         } for t in times],
         'timemodel':
         time_model,
