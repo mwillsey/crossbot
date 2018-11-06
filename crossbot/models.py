@@ -399,8 +399,9 @@ class CommonTime(models.Model):
     def winners(cls, date):
         entries = cls.times_for_date(date)
         try:
-            best = min(e.seconds for e in entries)
+            best = min(e.seconds for e in entries if e.seconds > 0)
             winners = [e for e in entries if e.seconds == best]
+            # if there was a best, there must be a winner
             assert winners
             return winners
         except ValueError as e:
