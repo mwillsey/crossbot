@@ -5,6 +5,8 @@ from django import forms
 from django.contrib import admin
 from django.core.paginator import EmptyPage, InvalidPage, Paginator
 
+from django_admin_listfilter_dropdown.filters import DropdownFilter, RelatedDropdownFilter
+
 import crossbot.models as models
 
 logger = logging.getLogger(__name__)
@@ -122,7 +124,37 @@ class CommonTimeAdminTemplate(admin.ModelAdmin):
 
 admin.site.register(models.QueryShorthand)
 
-admin.site.register(models.Prediction)
-admin.site.register(models.PredictionDate)
+
+@admin.register(models.Prediction)
+class PredictionAdmin(admin.ModelAdmin):
+    list_display = (
+        'user',
+        'date',
+        'prediction',
+        'residual',
+    )
+    list_filter = ('date', ('user', RelatedDropdownFilter))
+
+
+@admin.register(models.PredictionUser)
+class PredictionUserAdmin(admin.ModelAdmin):
+    list_display = (
+        'user',
+        'skill',
+        'skill_25',
+        'skill_75',
+    )
+
+
+@admin.register(models.PredictionDate)
+class PredictionDateAdmin(admin.ModelAdmin):
+    list_display = (
+        'date',
+        'difficulty',
+        'difficulty_25',
+        'difficulty_75',
+    )
+    list_filter = ('date', )
+
+
 admin.site.register(models.PredictionParameter)
-admin.site.register(models.PredictionUser)

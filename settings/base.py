@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'social_django',
     'django_cron',
+    'django_admin_listfilter_dropdown',
 ]
 
 MIDDLEWARE = [
