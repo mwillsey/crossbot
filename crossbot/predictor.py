@@ -32,8 +32,7 @@ def data():
 
 def nth(uids, dates, ts):
     uid_dates = {
-        the_uid:
-        sorted([t for uid, t in zip(uids, ts) if uid == the_uid])
+        the_uid: sorted([t for uid, t in zip(uids, ts) if uid == the_uid])
         for the_uid in set(uids)
     }
     return [
