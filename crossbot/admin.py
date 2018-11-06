@@ -23,9 +23,11 @@ class ItemOwnershipRecordInline(admin.TabularInline):
     form = ItemOwnershipRecordForm
     extra = 0
 
+
 class UserSkillInline(admin.StackedInline):
     model = models.PredictionUser
     extra = 0
+
 
 # Adapted from: https://github.com/darklow/django-suit/issues/65#issuecomment-29606850
 class PaginatedInline(admin.TabularInline):
@@ -87,11 +89,11 @@ class CBUserAdmin(admin.ModelAdmin):
         'crossbucks',
     )
     inlines = [
+        UserSkillInline,
         ItemOwnershipRecordInline,
         MiniCrosswordTimeInline,
         CrosswordTimeInline,
         EasySudokuTimeInline,
-        UserSkillInline,
     ]
 
 
