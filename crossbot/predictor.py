@@ -33,11 +33,11 @@ def data():
 def nth(uids, dates, ts):
     uid_dates = {
         the_uid:
-        sorted([date for uid, date in zip(uids, dates) if uid == the_uid])
+        sorted([t for uid, t in zip(uids, ts) if uid == the_uid])
         for the_uid in set(uids)
     }
     return [
-        bisect.bisect(uid_dates[uid], ts.date()) + 1
+        bisect.bisect(uid_dates[uid], ts) + 1
         for uid, date, ts in zip(uids, dates, ts)
     ]
 
