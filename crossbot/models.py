@@ -16,7 +16,7 @@ from django.contrib.staticfiles.templatetags.staticfiles import static
 from django.db import models, transaction
 from django.utils import timezone
 
-from .settings import CROSSBUCKS_PER_SOLVE, ITEM_DROP_RATE
+from .settings import CROSSBUCKS_PER_SOLVE, ITEM_DROP_RATE, DEFAULT_TITLE
 from crossbot.slack.api import slack_users, slack_user
 
 logger = logging.getLogger(__name__)
@@ -276,6 +276,14 @@ class CBUser(models.Model):
     def title(self):
         """Return the title Item for a person, or None if they have no title."""
         return Item.from_key(self.title_key)
+
+    @property
+    def title_text(self):
+        """Returns the title if the user has one, the default one otherwise."""
+        title = self.title
+        if title is None:
+            return DEFAULT_TITLE
+        return str(title)
 
     @transaction.atomic
     def equip(self, item):
