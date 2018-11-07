@@ -5,6 +5,7 @@
 #   tradeable: bool (default True)
 #   unique: bool (default False)
 #   rarity: float in (0, FLOAT_MAX], larger is less rare (default 1.0)
+#   price: positive int
 #   image_name: str (default None/no image)
 #   type: str (default None)
 #   game_specific: bool (default False)
@@ -15,19 +16,28 @@ tophat:
   image_name: tophat.png
   type: hat
 
+jesterhat:
+  name: Jester Hat
+  image_name: jesterhat.png
+  type: hat
+
+propellerhat:
+  name: Propeller Beanie
+  image_name: propellerhat.png
+  type: hat
+
 # titles earned for completing X games
-  
 __completed_title: &completed_title
   type: title
   droppable: false
   tradeable: false
   unique: true
   game_specific: true
-  
+
 completed3_title:
   <<: *completed_title
   name: "{short} Dabbler"
-  
+
 completed10_title:
   <<: *completed_title
   name: "{short} Dilettante"

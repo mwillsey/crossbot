@@ -6,6 +6,7 @@ from datetime import timedelta
 from crossbot.util import comma_and
 from crossbot.models import MiniCrosswordTime
 from crossbot.slack.api import post_message
+import crossbot.predictor as predictor
 
 import logging
 
@@ -41,6 +42,14 @@ class ReleaseAnnouncement(CronJobBase):
                 comma_and(announce_data['winners_yesterday']) + also +
                 ' won yesterday.'
             )
+        if announce_data['overperformers']:
+            users = [
+                u + (
+                    " " + ":chart_with_upwards_trend:" * int(-i)
+                    if i <= -1 else ""
+                ) for u, i in announce_data['overperformers']
+            ]
+            msgs.append(comma_and(users) + ' did really well today!')
         msgs.append("Play tomorrow's:")
         for game in announce_data['links']:
             msgs.append("{} : {}".format(game, announce_data['links'][game]))
@@ -77,9 +86,11 @@ class MorningAnnouncement(CronJobBase):
         # now add the other winners
         also = ' also' if announce_data['streaks'] else ''
         if announce_data['winners_today']:
+            is_are = 'are' if len(announce_data['winners_today']) > 1 else 'is'
             msgs.append(
-                comma_and(announce_data['winners_today']) + also +
-                ' is winning.'
+                '{} {}{} winning'.format(
+                    comma_and(announce_data['winners_today']), is_are, also
+                )
             )
         if announce_data['winners_yesterday']:
             msgs.append(
@@ -100,3 +111,16 @@ class MorningAnnouncement(CronJobBase):
         channel = 'C58PXJTNU'
         response = post_message(channel, {'text': message})
         return "Ran morning announcement at {}\n{}".format(now, message)
+
+
+class Predictor(CronJobBase):
+    schedule = Schedule(run_every_mins=60)
+    code = 'crossbot.predictor.infer'
+
+    def do(self):
+        data = predictor.data()
+        fit = predictor.fit(data, quiet=True)
+        model = predictor.extract_model(data, fit)
+        predictor.save(model)
+        historic, dates, users, params = model
+        return "Ran the predictor at {}".format(params.when_run)

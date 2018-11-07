@@ -13,6 +13,7 @@ from django.conf import settings
 from django.test import TestCase as DjangoTestCase
 from django.test.client import RequestFactory
 from django.urls import reverse
+from django.contrib.auth.models import User
 from django.contrib.staticfiles import finders
 from django.utils import timezone
 
@@ -27,6 +28,7 @@ from crossbot.models import (
     QueryShorthand,
     Item,
     ItemOwnershipRecord,
+    Prediction,
 )
 from crossbot.cron import ReleaseAnnouncement, MorningAnnouncement
 from crossbot.settings import CROSSBUCKS_PER_SOLVE
@@ -224,6 +226,8 @@ class SlackTestCase(MockedRequestTestCase):
         return None
 
 
+# TODO: this shouldn't be a subclass of SlackTestCase?
+# TODO: make sure these tests check that save() is properly called
 class ModelTests(SlackTestCase):
     def test_from_slackid(self):
         alice = CBUser.from_slackid('UALICE', 'alice')
@@ -419,6 +423,48 @@ class ModelTests(SlackTestCase):
         self.assertEqual(title.key, 'mini_completed3_title')
         self.assertEqual(title.name, 'Mini Dabbler')
 
+    def test_equip_item(self):
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        tophat = Item.from_key('tophat')
+
+        # try to equip hat without owning one, should fail
+        self.assertFalse(alice.equip(tophat))
+        self.assertFalse(alice.is_equipped(tophat))
+        self.assertIsNone(alice.hat)
+
+        # give one and equip it
+        alice.add_item(tophat)
+        self.assertTrue(alice.equip(tophat))
+        self.assertTrue(alice.is_equipped(tophat))
+        self.assertEqual(alice.hat, tophat)
+
+        # make sure the changes persisted
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        self.assertTrue(alice.is_equipped(tophat))
+        self.assertEqual(alice.hat, tophat)
+
+        # shouldn't be able to remove it
+        self.assertFalse(alice.remove_item(tophat))
+        self.assertEqual(alice.quantity_owned(tophat), 1)
+
+        # unequip it both ways
+        alice.unequip(tophat)
+        self.assertFalse(alice.is_equipped(tophat))
+        self.assertIsNone(alice.hat)
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        self.assertFalse(alice.is_equipped(tophat))
+        self.assertIsNone(alice.hat)
+
+        self.assertTrue(alice.equip(tophat))
+        self.assertTrue(alice.is_equipped(tophat))
+        self.assertEqual(alice.hat, tophat)
+        alice.unequip_hat()
+        self.assertFalse(alice.is_equipped(tophat))
+        self.assertIsNone(alice.hat)
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        self.assertFalse(alice.is_equipped(tophat))
+        self.assertIsNone(alice.hat)
+
 
 class SlackAuthTests(SlackTestCase):
     def test_bad_signature(self):
@@ -432,11 +478,28 @@ class SlackAuthTests(SlackTestCase):
 
 class SlackAppTests(SlackTestCase):
     def test_add(self):
+
         self.slack_post(text='add :10')
+        self.slack_post(text='add :10 2017-01-01')
+
+        messages = [json.loads(m) for m in self.messages]
+
+        # each post gets two responses, one ephemeral and one in channel.
+        self.assertEqual(len(messages), 4)
+
+        # this one was for the current date, so the date shouldn't be mentioned.
+        self.assertEqual(messages[0]['response_type'], 'ephemeral')
+        self.assertEqual(messages[1]['channel'], 'main_channel')
+        self.assertEqual(messages[1]['text'], '*Mini Added*: 0:10')
+
+        # this one was for a different date and should mention it
+        self.assertEqual(messages[2]['response_type'], 'ephemeral')
+        self.assertEqual(messages[3]['channel'], 'main_channel')
+        self.assertEqual(messages[3]['text'], '*Mini Added*: 0:10 2017-01-01')
 
         # make sure the database reflects this
         alice = CBUser.objects.get(slackid='UALICE')
-        self.assertEqual(len(alice.minicrosswordtime_set.all()), 1)
+        self.assertEqual(len(alice.minicrosswordtime_set.all()), 2)
 
     def test_double_add(self):
 
@@ -581,6 +644,46 @@ class SlackAppTests(SlackTestCase):
         )
 
 
+# Again, shouldn't be a subclass of "SlackTestsCase"
+class WebViewTests(SlackTestCase):
+    def test_equip_item(self):
+        tophat = Item.from_key('tophat')
+
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        # need to make alice staff, as it's feature gated for now
+        auth_alice = User.objects.get_or_create(
+            username='UALICE', is_staff=True
+        )[0]
+        alice.auth_user = auth_alice
+        alice.save()
+        self.client.force_login(auth_alice)
+
+        response = self.client.get(reverse('inventory'))
+        self.assertNotContains(response, tophat.name)
+
+        alice.add_item(tophat)
+
+        response = self.client.get(reverse('inventory'))
+        self.assertContains(response, tophat.name)
+        self.assertNotContains(response, 'Un-equip')
+
+        # Try to equip an item through the POST method
+        response = self.client.post(
+            reverse('equip_item'), data={'itemkey': tophat.key}
+        )
+        self.assertRedirects(response, reverse('inventory'))
+        self.assertEquals(CBUser.from_slackid('UALICE', 'alice').hat, tophat)
+
+        response = self.client.get(reverse('inventory'))
+        self.assertContains(response, 'Un-equip')
+
+        response = self.client.post(
+            reverse('unequip_item', kwargs={'item_type': 'hat'})
+        )
+        self.assertIsNone(CBUser.from_slackid('UALICE', 'alice').hat)
+        self.assertRedirects(response, reverse('inventory'))
+
+
 class AnnouncementTests(SlackTestCase):
     def setUp(self):
         super().setUp()
@@ -627,3 +730,65 @@ class MiscTests(TestCase):
         self.assertEqual(
             'alice, bob, and charlie', comma_and(['alice', 'bob', 'charlie'])
         )
+
+
+class PredictorTests(SlackTestCase):
+    data = {
+        'U1': [None, 62, 38, 28, 42, 17],
+        'U2': [73, 72, 36, 37, 51, None],
+    }
+
+    def setUp(self):
+        super().setUp()
+        self.maxDiff = None
+        for u, ts in self.data.items():
+            user = CBUser(slackid=u)
+            user.save()
+            for i, t in enumerate(ts):
+                if t is not None:
+                    user.add_mini_crossword_time(
+                        t, parse_date("2018-01-0" + str(i + 1))
+                    )
+
+    def run_predictor(self):
+        import crossbot.predictor as p
+        data = p.data()
+        fit = p.fit(data, quiet=True)
+        model = p.extract_model(data, fit)
+        p.save(model)
+        return model
+
+    def test_predictor(self):
+        import crossbot.predictor as p
+        model = self.run_predictor()
+        model2 = p.load()
+        self.assertEqual(model, model2)
+
+        users = {m.user: m for m in model[2]}
+        u1, u2 = CBUser.from_slackid("U1"), CBUser.from_slackid("U2")
+        self.assertLess(users[u1].skill, users[u2].skill)
+
+    def test_cron(self):
+        from crossbot.cron import Predictor
+        Predictor().do()
+
+    def test_announcement(self):
+        self.run_predictor()
+        announce_data = MiniCrosswordTime.announcement_data(
+            parse_date("2018-01-03")
+        )
+        self.assertIn('overperformers', announce_data)
+        self.assertEqual([u for u, r in announce_data['overperformers']],
+                         ['U2'])
+
+    def test_slack_command(self):
+        self.run_predictor()
+        response = self.slack_post(text='predictor')
+        self.assertIn("*log(P)* = ", response["text"])
+        response2 = self.slack_post(text='predictor details')
+        self.assertEqual(response["text"], response2["text"])
+        response3 = self.slack_post(text='predictor validate')
+        parts = response3["text"].split()
+        self.assertEqual(len(parts), 7)
+        mse, baseline = float(parts[3]), float(parts[5])
+        self.assertLess(mse, baseline)

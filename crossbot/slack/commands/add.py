@@ -55,13 +55,10 @@ def add(request):
         )
     )
     if request.in_main_channel():
-        response.add_text(
-            # TODO: only add date if it isn't for the current crossword
-            "*{} Added:* {}  {}".format(
-                time.SHORT_NAME, time.date, time.time_str()
-            ),
-            ephemeral=False
-        )
+        text = "*{} Added*: {}".format(time.SHORT_NAME, time.time_str())
+        if args.date != parse_date('now'):
+            text += " {}".format(time.date)
+        response.add_text(text, ephemeral=False)
         response.set_user(request.user)
         response.add_reaction(emj)
     else:
@@ -72,7 +69,8 @@ def add(request):
             for i, entry in enumerate(streak):
                 if entry.date == args.date:
                     # i is the old streak count, len is the new one
-                    return i, len(streak)
+                    old = max(i, len(streak) - 1 - i)
+                    return old, len(streak)
         raise ValueError("date wasn't in streaks!")
 
     streaks = args.table.participation_streaks(request.user)

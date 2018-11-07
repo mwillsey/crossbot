@@ -6,6 +6,7 @@ curtsies==0.3.0
 cycler==0.10.0
 defusedxml==0.5.0
 Django==2.1.2
+django-admin-list-filter-dropdown==1.0.2
 django-common-helpers==0.9.2
 django-cron==0.5.1
 greenlet==0.4.14
@@ -39,3 +40,4 @@ urllib3==1.23
 wcwidth==0.1.7
 wrapt==1.10.11
 yapf==0.24.0
+pystan==2.18.0.0

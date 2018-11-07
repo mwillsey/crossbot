@@ -247,7 +247,7 @@ class CBUser(models.Model):
             return False
 
         # Check to see if there are enough to safely delete
-        if amount > record.quantity:
+        if amount + (1 if self.is_equipped(item) else 0) > record.quantity:
             return False
 
         record.quantity -= amount
@@ -271,6 +271,40 @@ class CBUser(models.Model):
     def hat(self):
         """Return the hat Item for a person, or None if they have no hat. :-("""
         return Item.from_key(self.hat_key)
+
+    @transaction.atomic
+    def equip(self, item):
+        """Equip the item to the correct slot if the user owns at least one.
+        Args:
+            item: An Item.
+        Returns:
+            Whether or not the hat was sucessfully put on.
+        """
+        assert isinstance(item, Item)
+        assert item.is_hat()  # or item.is_title()
+
+        if self.quantity_owned(item) <= 0:
+            return False
+
+        if item.is_hat():
+            self.hat_key = item.key
+            self.save()
+            return True
+
+    def is_equipped(self, item):
+        assert isinstance(item, Item)
+        return item.key == self.hat_key
+
+    def unequip(self, item):
+        assert isinstance(item, Item)
+        if item.key == self.hat_key:
+            self.hat_key = None
+            self.save()
+            return
+
+    def unequip_hat(self):
+        self.hat_key = None
+        self.save()
 
     @property
     def is_staff(self):
@@ -396,8 +430,9 @@ class CommonTime(models.Model):
     def winners(cls, date):
         entries = cls.times_for_date(date)
         try:
-            best = min(e.seconds for e in entries)
+            best = min(e.seconds for e in entries if e.seconds > 0)
             winners = [e for e in entries if e.seconds == best]
+            # if there was a best, there must be a winner
             assert winners
             return winners
         except ValueError as e:
@@ -449,6 +484,12 @@ class CommonTime(models.Model):
             str(w.user) for w in cls.winners(yest) if w.user not in streakers
         ]
 
+        overperformers = [
+            (str(m.user), m.residual)
+            for m in Prediction.objects.filter(date=date, residual__lte=0
+                                               ).order_by('residual')[:3]
+        ]
+
         games = {
             "mini crossword": "https://www.nytimes.com/crosswords/game/mini",
             "easy sudoku":
@@ -459,7 +500,8 @@ class CommonTime(models.Model):
             'streaks': streaks,
             'winners_today': winners1,
             'winners_yesterday': winners2,
-            'links': games
+            'overperformers': overperformers,
+            'links': games,
         }
 
     @classmethod
@@ -542,47 +584,31 @@ class EasySudokuTime(CommonTime):
     pass
 
 
-class MiniCrosswordModel(models.Model):
+class Prediction(models.Model):
     class Meta:
-        managed = False
-        db_table = 'mini_crossword_model'
-        unique_together = (('userid', 'date'), )
+        unique_together = (('user', 'date'), )
 
-    userid = models.TextField()
-    date = models.IntegerField()
-    prediction = models.IntegerField()
+    user = models.ForeignKey(CBUser, on_delete=models.CASCADE)
+    date = models.DateField()
+    prediction = models.FloatField()
     residual = models.FloatField()
 
 
-class ModelUser(models.Model):
-    class Meta:
-        managed = False
-        db_table = 'model_users'
-
-    uid = models.TextField(unique=True)
-    nth = models.IntegerField()
+class PredictionUser(models.Model):
+    user = models.ForeignKey(CBUser, on_delete=models.CASCADE)
     skill = models.FloatField()
     skill_25 = models.FloatField()
     skill_75 = models.FloatField()
 
 
-class ModelDate(models.Model):
-    class Meta:
-        managed = False
-        db_table = 'model_dates'
-
-    date = models.IntegerField()
+class PredictionDate(models.Model):
+    date = models.DateField()
     difficulty = models.FloatField()
     difficulty_25 = models.FloatField()
     difficulty_75 = models.FloatField()
 
 
-class ModelParams(models.Model):
-    class Meta:
-        managed = False
-        db_table = 'model_params'
-        verbose_name_plural = "ModelParams"
-
+class PredictionParameter(models.Model):
     time = models.FloatField()
     time_25 = models.FloatField()
     time_75 = models.FloatField()
@@ -599,7 +625,7 @@ class ModelParams(models.Model):
     date_dev = models.FloatField()
     sigma = models.FloatField()
     lp = models.FloatField()
-    when_run = models.FloatField()
+    when_run = models.DateTimeField()
 
 
 class QueryShorthand(models.Model):
@@ -637,6 +663,7 @@ class QueryShorthand(models.Model):
 # Items are stored in YAML (not the DB) but loaded here for convenience
 
 
+# TODO: ensure this class is immutable? Or reload from YAML details every time?
 class Item:
     ITEMS = {}
 

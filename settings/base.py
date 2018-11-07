@@ -13,6 +13,9 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 import os
 import warnings
 
+from django.contrib import messages
+
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -60,6 +63,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'social_django',
     'django_cron',
+    'django_admin_listfilter_dropdown',
 ]
 
 MIDDLEWARE = [
@@ -194,7 +198,10 @@ warnings.filterwarnings(
 CRON_CLASSES = [
     "crossbot.cron.ReleaseAnnouncement",
     "crossbot.cron.MorningAnnouncement",
+    "crossbot.cron.Predictor",
 ]
+
+DJANGO_CRON_LOCK_BACKEND = "django_cron.backends.lock.file.FileLock"
 
 # OAuth setup
 # Be sure to add this site's hostnames to Oauth Redirect URLs in Slack
@@ -221,3 +228,8 @@ AUTHENTICATION_BACKENDS = (
     'social_core.backends.slack.SlackOAuth2',
     'django.contrib.auth.backends.ModelBackend',
 )
+
+# Make message tags Bootstrap compatible
+MESSAGE_TAGS = {
+    messages.ERROR: 'danger',
+}

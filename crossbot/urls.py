@@ -1,6 +1,6 @@
 from django.urls import path
 from django.views.generic.base import TemplateView
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 
 from . import views
 
@@ -14,6 +14,19 @@ urlpatterns = [
             TemplateView.as_view(template_name='crossbot/plot.html')
         ),
         name='plot'
+    ),
+    path('inventory/equip-item/', views.equip_item, name='equip_item'),
+    path(
+        'inventory/unequip-<item_type>/',
+        views.unequip_item,
+        name='unequip_item'
+    ),
+    path(
+        'inventory/',
+        user_passes_test(lambda u: u.is_staff)(
+            TemplateView.as_view(template_name='crossbot/inventory.html')
+        ),
+        name='inventory'
     ),
     path('', views.home, name='home')
 ]
