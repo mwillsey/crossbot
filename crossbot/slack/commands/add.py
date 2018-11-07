@@ -58,9 +58,9 @@ def add(request):
         text = "*{} Added*: {}".format(time.SHORT_NAME, time.time_str())
         if args.date != parse_date('now'):
             text += " {}".format(time.date)
-        response.attach(text=text,
-                        author_name=request.user.title_text,
-                        ephemeral=False)
+        response.attach(
+            text=text, author_name=request.user.title_text, ephemeral=False
+        )
         response.set_user(request.user)
         response.add_reaction(emj)
     else:
