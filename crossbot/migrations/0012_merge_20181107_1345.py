@@ -10,5 +10,4 @@ class Migration(migrations.Migration):
         ('crossbot', '0011_manage_predictor'),
     ]
 
-    operations = [
-    ]
+    operations = []
