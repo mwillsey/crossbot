@@ -3,9 +3,11 @@
 import pickle
 import pystan
 from django.utils import timezone
+from datetime import datetime
 import bisect
 import os
 from hashlib import md5
+import json
 
 from . import models
 
@@ -28,6 +30,26 @@ def data():
         'secs': [t.seconds for t in all_times],
         'ts': [t.timestamp or t.date for t in all_times],
     }
+
+
+def data_json(file):
+    with open(file) as f:
+        data = json.load(f)
+        dates = [
+            datetime.strptime(t["date"], "%Y-%m-%d").date()
+            for t in data["times"]
+        ]
+        return {
+            'uids': [models.CBUser(t["user"]) for t in data["times"]],
+            'dates':
+            dates,
+            'dows': [(d.weekday() + 1) % 7 for d in dates],
+            'secs': [t["seconds"] for t in data["times"]],
+            'ts': [
+                datetime.strptime(t["timestamp"], "%Y-%m-%d %H:%M:%S")
+                for t in data["times"]
+            ],
+        }
 
 
 def nth(uids, dates, ts):
@@ -212,6 +234,7 @@ def save(model):
     for date in dates:
         date.save()
     for user in users:
+        user.user.save()
         user.save()
     params.save()
 
@@ -377,7 +400,8 @@ def selsubs(data, model):
 
 
 if __name__ == "__main__":
-    DATA = data()
+    import sys
+    DATA = data_json(sys.argv[1])
     FIT = fit(DATA)
     MODEL = extract_model(DATA, FIT)
     save(MODEL)
