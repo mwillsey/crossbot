@@ -472,11 +472,28 @@ class SlackAuthTests(SlackTestCase):
 
 class SlackAppTests(SlackTestCase):
     def test_add(self):
+
         self.slack_post(text='add :10')
+        self.slack_post(text='add :10 2017-01-01')
+
+        messages = [json.loads(m) for m in self.messages]
+
+        # each post gets two responses, one ephemeral and one in channel.
+        self.assertEqual(len(messages), 4)
+
+        # this one was for the current date, so the date shouldn't be mentioned.
+        self.assertEqual(messages[0]['response_type'], 'ephemeral')
+        self.assertEqual(messages[1]['channel'], 'main_channel')
+        self.assertEqual(messages[1]['text'], '*Mini Added*: 0:10')
+
+        # this one was for a different date and should mention it
+        self.assertEqual(messages[2]['response_type'], 'ephemeral')
+        self.assertEqual(messages[3]['channel'], 'main_channel')
+        self.assertEqual(messages[3]['text'], '*Mini Added*: 0:10 2017-01-01')
 
         # make sure the database reflects this
         alice = CBUser.objects.get(slackid='UALICE')
-        self.assertEqual(len(alice.minicrosswordtime_set.all()), 1)
+        self.assertEqual(len(alice.minicrosswordtime_set.all()), 2)
 
     def test_double_add(self):
 
