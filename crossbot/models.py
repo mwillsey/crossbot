@@ -38,8 +38,8 @@ class CBUser(models.Model):
     image_url = models.CharField(max_length=150, blank=True)
 
     crossbucks = models.IntegerField(default=0)
-    hat_key = models.CharField(max_length=20, null=True, blank=True)
-    title_key = models.CharField(max_length=20, null=True)
+    hat_key = models.CharField(max_length=40, null=True, blank=True)
+    title_key = models.CharField(max_length=40, null=True, blank=True)
 
     auth_user = models.OneToOneField(
         User,
@@ -272,6 +272,11 @@ class CBUser(models.Model):
         """Return the hat Item for a person, or None if they have no hat. :-("""
         return Item.from_key(self.hat_key)
 
+    @property
+    def title(self):
+        """Return the title Item for a person, or None if they have no title."""
+        return Item.from_key(self.title_key)
+
     @transaction.atomic
     def equip(self, item):
         """Equip the item to the correct slot if the user owns at least one.
@@ -281,7 +286,7 @@ class CBUser(models.Model):
             Whether or not the hat was sucessfully put on.
         """
         assert isinstance(item, Item)
-        assert item.is_hat()  # or item.is_title()
+        assert item.is_hat() or item.is_title()
 
         if self.quantity_owned(item) <= 0:
             return False
@@ -291,19 +296,30 @@ class CBUser(models.Model):
             self.save()
             return True
 
+        if item.is_title():
+            self.title_key = item.key
+            self.save()
+            return True
+
     def is_equipped(self, item):
         assert isinstance(item, Item)
-        return item.key == self.hat_key
+        return item.key == self.hat_key or item.key == self.title_key
 
     def unequip(self, item):
         assert isinstance(item, Item)
+
         if item.key == self.hat_key:
-            self.hat_key = None
-            self.save()
-            return
+            self.unequip_hat()
+
+        elif item.key == self.title_key:
+            self.unequip_title()
 
     def unequip_hat(self):
         self.hat_key = None
+        self.save()
+
+    def unequip_title(self):
+        self.title_key = None
         self.save()
 
     @property
@@ -739,6 +755,9 @@ class Item:
     def is_hat(self):
         return self.type == 'hat'
 
+    def is_title(self):
+        return self.type == 'title'
+
     def __str__(self):
         return self.name
 
@@ -758,7 +777,7 @@ class ItemOwnershipRecord(models.Model):
         unique_together = (('owner', 'item_key'), )
 
     owner = models.ForeignKey(CBUser, models.CASCADE)
-    item_key = models.CharField(max_length=20)
+    item_key = models.CharField(max_length=40)
     quantity = models.IntegerField(default=0)
 
     @property
