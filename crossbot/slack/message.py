@@ -216,6 +216,8 @@ class Attachment:
             attachment_dict['title_link'] = self.title_link
         if self.text:
             attachment_dict['text'] = self.text
+            # By default, assume that text has markdown (but not pretext/fields)
+            attachment_dict['mrkdwn_in'] = ['text']
         if self.image_url:
             attachment_dict['image_url'] = self.image_url
         if self.thumb_url:
