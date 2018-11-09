@@ -125,7 +125,7 @@ class CommonTimeAdminTemplate(admin.ModelAdmin):
         'date',
         'seconds',
     )
-    list_filter = (IsFailFilter, )
+    list_filter = (IsFailFilter, 'date', ('user', RelatedDropdownFilter))
 
 
 admin.site.register(models.QueryShorthand)
