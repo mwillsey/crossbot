@@ -417,6 +417,12 @@ class ModelTests(SlackTestCase):
         path = finders.find(url)
         self.assertTrue(os.path.isfile(path))
 
+    def test_game_specific_items(self):
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        title = Item.from_key('mini_completed3_title')
+        self.assertEqual(title.key, 'mini_completed3_title')
+        self.assertEqual(title.name, 'Mini Dabbler')
+
     def test_equip_item(self):
         alice = CBUser.from_slackid('UALICE', 'alice')
         tophat = Item.from_key('tophat')
@@ -484,12 +490,17 @@ class SlackAppTests(SlackTestCase):
         # this one was for the current date, so the date shouldn't be mentioned.
         self.assertEqual(messages[0]['response_type'], 'ephemeral')
         self.assertEqual(messages[1]['channel'], 'main_channel')
-        self.assertEqual(messages[1]['text'], '*Mini Added*: 0:10')
+        self.assertEqual(
+            messages[1]['attachments'][0]['text'], '*Mini Added*: 0:10'
+        )
 
         # this one was for a different date and should mention it
         self.assertEqual(messages[2]['response_type'], 'ephemeral')
         self.assertEqual(messages[3]['channel'], 'main_channel')
-        self.assertEqual(messages[3]['text'], '*Mini Added*: 0:10 2017-01-01')
+        self.assertEqual(
+            messages[3]['attachments'][0]['text'],
+            '*Mini Added*: 0:10 2017-01-01'
+        )
 
         # make sure the database reflects this
         alice = CBUser.objects.get(slackid='UALICE')
@@ -636,6 +647,12 @@ class SlackAppTests(SlackTestCase):
         self.assertIn(
             settings.MEDIA_URL, response['attachments'][0]['image_url']
         )
+
+    def test_get_title(self):
+        self.slack_post(text='add :10 2018-08-01')
+        self.slack_post(text='add :10 2018-08-02')
+        self.slack_post(text='add :10 2018-08-03')
+        self.assertIn('Mini Dabbler', self.messages[-1])
 
 
 # Again, shouldn't be a subclass of "SlackTestsCase"

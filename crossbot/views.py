@@ -158,5 +158,8 @@ def unequip_item(request, item_type):
         if item_type == 'hat':
             user.unequip_hat()
             messages.info(request, "Hat unequipped.")
+        elif item_type == 'title':
+            user.unequip_title()
+            messages.info(request, "Title unequipped.")
 
     return redirect('inventory')

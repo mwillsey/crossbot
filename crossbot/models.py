@@ -16,7 +16,7 @@ from django.contrib.staticfiles.templatetags.staticfiles import static
 from django.db import models, transaction
 from django.utils import timezone
 
-from .settings import CROSSBUCKS_PER_SOLVE, ITEM_DROP_RATE
+from .settings import CROSSBUCKS_PER_SOLVE, ITEM_DROP_RATE, DEFAULT_TITLE
 from crossbot.slack.api import slack_users, slack_user
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,8 @@ class CBUser(models.Model):
     image_url = models.CharField(max_length=150, blank=True)
 
     crossbucks = models.IntegerField(default=0)
-    hat_key = models.CharField(max_length=20, null=True, blank=True)
+    hat_key = models.CharField(max_length=40, null=True, blank=True)
+    title_key = models.CharField(max_length=40, null=True, blank=True)
 
     auth_user = models.OneToOneField(
         User,
@@ -90,6 +91,12 @@ class CBUser(models.Model):
             # image size options: 24 32 48 72 192 512 1024
             user.image_url = u['profile']['image_48']
             user.save()
+
+    @classmethod
+    def do_all_completed(cls):
+        for user in cls.objects.all():
+            for game in CommonTime.__subclasses__():
+                game.do_completed(user)
 
     def get_time(self, time_model, date):
         """Get the time for this user for the given date.
@@ -221,8 +228,11 @@ class CBUser(models.Model):
         record, _ = ItemOwnershipRecord.objects.get_or_create(
             owner=self, item_key=item.key
         )
+        if item.unique and record.quantity > 0:
+            return False
         record.quantity += amount
         record.save()
+        return True
 
     def remove_item(self, item, amount=1):
         """Remove an item from this user's inventory.
@@ -268,6 +278,19 @@ class CBUser(models.Model):
         """Return the hat Item for a person, or None if they have no hat. :-("""
         return Item.from_key(self.hat_key)
 
+    @property
+    def title(self):
+        """Return the title Item for a person, or None if they have no title."""
+        return Item.from_key(self.title_key)
+
+    @property
+    def title_text(self):
+        """Returns the title if the user has one, the default one otherwise."""
+        title = self.title
+        if title is None:
+            return DEFAULT_TITLE
+        return str(title)
+
     @transaction.atomic
     def equip(self, item):
         """Equip the item to the correct slot if the user owns at least one.
@@ -277,7 +300,7 @@ class CBUser(models.Model):
             Whether or not the hat was sucessfully put on.
         """
         assert isinstance(item, Item)
-        assert item.is_hat()  # or item.is_title()
+        assert item.is_hat() or item.is_title()
 
         if self.quantity_owned(item) <= 0:
             return False
@@ -287,19 +310,30 @@ class CBUser(models.Model):
             self.save()
             return True
 
+        if item.is_title():
+            self.title_key = item.key
+            self.save()
+            return True
+
     def is_equipped(self, item):
         assert isinstance(item, Item)
-        return item.key == self.hat_key
+        return item.key == self.hat_key or item.key == self.title_key
 
     def unequip(self, item):
         assert isinstance(item, Item)
+
         if item.key == self.hat_key:
-            self.hat_key = None
-            self.save()
-            return
+            self.unequip_hat()
+
+        elif item.key == self.title_key:
+            self.unequip_title()
 
     def unequip_hat(self):
         self.hat_key = None
+        self.save()
+
+    def unequip_title(self):
+        self.title_key = None
         self.save()
 
     @property
@@ -320,6 +354,13 @@ class CommonTime(models.Model):
     class Meta:
         unique_together = ("user", "date", "deleted")
         abstract = True
+
+    SLUG = 'common'
+    SHORT = 'Common'
+    PLURAL = 'commons'
+
+    completed_milestones = [3, 10, 50, 100, 250, 500, 1000]
+    completed_congrats = "Congrats on completing {n} {games}! You've earned a new title: \"{title}\""
 
     user = models.ForeignKey(CBUser, on_delete=models.CASCADE)
     seconds = models.IntegerField()
@@ -384,6 +425,27 @@ class CommonTime(models.Model):
             streaks.append(current_streak)
 
         return streaks
+
+    @classmethod
+    def do_completed(cls, user):
+        num_completed = len(cls.all_times().filter(user=user))
+        passed_milestones = (
+            n for n in cls.completed_milestones if n <= num_completed
+        )
+
+        msgs = []
+        for milestone in passed_milestones:
+            title_key = '{}_completed{}_title'.format(cls.SLUG, milestone)
+            title = Item.from_key(title_key)
+
+            if user.add_item(title):
+                msgs.append(
+                    cls.completed_congrats.format(
+                        n=milestone, games=cls.PLURAL, title=title.name
+                    )
+                )
+
+        return '\n'.join(msgs)
 
     @classmethod
     def winning_times(cls, qs=None):
@@ -534,16 +596,22 @@ class CommonTime(models.Model):
 
 class MiniCrosswordTime(CommonTime):
     SHORT_NAME = 'Mini'
+    SLUG = 'mini'
+    PLURAL = 'mini crosswords'
     pass
 
 
 class CrosswordTime(CommonTime):
     SHORT_NAME = 'Crossword'
+    SLUG = 'crossword'
+    PLURAL = 'regular crosswords'
     pass
 
 
 class EasySudokuTime(CommonTime):
     SHORT_NAME = 'Sudoku'
+    SLUG = 'sudoku'
+    PLURAL = 'sudokus'
     pass
 
 
@@ -636,15 +704,36 @@ class Item:
         self.name = options['name']
         # use setattr and defaults in getter methods?
         self.droppable = options.get('droppable', True)
-        self.image_name = options.get('image_name', None)
+        self.tradeable = options.get('tradeable', True)
+        self.unique = options.get('unique', False)
         self.rarity = options.get('rarity', 1.0)
+        self.image_name = options.get('image_name', None)
         self.type = options.get('type', None)
+        self.game_specific = options.get('game_specific', False)
 
     @classmethod
     def load_items(cls):
         with open(path.join(path.dirname(__file__), 'items.yaml')) as f:
             for key, options in yaml.load(f).items():
-                cls.ITEMS[key] = Item(key, options)
+                if key.startswith('__'):
+                    continue
+                if options.get('game_specific', False):
+                    for game_cls in CommonTime.__subclasses__():
+                        game_key = '{}_{}'.format(game_cls.SLUG, key)
+                        formatter_options = {
+                            'slug': game_cls.SLUG,
+                            'short': game_cls.SHORT_NAME
+                        }
+                        game_options = {
+                            k: (
+                                v.format(**formatter_options)
+                                if isinstance(v, str) else v
+                            )
+                            for (k, v) in options.items()
+                        }
+                        cls.ITEMS[game_key] = Item(game_key, game_options)
+                else:
+                    cls.ITEMS[key] = Item(key, options)
 
     @classmethod
     def from_key(cls, key):
@@ -681,6 +770,9 @@ class Item:
     def is_hat(self):
         return self.type == 'hat'
 
+    def is_title(self):
+        return self.type == 'title'
+
     def __str__(self):
         return self.name
 
@@ -700,7 +792,7 @@ class ItemOwnershipRecord(models.Model):
         unique_together = (('owner', 'item_key'), )
 
     owner = models.ForeignKey(CBUser, models.CASCADE)
-    item_key = models.CharField(max_length=20)
+    item_key = models.CharField(max_length=40)
     quantity = models.IntegerField(default=0)
 
     @property
