@@ -648,6 +648,12 @@ class SlackAppTests(SlackTestCase):
             settings.MEDIA_URL, response['attachments'][0]['image_url']
         )
 
+    def test_get_title(self):
+        self.slack_post(text='add :10 2018-08-01')
+        self.slack_post(text='add :10 2018-08-02')
+        self.slack_post(text='add :10 2018-08-03')
+        self.assertIn('Mini Dabbler', self.messages[-1])
+
 
 # Again, shouldn't be a subclass of "SlackTestsCase"
 class WebViewTests(SlackTestCase):
