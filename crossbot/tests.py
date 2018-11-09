@@ -661,10 +661,7 @@ class WebViewTests(SlackTestCase):
         tophat = Item.from_key('tophat')
 
         alice = CBUser.from_slackid('UALICE', 'alice')
-        # need to make alice staff, as it's feature gated for now
-        auth_alice = User.objects.get_or_create(
-            username='UALICE', is_staff=True
-        )[0]
+        auth_alice = User.objects.get_or_create(username='UALICE')[0]
         alice.auth_user = auth_alice
         alice.save()
         self.client.force_login(auth_alice)
