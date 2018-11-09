@@ -92,6 +92,12 @@ class CBUser(models.Model):
             user.image_url = u['profile']['image_48']
             user.save()
 
+    @classmethod
+    def do_all_completed(cls):
+        for user in cls.objects.all():
+            for game in CommonTime.__subclasses__():
+                game.do_completed(user)
+
     def get_time(self, time_model, date):
         """Get the time for this user for the given date.
 
@@ -423,22 +429,23 @@ class CommonTime(models.Model):
     @classmethod
     def do_completed(cls, user):
         num_completed = len(cls.all_times().filter(user=user))
-        most_recent_milestone = max(
-            (n for n in cls.completed_milestones if n <= num_completed),
-            default=0
+        passed_milestones = (
+            n for n in cls.completed_milestones if n <= num_completed
         )
-        if not most_recent_milestone:
-            return
-        title_key = '{}_completed{}_title'.format(
-            cls.SLUG, most_recent_milestone
-        )
-        title = Item.from_key(title_key)
 
-        if user.add_item(title):
-            return cls.completed_congrats.format(
-                n=most_recent_milestone, games=cls.PLURAL, title=title.name
-            )
-        return
+        msgs = []
+        for milestone in passed_milestones:
+            title_key = '{}_completed{}_title'.format(cls.SLUG, milestone)
+            title = Item.from_key(title_key)
+
+            if user.add_item(title):
+                msgs.append(
+                    cls.completed_congrats.format(
+                        n=milestone, games=cls.PLURAL, title=title.name
+                    )
+                )
+
+        return '\n'.join(msgs)
 
     @classmethod
     def winning_times(cls, qs=None):
