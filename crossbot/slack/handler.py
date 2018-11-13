@@ -1,7 +1,3 @@
-import json
-
-from django.conf import settings
-
 from .parser import Parser, ParserException
 from . import commands
 from .message import SlashCommandRequest, Message

@@ -52,17 +52,14 @@ class CBUser(models.Model):
     @classmethod
     @transaction.atomic
     def from_slackid(cls, slackid, slackname=None):
-        """Gets or creates the user with slackid, updating slackname.
-
-        Returns:
-            The CBUser if it exists or create=True, None otherwise.
-        """
+        """Gets or creates the user with slackid, updating slackname."""
         try:
             user = cls.objects.get(slackid=slackid)
-            if slackname:
+            if slackname is not None and user.slackname != slackname:
                 user.slackname = slackname
                 user.save()
             return user
+
         except cls.DoesNotExist:
             try:
                 slack_data = slack_user(slackid)
@@ -71,12 +68,14 @@ class CBUser(models.Model):
                     # This should never happen, since we got the slackname from slack!
                     raise
                 return None
+
             user = cls(
                 slackid=slackid,
                 slackname=slack_data['name'],
                 slack_fullname=slack_data['profile']['real_name'],
                 image_url=slack_data['profile']['image_48']
             )
+
             user.save()
             return user
 
