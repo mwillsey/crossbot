@@ -12,6 +12,8 @@ import json
 from . import models
 
 
+# NOTE 2018-11-21 Tried using a centered parametrization and it didn't work
+
 def index(l):
     x = list(sorted(set(l), key=id))
     return [x.index(i) + 1 for i in l]
