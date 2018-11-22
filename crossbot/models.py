@@ -454,9 +454,8 @@ class CommonTime(models.Model):
         ]
 
         overperformers = [
-            (str(m.user), m.residual)
-            for m in Prediction.objects.filter(date=date, residual__lte=0
-                                               ).order_by('residual')[:3]
+            (str(m.time.user), m.residual) for m in Prediction.objects
+            .filter(time__date=date, residual__lte=0).order_by('residual')[:3]
         ]
 
         games = {

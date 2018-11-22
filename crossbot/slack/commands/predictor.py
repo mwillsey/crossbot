@@ -40,18 +40,12 @@ def details():
 
 
 def validate():
-    times = list(models.MiniCrosswordTime.objects.order_by('user', 'date'))
-    predictions = list(models.Prediction.objects.order_by('user', 'date'))
+    predictions = list(models.Prediction.objects.all())
     lsecs = []
     psecs = []
 
-    # TODO: add a foreign key from predictions to times to avoid this manual join
-    j = 0
     for i, p in enumerate(predictions):
-        while times[j].user != p.user or times[j].date != p.date:
-            j += 1
-
-        secs = times[j].seconds
+        secs = p.time.seconds
         lsecs.append(math.log(secs if 0 < secs < 300 else 300))
         psecs.append(p.prediction)
 

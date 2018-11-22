@@ -11,8 +11,8 @@ import json
 
 from . import models
 
-
 # NOTE 2018-11-21 Tried using a centered parametrization and it didn't work
+
 
 def index(l):
     x = list(sorted(set(l), key=id))
@@ -35,7 +35,9 @@ def data_json(file):
                 user=models.CBUser(x["times"]),
                 seconds=x["seconds"],
                 date=datetime.strptime(x["date"], "%Y-%m-%d").date(),
-                timestamp=datetime.strptime(x["timestamp"], "%Y-%m-%d %H:%M:%S"),
+                timestamp=datetime.strptime(
+                    x["timestamp"], "%Y-%m-%d %H:%M:%S"
+                ),
                 deleted=None,
             )
             t.save()
@@ -54,7 +56,7 @@ def nth(uids, dates, ts):
 
 
 def munge_data(data):
-    data = list(data) # Collapse any streams
+    data = list(data)  # Collapse any streams
     uids = [t.user for t in data]
     dates = [t.date for t in data]
     dows = [(t.date.weekday() + 1) % 7 + 1 for t in data]
@@ -180,14 +182,11 @@ def extract_model(data, fm):
         )
 
     recs = []
-    for t, prediction, residual in zip(
-            data, params["predictions"].transpose(),
-            params["residuals"].transpose()):
+    for t, prediction, residual in zip(data, params["predictions"].transpose(),
+                                       params["residuals"].transpose()):
         recs.append(
             models.Prediction(
-                time=t,
-                prediction=prediction.mean(),
-                residual=residual.mean()
+                time=t, prediction=prediction.mean(), residual=residual.mean()
             )
         )
 

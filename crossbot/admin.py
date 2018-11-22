@@ -139,10 +139,13 @@ class PredictionAdmin(admin.ModelAdmin):
         'prediction',
         'residual',
     )
+
     def user(self, p):
         return p.time.user
+
     def date(self, p):
         return p.time.date
+
     list_filter = ('time__date', ('user', RelatedDropdownFilter))
 
 
