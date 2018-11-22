@@ -24,34 +24,22 @@ def unindex(l, i):
 
 
 def data():
-    all_times = models.MiniCrosswordTime.all_times()
-    return {
-        'uids': [t.user for t in all_times],
-        'dates': [t.date for t in all_times],
-        'dows': [(t.date.weekday() + 1) % 7 for t in all_times],
-        'secs': [t.seconds for t in all_times],
-        'ts': [t.timestamp or t.date for t in all_times],
-    }
+    return models.MiniCrosswordTime.all_times()
 
 
 def data_json(file):
     with open(file) as f:
-        data = json.load(f)
-        dates = [
-            datetime.strptime(t["date"], "%Y-%m-%d").date()
-            for t in data["times"]
-        ]
-        return {
-            'uids': [models.CBUser(t["user"]) for t in data["times"]],
-            'dates':
-            dates,
-            'dows': [(d.weekday() + 1) % 7 for d in dates],
-            'secs': [t["seconds"] for t in data["times"]],
-            'ts': [
-                datetime.strptime(t["timestamp"], "%Y-%m-%d %H:%M:%S")
-                for t in data["times"]
-            ],
-        }
+        data = json.load(f)["times"]
+        for x in data:
+            t = models.MiniCrosswordTime(
+                user=models.CBUser(x["times"]),
+                seconds=x["seconds"],
+                date=datetime.strptime(x["date"], "%Y-%m-%d").date(),
+                timestamp=datetime.strptime(x["timestamp"], "%Y-%m-%d %H:%M:%S"),
+                deleted=None,
+            )
+            t.save()
+            yield t
 
 
 def nth(uids, dates, ts):
@@ -65,12 +53,18 @@ def nth(uids, dates, ts):
     ]
 
 
-def munge_data(uids, dates, dows, secs, ts):
+def munge_data(data):
+    data = list(data) # Collapse any streams
+    uids = [t.user for t in data]
+    dates = [t.date for t in data]
+    dows = [(t.date.weekday() + 1) % 7 + 1 for t in data]
+    secs = [t.seconds for t in data]
+    ts = [t.timestamp or t.date for t in data]
     return {
         'uids': index(uids),
         'dates': index(dates),
         'nth': nth(uids, dates, ts),
-        'dows': [int(dow) + 1 for dow in dows],
+        'dows': dows,
         'secs': secs,
         'Us': len(set(uids)),
         'Ss': len(secs),
@@ -137,7 +131,7 @@ def fit(data, quiet=False):
 
     with suppress_stdout_stderr(quiet=quiet):
         fm = sm.sampling(
-            data=munge_data(**data),
+            data=munge_data(data),
             iter=1000,
             chains=4,
             n_jobs=2,
@@ -161,7 +155,7 @@ def extract_model(data, fm):
 
     dates = []
     for i, multiplier in enumerate(params["date_effect"].transpose()):
-        date = unindex(data['dates'], i + 1)
+        date = unindex([t.date for t in data], i + 1)
         mult_mean, mult_25, mult_75 = drange(multiplier)
         dates.append(
             models.PredictionDate(
@@ -174,7 +168,7 @@ def extract_model(data, fm):
 
     users = []
     for i, multiplier in enumerate(params["skill_effect"].transpose()):
-        uid = unindex(data['uids'], i + 1)
+        uid = unindex([t.user for t in data], i + 1)
         mult_mean, mult_25, mult_75 = drange(multiplier)
         users.append(
             models.PredictionUser(
@@ -186,13 +180,12 @@ def extract_model(data, fm):
         )
 
     recs = []
-    for date, uid, prediction, residual in zip(
-            data["dates"], data["uids"], params["predictions"].transpose(),
+    for t, prediction, residual in zip(
+            data, params["predictions"].transpose(),
             params["residuals"].transpose()):
         recs.append(
             models.Prediction(
-                date=date,
-                user=uid,
+                time=t,
                 prediction=prediction.mean(),
                 residual=residual.mean()
             )

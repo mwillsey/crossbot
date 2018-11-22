@@ -548,17 +548,13 @@ class EasySudokuTime(CommonTime):
 
 
 class Prediction(models.Model):
-    class Meta:
-        unique_together = (('user', 'date'), )
-
-    user = models.ForeignKey(CBUser, on_delete=models.CASCADE)
-    date = models.DateField()
+    time = models.OneToOneField(MiniCrosswordTime, on_delete=models.CASCADE)
     prediction = models.FloatField()
     residual = models.FloatField()
 
 
 class PredictionUser(models.Model):
-    user = models.ForeignKey(CBUser, on_delete=models.CASCADE)
+    user = models.OneToOneField(CBUser, on_delete=models.CASCADE)
     skill = models.FloatField()
     skill_25 = models.FloatField()
     skill_75 = models.FloatField()
