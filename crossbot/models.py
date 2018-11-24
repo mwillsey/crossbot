@@ -518,6 +518,10 @@ class CommonTime(models.Model):
             (str(m.time.user), m.residual) for m in Prediction.objects
             .filter(time__date=date, residual__lte=0).order_by('residual')[:3]
         ]
+        try:
+            difficulty = PredictionDate.objects.get(date=date).difficulty
+        except PredictionDate.DoesNotExist:
+            difficulty = 0
 
         games = {
             "mini crossword": "https://www.nytimes.com/crosswords/game/mini",
@@ -530,6 +534,7 @@ class CommonTime(models.Model):
             'winners_today': winners1,
             'winners_yesterday': winners2,
             'overperformers': overperformers,
+            'difficulty': difficulty,
             'links': games,
         }
 

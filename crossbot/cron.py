@@ -50,6 +50,9 @@ class ReleaseAnnouncement(CronJobBase):
                 ) for u, i in announce_data['overperformers']
             ]
             msgs.append(comma_and(users) + ' did really well today!')
+        if announce_data['difficulty'] > 1:
+            diff = int(announce_data['difficulty'])
+            msgs.append("Oof, that was a tough mini! " + diff * ":open_mouth:")
         msgs.append("Play tomorrow's:")
         for game in announce_data['links']:
             msgs.append("{} : {}".format(game, announce_data['links'][game]))
