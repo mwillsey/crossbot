@@ -23,7 +23,7 @@ urlpatterns = [
     ),
     path(
         'inventory/',
-        user_passes_test(lambda u: u.is_staff)(
+        login_required(
             TemplateView.as_view(template_name='crossbot/inventory.html')
         ),
         name='inventory'

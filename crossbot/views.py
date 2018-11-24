@@ -133,7 +133,7 @@ def home(request):
 
 # TODO: require login with an account linked to Crossbot?
 # TODO: actually use forms instead of rolling my own?
-@user_passes_test(lambda u: u.is_staff)
+@login_required
 def equip_item(request):
     if request.method == 'POST':
         user = request.user.cb_user
@@ -151,12 +151,15 @@ def equip_item(request):
     return redirect('inventory')
 
 
-@user_passes_test(lambda u: u.is_staff)
+@login_required
 def unequip_item(request, item_type):
     user = request.user.cb_user
     if request.method == 'POST':
         if item_type == 'hat':
             user.unequip_hat()
             messages.info(request, "Hat unequipped.")
+        elif item_type == 'title':
+            user.unequip_title()
+            messages.info(request, "Title unequipped.")
 
     return redirect('inventory')

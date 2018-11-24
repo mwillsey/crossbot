@@ -34,6 +34,15 @@
                 </form>
             </div>
         {% endif %}
+        {% if user.title %}
+            <div>
+                Title: {{ user.title }}
+                <form class="d-inline-block" action="{% url 'unequip_item' item_type='title' %}" method="POST">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-secondary btn-sm">Un-equip</button>
+                </form>
+            </div>
+        {% endif %}
     </div>
 </div>
 

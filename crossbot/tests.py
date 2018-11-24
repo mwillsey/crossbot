@@ -417,6 +417,12 @@ class ModelTests(SlackTestCase):
         path = finders.find(url)
         self.assertTrue(os.path.isfile(path))
 
+    def test_game_specific_items(self):
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        title = Item.from_key('mini_completed3_title')
+        self.assertEqual(title.key, 'mini_completed3_title')
+        self.assertEqual(title.name, 'Mini Dabbler')
+
     def test_equip_item(self):
         alice = CBUser.from_slackid('UALICE', 'alice')
         tophat = Item.from_key('tophat')
@@ -472,11 +478,33 @@ class SlackAuthTests(SlackTestCase):
 
 class SlackAppTests(SlackTestCase):
     def test_add(self):
+
         self.slack_post(text='add :10')
+        self.slack_post(text='add :10 2017-01-01')
+
+        messages = [json.loads(m) for m in self.messages]
+
+        # each post gets two responses, one ephemeral and one in channel.
+        self.assertEqual(len(messages), 4)
+
+        # this one was for the current date, so the date shouldn't be mentioned.
+        self.assertEqual(messages[0]['response_type'], 'ephemeral')
+        self.assertEqual(messages[1]['channel'], 'main_channel')
+        self.assertEqual(
+            messages[1]['attachments'][0]['text'], '*Mini Added*: 0:10'
+        )
+
+        # this one was for a different date and should mention it
+        self.assertEqual(messages[2]['response_type'], 'ephemeral')
+        self.assertEqual(messages[3]['channel'], 'main_channel')
+        self.assertEqual(
+            messages[3]['attachments'][0]['text'],
+            '*Mini Added*: 0:10 2017-01-01'
+        )
 
         # make sure the database reflects this
         alice = CBUser.objects.get(slackid='UALICE')
-        self.assertEqual(len(alice.minicrosswordtime_set.all()), 1)
+        self.assertEqual(len(alice.minicrosswordtime_set.all()), 2)
 
     def test_double_add(self):
 
@@ -620,6 +648,12 @@ class SlackAppTests(SlackTestCase):
             settings.MEDIA_URL, response['attachments'][0]['image_url']
         )
 
+    def test_get_title(self):
+        self.slack_post(text='add :10 2018-08-01')
+        self.slack_post(text='add :10 2018-08-02')
+        self.slack_post(text='add :10 2018-08-03')
+        self.assertIn('Mini Dabbler', self.messages[-1])
+
 
 # Again, shouldn't be a subclass of "SlackTestsCase"
 class WebViewTests(SlackTestCase):
@@ -627,10 +661,7 @@ class WebViewTests(SlackTestCase):
         tophat = Item.from_key('tophat')
 
         alice = CBUser.from_slackid('UALICE', 'alice')
-        # need to make alice staff, as it's feature gated for now
-        auth_alice = User.objects.get_or_create(
-            username='UALICE', is_staff=True
-        )[0]
+        auth_alice = User.objects.get_or_create(username='UALICE')[0]
         alice.auth_user = auth_alice
         alice.save()
         self.client.force_login(auth_alice)

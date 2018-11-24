@@ -55,12 +55,11 @@ def add(request):
         )
     )
     if request.in_main_channel():
-        response.add_text(
-            # TODO: only add date if it isn't for the current crossword
-            "*{} Added:* {}  {}".format(
-                time.SHORT_NAME, time.date, time.time_str()
-            ),
-            ephemeral=False
+        text = "*{} Added*: {}".format(time.SHORT_NAME, time.time_str())
+        if args.date != parse_date('now'):
+            text += " {}".format(time.date)
+        response.attach(
+            text=text, author_name=request.user.title_text, ephemeral=False
         )
         response.set_user(request.user)
         response.add_reaction(emj)
@@ -95,6 +94,14 @@ def add(request):
     logger.debug(
         "%s has a streak of %s in %s", request.user, new_sc, args.table
     )
+
+    completed_message = args.table.do_completed(request.user)
+    if completed_message:
+        response.attach(
+            ephemeral=not request.in_main_channel(),
+            color="#39C53D",
+            text=completed_message
+        )
 
     return response
 
