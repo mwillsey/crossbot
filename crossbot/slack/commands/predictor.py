@@ -2,7 +2,7 @@ import logging
 import math
 
 from django.utils import timezone
-from . import models, SlashCommandResponse
+from . import models, SlashCommandResponse, parse_date
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +14,16 @@ def init(parser):
     parser.set_defaults(command=predictor)
     parser.add_argument(
         'cmd',
-        default='details',
+        default='performance',
         help="What information to print about the predictor",
         nargs='?'
     )
 
 
 def predictor(request):
-    if request.args.cmd == 'details':
+    if request.args.cmd == 'performance':
+        return SlashCommandResponse(text=performance())
+    elif request.args.cmd == 'details':
         return SlashCommandResponse(text=details())
     elif request.args.cmd == 'validate':
         return SlashCommandResponse(text=validate())
@@ -30,6 +32,16 @@ def predictor(request):
             text="Error: no known predictor command `{}`"
             .format(request.args.cmd)
         )
+
+
+def performance():
+    date = parse_date('now')
+    predictions = models.Prediction.objects.filter(time__date=date
+                                                   ).order_by('residual')
+    return "".join([
+        "{}: {:0.2f}\n".format(p.user.slackname, p.residual)
+        for p in predictions
+    ])
 
 
 def details():
