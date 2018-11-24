@@ -26,7 +26,7 @@ def unset_time(apps, editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('crossbot', '0011_manage_predictor'),
+        ('crossbot', '0013_extend_item_keys'),
     ]
 
     operations = [
