@@ -515,10 +515,13 @@ class CommonTime(models.Model):
         ]
 
         overperformers = [
-            (str(m.user), m.residual)
-            for m in Prediction.objects.filter(date=date, residual__lte=0
-                                               ).order_by('residual')[:3]
+            (str(m.time.user), m.residual) for m in Prediction.objects
+            .filter(time__date=date, residual__lte=0).order_by('residual')[:3]
         ]
+        try:
+            difficulty = PredictionDate.objects.get(date=date).difficulty
+        except PredictionDate.DoesNotExist:
+            difficulty = 0
 
         games = {
             "mini crossword": "https://www.nytimes.com/crosswords/game/mini",
@@ -531,6 +534,7 @@ class CommonTime(models.Model):
             'winners_today': winners1,
             'winners_yesterday': winners2,
             'overperformers': overperformers,
+            'difficulty': difficulty,
             'links': games,
         }
 
@@ -615,17 +619,13 @@ class EasySudokuTime(CommonTime):
 
 
 class Prediction(models.Model):
-    class Meta:
-        unique_together = (('user', 'date'), )
-
-    user = models.ForeignKey(CBUser, on_delete=models.CASCADE)
-    date = models.DateField()
+    time = models.OneToOneField(MiniCrosswordTime, on_delete=models.CASCADE)
     prediction = models.FloatField()
     residual = models.FloatField()
 
 
 class PredictionUser(models.Model):
-    user = models.ForeignKey(CBUser, on_delete=models.CASCADE)
+    user = models.OneToOneField(CBUser, on_delete=models.CASCADE)
     skill = models.FloatField()
     skill_25 = models.FloatField()
     skill_75 = models.FloatField()

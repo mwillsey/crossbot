@@ -788,13 +788,14 @@ class PredictorTests(SlackTestCase):
         self.assertIn('overperformers', announce_data)
         self.assertEqual([u for u, r in announce_data['overperformers']],
                          ['U2'])
+        self.assertIn('difficulty', announce_data)
+        self.assertLess(announce_data['difficulty'], 0)
 
     def test_slack_command(self):
         self.run_predictor()
         response = self.slack_post(text='predictor')
-        self.assertIn("*log(P)* = ", response["text"])
         response2 = self.slack_post(text='predictor details')
-        self.assertEqual(response["text"], response2["text"])
+        self.assertIn("*log(P)* = ", response2["text"])
         response3 = self.slack_post(text='predictor validate')
         parts = response3["text"].split()
         self.assertEqual(len(parts), 7)
