@@ -40,6 +40,7 @@ class CBUser(models.Model):
     crossbucks = models.IntegerField(default=0)
     hat_key = models.CharField(max_length=40, null=True, blank=True)
     title_key = models.CharField(max_length=40, null=True, blank=True)
+    custom_title = models.CharField(max_length=40, null=True, blank=True)
 
     auth_user = models.OneToOneField(
         User,
@@ -285,6 +286,8 @@ class CBUser(models.Model):
     @property
     def title_text(self):
         """Returns the title if the user has one, the default one otherwise."""
+        if self.custom_title:
+            return self.custom_title
         title = self.title
         if title is None:
             return DEFAULT_TITLE

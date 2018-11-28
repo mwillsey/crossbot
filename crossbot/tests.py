@@ -423,6 +423,23 @@ class ModelTests(SlackTestCase):
         self.assertEqual(title.key, 'mini_completed3_title')
         self.assertEqual(title.name, 'Mini Dabbler')
 
+    def test_show_title(self):
+        alice = CBUser.from_slackid('UALICE', 'alice')
+        key = 'mini_completed3_title'
+        title = Item.from_key(key)
+        alice.title_key = key
+        alice.save()
+
+        self.slack_post('add :10 2018-01-1')
+        self.assertIn(title.name, self.messages[-1])
+
+        alice = CBUser.from_slackid('UALICE')
+        alice.custom_title = 'foobar'
+        alice.save()
+        self.slack_post('add :10 2018-01-02')
+        self.assertNotIn(title.name, self.messages[-1])
+        self.assertIn('foobar', self.messages[-1])
+
     def test_equip_item(self):
         alice = CBUser.from_slackid('UALICE', 'alice')
         tophat = Item.from_key('tophat')
