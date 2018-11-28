@@ -146,7 +146,7 @@ class PredictionAdmin(admin.ModelAdmin):
     def date(self, p):
         return p.time.date
 
-    list_filter = ('time__date', ('user', RelatedDropdownFilter))
+    list_filter = ('time__date', ('time__user', RelatedDropdownFilter))
 
 
 @admin.register(models.PredictionUser)

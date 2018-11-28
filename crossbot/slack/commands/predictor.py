@@ -39,7 +39,7 @@ def performance():
     predictions = models.Prediction.objects.filter(time__date=date
                                                    ).order_by('residual')
     return "".join([
-        "{}: {:0.2f}\n".format(p.user.slackname, p.residual)
+        "{}: {:0.2f}\n".format(p.time.user.slackname, p.residual)
         for p in predictions
     ])
 
@@ -52,11 +52,10 @@ def details():
 
 
 def validate():
-    predictions = list(models.Prediction.objects.all())
     lsecs = []
     psecs = []
 
-    for i, p in enumerate(predictions):
+    for i, p in enumerate(models.Prediction.objects.all()):
         secs = p.time.seconds
         lsecs.append(math.log(secs if 0 < secs < 300 else 300))
         psecs.append(p.prediction)
