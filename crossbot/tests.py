@@ -740,6 +740,15 @@ class AnnouncementTests(SlackTestCase):
             self.release_announcement.do()
             self.assertEqual(len(self.messages), 1)
 
+    def test_announcement_streak(self):
+        self.slack_post("add :10 2018-10-24")
+        self.slack_post("add :10 2018-10-25")
+        with patch.object(timezone, 'localtime',
+                          return_value=self.weekday_right_time):
+            self.release_announcement.do()
+
+        self.assertIn('Alice is on a 2-day streak', self.messages[-1])
+
     def test_morning_announcement_run(self):
         self.morning_announcement.do()
         self.assertEqual(len(self.messages), 1)

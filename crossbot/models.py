@@ -488,6 +488,9 @@ class CommonTime(models.Model):
     @classmethod
     # TODO: should this take a date or a timestamp?
     def current_win_streaks(cls, date):
+        if isinstance(date, datetime.datetime):
+            # convert to just a date for comparison to dates in the db
+            date = date.date()
         result = {}
         # get the win streaks up to this date
         qs = cls.all_times().filter(date__lte=date)
@@ -532,7 +535,7 @@ class CommonTime(models.Model):
             "https://www.nytimes.com/crosswords/game/sudoku/easy"
         }
 
-        return {
+        data = {
             'streaks': streaks,
             'winners_today': winners1,
             'winners_yesterday': winners2,
@@ -540,6 +543,7 @@ class CommonTime(models.Model):
             'difficulty': difficulty,
             'links': games,
         }
+        return data
 
     @classmethod
     # TODO: should this be in model?
