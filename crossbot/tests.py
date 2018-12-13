@@ -747,7 +747,7 @@ class AnnouncementTests(SlackTestCase):
                           return_value=self.weekday_right_time):
             self.release_announcement.do()
 
-        self.assertIn('Alice is on a 2-day streak', self.messages[-1])
+        self.assertIn('Alice is on a 2-day win streak', self.messages[-1])
 
     def test_morning_announcement_run(self):
         self.morning_announcement.do()

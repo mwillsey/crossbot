@@ -26,7 +26,7 @@ class ReleaseAnnouncement(CronJobBase):
     def format_message(self, announce_data):
         msgs = ['Good evening crossworders!']
         msgs += [
-            '{u} is on a {n}-day streak! {emoji}'.format(
+            '{u} is on a {n}-day win streak! {emoji}'.format(
                 u=u, n=len(streak), emoji=':fire:' * len(streak)
             ) for u, streak in announce_data['streaks']
         ]
@@ -81,7 +81,7 @@ class MorningAnnouncement(CronJobBase):
         msgs = ['Good morning crossworders!']
 
         msgs += [
-            '{u} is currently on a {n}-day streak! {emoji}'.format(
+            '{u} is currently on a {n}-day win streak! {emoji}'.format(
                 u=u, n=len(streak), emoji=':fire:' * len(streak)
             ) for u, streak in announce_data['streaks']
         ]
