@@ -32,7 +32,7 @@ def data_json(file):
         data = json.load(f)["times"]
         for x in data:
             t = models.MiniCrosswordTime(
-                user=models.CBUser(x["times"]),
+                user=models.CBUser(x["user"]),
                 seconds=x["seconds"],
                 date=datetime.strptime(x["date"], "%Y-%m-%d").date(),
                 timestamp=datetime.strptime(
@@ -131,18 +131,23 @@ def fit(data, quiet=False):
         with open(cache_path, "wb") as f:
             pickle.dump(sm, f)
 
-    with suppress_stdout_stderr(quiet=quiet):
-        fm = sm.sampling(
-            data=munge_data(data),
-            iter=1000,
-            chains=4,
-            n_jobs=2,
-            pars=[
-                'date_effect', 'skill_effect', 'predictions', 'residuals',
-                'beginner_gain', 'beginner_decay', 'sat_effect', 'mu',
-                'skill_dev', 'date_dev', 'sigma'
-            ],
-        )
+    try:
+        with suppress_stdout_stderr(quiet=quiet):
+            fm = sm.sampling(
+                data=munge_data(data),
+                iter=1000,
+                chains=4,
+                n_jobs=2,
+                pars=[
+                    'date_effect', 'skill_effect', 'predictions', 'residuals',
+                    'beginner_gain', 'beginner_decay', 'sat_effect', 'mu',
+                    'skill_dev', 'date_dev', 'sigma'
+                ],
+            )
+    except:
+        if os.path.exists(cache_path):
+            os.remove(cache_path)
+        raise
     return fm
 
 
