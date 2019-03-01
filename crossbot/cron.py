@@ -4,7 +4,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from crossbot.util import comma_and
-from crossbot.models import MiniCrosswordTime
+from crossbot.models import MiniCrosswordTime, CBUser
 from crossbot.slack.api import post_message
 import crossbot.predictor as predictor
 
@@ -127,3 +127,13 @@ class Predictor(CronJobBase):
         predictor.save(model)
         historic, dates, users, params = model
         return "Ran the predictor at {}".format(params.when_run)
+
+
+class SlacknameUpdater(CronJobBase):
+    schedule = Schedule(run_at_times=['2:00'])
+    code = 'crossbot.update_slacknames'
+
+    def do(self):
+        now = timezone.localtime()
+        CBUser.update_slacknames()
+        return "Updated slack_users at {}".format(now)

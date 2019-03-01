@@ -199,6 +199,7 @@ CRON_CLASSES = [
     "crossbot.cron.ReleaseAnnouncement",
     "crossbot.cron.MorningAnnouncement",
     "crossbot.cron.Predictor",
+    "crossbot.cron.SlacknameUpdater"
 ]
 
 DJANGO_CRON_LOCK_BACKEND = "django_cron.backends.lock.file.FileLock"
