@@ -25,7 +25,7 @@ def times(request):
 
     args = request.args
 
-    day_of_week = timezone.now().weekday()
+    day_of_week = args.date.weekday()
 
     for item in args.table.times_for_date(args.date).order_by('seconds'):
         name = str(item.user)
