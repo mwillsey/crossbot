@@ -28,7 +28,7 @@ pyparsing==2.2.0
 python-dateutil==2.7.3
 python3-openid==3.1.0
 pytz==2018.5
-PyYAML==4.2b1
+PyYAML==5.4
 requests==2.20.0
 requests-oauthlib==1.0.0
 six==1.11.0
